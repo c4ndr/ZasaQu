@@ -1,9 +1,38 @@
 <?php
 
+use App\Http\Controllers\Api\Food\FoodOrderController;
+use App\Http\Controllers\Api\Food\FoodMitraController;
 use App\Http\Controllers\Api\Merchant\ProfileController as MerchantProfileController;
 use App\Http\Controllers\Api\Merchant\MenuController as MerchantMenuController;
+use App\Http\Controllers\Api\Merchant\FoodOrderController as MerchantFoodOrderController;
 use App\Http\Controllers\Api\Admin\FoodController as AdminFoodController;
 use Illuminate\Support\Facades\Route;
+
+// ── Publik (pelanggan & semua role login) ─────────────────────────────────
+Route::prefix('food')->group(function () {
+    Route::get('merchants',                    [FoodOrderController::class, 'indexMerchants']);
+    Route::get('merchants/{id}',               [FoodOrderController::class, 'showMerchant']);
+    Route::get('delivery-estimate',            [FoodOrderController::class, 'estimateDelivery']);
+
+    Route::get('orders',                       [FoodOrderController::class, 'index']);
+    Route::post('orders',                      [FoodOrderController::class, 'store']);
+    Route::get('orders/{id}',                  [FoodOrderController::class, 'show']);
+    Route::post('orders/{id}/cancel',          [FoodOrderController::class, 'cancel']);
+    Route::post('orders/{id}/confirm',         [FoodOrderController::class, 'confirm']);
+    Route::post('orders/{id}/rate',            [FoodOrderController::class, 'rate']);
+    Route::get('orders/{id}/mitra-location',   [FoodOrderController::class, 'mitraLocation']);
+});
+
+// ── Mitra delivery ZasaFood ───────────────────────────────────────────────
+Route::prefix('food/mitra')
+    ->middleware('role:mitra_motor,mitra_mobil')
+    ->group(function () {
+
+    Route::get('orders/available',         [FoodMitraController::class, 'available']);
+    Route::get('orders/my',                [FoodMitraController::class, 'myOrders']);
+    Route::post('orders/{id}/accept',      [FoodMitraController::class, 'accept']);
+    Route::patch('orders/{id}/status',     [FoodMitraController::class, 'updateStatus']);
+});
 
 // ── Merchant (role: merchant) ──────────────────────────────────────────────
 Route::prefix('food/merchant')
@@ -27,6 +56,16 @@ Route::prefix('food/merchant')
         Route::patch('items/{id}',            [MerchantMenuController::class, 'updateItem']);
         Route::delete('items/{id}',           [MerchantMenuController::class, 'destroyItem']);
         Route::post('items/{id}/toggle',      [MerchantMenuController::class, 'toggleItem']);
+    });
+
+    // Order management
+    Route::prefix('orders')->group(function () {
+        Route::get('/',                [MerchantFoodOrderController::class, 'index']);
+        Route::get('{id}',             [MerchantFoodOrderController::class, 'show']);
+        Route::post('{id}/accept',     [MerchantFoodOrderController::class, 'accept']);
+        Route::post('{id}/reject',     [MerchantFoodOrderController::class, 'reject']);
+        Route::post('{id}/preparing',  [MerchantFoodOrderController::class, 'preparing']);
+        Route::post('{id}/ready',      [MerchantFoodOrderController::class, 'ready']);
     });
 });
 

@@ -52,10 +52,20 @@ const IconBolt = () => (
   </svg>
 )
 
+const IconFood = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8h1a4 4 0 010 8h-1"/>
+    <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>
+    <line x1="6" y1="1" x2="6" y2="4"/>
+    <line x1="10" y1="1" x2="10" y2="4"/>
+    <line x1="14" y1="1" x2="14" y2="4"/>
+  </svg>
+)
+
 const PELANGGAN_ITEMS = (name) => [
   { to: '/dashboard', icon: <IconHome />,                    label: 'Beranda',  exact: true },
   { to: '/orders',    icon: <IconBox />,                     label: 'Order' },
-  { to: '/jastip',    icon: <IconBolt />,                    label: 'JastipQu' },
+  { to: '/food',      icon: <IconFood />,                    label: 'ZasaFood' },
   { to: '/wallet',    icon: <IconWallet />,                  label: 'Wallet' },
   { to: '/profile',   icon: <AvatarIcon name={name} />,      label: 'Akun', avatar: true },
 ]

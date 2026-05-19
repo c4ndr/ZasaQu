@@ -28,6 +28,11 @@ import ProfilePage from './pages/ProfilePage'
 import NotificationsPage from './pages/NotificationsPage'
 import MitraOrderAlert from './components/MitraOrderAlert'
 import AdminFoodMerchantsPage from './pages/admin/AdminFoodMerchantsPage'
+import FoodPage from './pages/zasafood/FoodPage'
+import FoodMerchantPage from './pages/zasafood/FoodMerchantPage'
+import FoodCartPage from './pages/zasafood/FoodCartPage'
+import FoodOrdersPage from './pages/zasafood/FoodOrdersPage'
+import FoodTrackingPage from './pages/zasafood/FoodTrackingPage'
 import MerchantDashboardPage from './pages/merchant/MerchantDashboardPage'
 import MerchantMenuPage from './pages/merchant/MerchantMenuPage'
 import MerchantSettingsPage from './pages/merchant/MerchantSettingsPage'
@@ -91,6 +96,13 @@ function AppRoutes() {
       <Route path="/mitra/jastip" element={<PrivateRoute><MitraJastipPage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
       <Route path="/notifications" element={<PrivateRoute><NotificationsPage /></PrivateRoute>} />
+
+      {/* ZasaFood */}
+      <Route path="/food" element={<PrivateRoute><FoodPage /></PrivateRoute>} />
+      <Route path="/food/merchants/:id" element={<PrivateRoute><FoodMerchantPage /></PrivateRoute>} />
+      <Route path="/food/cart" element={<PrivateRoute><FoodCartPage /></PrivateRoute>} />
+      <Route path="/food/orders" element={<PrivateRoute><FoodOrdersPage /></PrivateRoute>} />
+      <Route path="/food/orders/:id" element={<PrivateRoute><FoodTrackingPage /></PrivateRoute>} />
 
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
       <Route path="/admin/orders" element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />
