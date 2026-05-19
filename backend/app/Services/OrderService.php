@@ -325,28 +325,42 @@ class OrderService
 
     public function cancelOrder(Order $order, string $reason): void
     {
-        if (in_array($order->status, ['completed', 'cancelled'])) {
-            throw new \Exception('Order tidak bisa dibatalkan.');
-        }
-
         DB::transaction(function () use ($order, $reason) {
+            // Lock baris order agar status check dan update berjalan atomik
+            // — mencegah double-cancel yang bisa double-decrement locked_balance
+            $locked = Order::lockForUpdate()->findOrFail($order->id);
+
+            if (in_array($locked->status, ['completed', 'cancelled'])) {
+                throw new \Exception('Order tidak bisa dibatalkan.');
+            }
+
+            $prevStatus = $locked->status;
+
             // Kembalikan saldo yang terkunci
-            if ($order->payment_method === 'wallet' && $order->payment_status === 'pending') {
-                $order->customer->wallet->decrement('locked_balance', (float) $order->shipping_fee);
+            if ($locked->payment_method === 'wallet' && $locked->payment_status === 'pending') {
+                $locked->customer->wallet->decrement('locked_balance', (float) $locked->shipping_fee);
             }
 
             // Jika jastip: kurangi count di sesi
-            if ($order->isJastip() && $order->jastipSession) {
-                $session = $order->jastipSession;
+            if ($locked->isJastip() && $locked->jastipSession) {
+                $session = $locked->jastipSession;
                 $session->decrement('jastip_count');
-                $session->decrement('total_jastip_fee', (float) $order->shipping_fee);
+                $session->decrement('total_jastip_fee', (float) $locked->shipping_fee);
             }
 
-            $order->update([
-                'status'       => 'cancelled',
-                'cancelled_at' => now(),
-                'cancel_reason'=> $reason,
+            $locked->update([
+                'status'        => 'cancelled',
+                'cancelled_at'  => now(),
+                'cancel_reason' => $reason,
             ]);
+
+            // Broadcast ke semua listener agar UI mitra & pelanggan langsung update
+            broadcast(new OrderStatusUpdated($locked->fresh(), $prevStatus));
+
+            // Notifikasi ke mitra jika order sudah diterima — mungkin sedang di jalan
+            if ($locked->mitra_id) {
+                $this->notifService->orderCancelledForMitra($locked->mitra, $locked->order_number);
+            }
         });
     }
 

@@ -105,6 +105,15 @@ class NotificationService
         );
     }
 
+    public function orderCancelledForMitra(User $mitra, string $orderNumber): void
+    {
+        $this->send($mitra, 'order_cancelled',
+            'Order Dibatalkan',
+            "Order #{$orderNumber} dibatalkan oleh pelanggan.",
+            ['order_number' => $orderNumber]
+        );
+    }
+
     public function newOrderAvailable(User $mitra, string $orderNumber): void
     {
         $this->send($mitra, 'new_order',
