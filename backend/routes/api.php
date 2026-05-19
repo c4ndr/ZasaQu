@@ -130,6 +130,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('sessions/{id}/order', [JastipController::class, 'placeJastipOrder']);
     });
 
+    // ─── ZasaFood ──────────────────────────────────────────────────────────
+    require __DIR__ . '/modules/zasafood.php';
+
     // ─── Admin ─────────────────────────────────────────────────────────────
     Route::prefix('admin')->middleware('role:admin')->group(function () {
 

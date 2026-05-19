@@ -27,6 +27,11 @@ import MitraJastipPage from './pages/MitraJastipPage'
 import ProfilePage from './pages/ProfilePage'
 import NotificationsPage from './pages/NotificationsPage'
 import MitraOrderAlert from './components/MitraOrderAlert'
+import AdminFoodMerchantsPage from './pages/admin/AdminFoodMerchantsPage'
+import MerchantDashboardPage from './pages/merchant/MerchantDashboardPage'
+import MerchantMenuPage from './pages/merchant/MerchantMenuPage'
+import MerchantSettingsPage from './pages/merchant/MerchantSettingsPage'
+import MerchantOrdersPage from './pages/merchant/MerchantOrdersPage'
 
 function PrivateRoute({ children }) {
   const { user } = useAuth()
@@ -45,6 +50,20 @@ function AdminRoute({ children }) {
   return children
 }
 
+function MerchantRoute({ children }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== 'merchant') return <Navigate to="/dashboard" replace />
+  return children
+}
+
+function DashboardRedirect() {
+  const { user } = useAuth()
+  if (user?.role === 'merchant') return <Navigate to="/merchant" replace />
+  if (user?.role === 'admin')    return <Navigate to="/admin" replace />
+  return <DashboardPage />
+}
+
 function AppRoutes() {
   return (
     <>
@@ -55,7 +74,7 @@ function AppRoutes() {
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
       <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
       <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
-      <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+      <Route path="/dashboard" element={<PrivateRoute><DashboardRedirect /></PrivateRoute>} />
       <Route path="/wallet" element={<PrivateRoute><WalletPage /></PrivateRoute>} />
       <Route path="/topup" element={<PrivateRoute><TopUpPage /></PrivateRoute>} />
       <Route path="/withdraw" element={<PrivateRoute><WithdrawPage /></PrivateRoute>} />
@@ -75,11 +94,18 @@ function AppRoutes() {
 
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
       <Route path="/admin/orders" element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />
+      <Route path="/admin/food/merchants" element={<AdminRoute><AdminFoodMerchantsPage /></AdminRoute>} />
       <Route path="/admin/topup" element={<AdminRoute><AdminTopUpPage /></AdminRoute>} />
       <Route path="/admin/withdraw" element={<AdminRoute><AdminWithdrawPage /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
       <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogPage /></AdminRoute>} />
+
+      {/* Merchant Panel */}
+      <Route path="/merchant" element={<MerchantRoute><MerchantDashboardPage /></MerchantRoute>} />
+      <Route path="/merchant/orders" element={<MerchantRoute><MerchantOrdersPage /></MerchantRoute>} />
+      <Route path="/merchant/menu" element={<MerchantRoute><MerchantMenuPage /></MerchantRoute>} />
+      <Route path="/merchant/settings" element={<MerchantRoute><MerchantSettingsPage /></MerchantRoute>} />
       </Routes>
     </>
   )

@@ -4,23 +4,25 @@ import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 
 const NAV_ITEMS = [
-  { to: '/admin',            emoji: '📊', label: 'Dashboard',   exact: true },
-  { to: '/admin/orders',     emoji: '📦', label: 'Order' },
-  { to: '/admin/topup',      emoji: '💰', label: 'Top Up' },
-  { to: '/admin/withdraw',   emoji: '💸', label: 'Withdraw' },
-  { to: '/admin/users',      emoji: '👥', label: 'Pengguna' },
-  { to: '/admin/settings',   emoji: '⚙️', label: 'Pengaturan' },
-  { to: '/admin/audit-logs', emoji: '📋', label: 'Log Audit' },
+  { to: '/admin',                 emoji: '📊', label: 'Dashboard',   exact: true },
+  { to: '/admin/orders',          emoji: '📦', label: 'Order ZasaGo' },
+  { to: '/admin/food/merchants',  emoji: '🍜', label: 'Merchant Food' },
+  { to: '/admin/topup',           emoji: '💰', label: 'Top Up' },
+  { to: '/admin/withdraw',        emoji: '💸', label: 'Withdraw' },
+  { to: '/admin/users',           emoji: '👥', label: 'Pengguna' },
+  { to: '/admin/settings',        emoji: '⚙️', label: 'Pengaturan' },
+  { to: '/admin/audit-logs',      emoji: '📋', label: 'Log Audit' },
 ]
 
 const PAGE_TITLE = {
-  '/admin':            'Dashboard',
-  '/admin/orders':     'Manajemen Order',
-  '/admin/topup':      'Top Up',
-  '/admin/withdraw':   'Withdraw',
-  '/admin/users':      'Pengguna',
-  '/admin/settings':   'Pengaturan',
-  '/admin/audit-logs': 'Log Audit',
+  '/admin':                   'Dashboard',
+  '/admin/orders':            'Manajemen Order ZasaGo',
+  '/admin/food/merchants':    'Merchant ZasaFood',
+  '/admin/topup':             'Top Up',
+  '/admin/withdraw':          'Withdraw',
+  '/admin/users':             'Pengguna',
+  '/admin/settings':          'Pengaturan',
+  '/admin/audit-logs':        'Log Audit',
 }
 
 const IconMenu = () => (
