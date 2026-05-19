@@ -96,15 +96,21 @@ class PaymentService
     public function confirmVirtualAccountPayment(VirtualAccount $va): void
     {
         DB::transaction(function () use ($va) {
-            $va->update(['status' => 'paid', 'paid_at' => now()]);
-            $va->topUpRequest->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+            $locked = VirtualAccount::lockForUpdate()->findOrFail($va->id);
+
+            if ($locked->status !== 'pending') {
+                throw new \Exception('Virtual account ini sudah dibayar sebelumnya.');
+            }
+
+            $locked->update(['status' => 'paid', 'paid_at' => now()]);
+            $locked->topUpRequest->update(['status' => 'confirmed', 'confirmed_at' => now()]);
 
             $this->walletService->credit(
-                $va->user,
-                (float) $va->amount,
+                $locked->user,
+                (float) $locked->amount,
                 'topup',
-                'Top up via virtual account ' . $va->va_number,
-                $va->topUpRequest
+                'Top up via virtual account ' . $locked->va_number,
+                $locked->topUpRequest
             );
         });
     }
@@ -141,15 +147,21 @@ class PaymentService
     public function confirmQrisPayment(QrisTransaction $qris): void
     {
         DB::transaction(function () use ($qris) {
-            $qris->update(['status' => 'paid', 'paid_at' => now()]);
-            $qris->topUpRequest->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+            $locked = QrisTransaction::lockForUpdate()->findOrFail($qris->id);
+
+            if ($locked->status !== 'pending') {
+                throw new \Exception('QRIS ini sudah dibayar sebelumnya.');
+            }
+
+            $locked->update(['status' => 'paid', 'paid_at' => now()]);
+            $locked->topUpRequest->update(['status' => 'confirmed', 'confirmed_at' => now()]);
 
             $this->walletService->credit(
-                $qris->user,
-                (float) $qris->amount,
+                $locked->user,
+                (float) $locked->amount,
                 'topup',
                 'Top up via QRIS',
-                $qris->topUpRequest
+                $locked->topUpRequest
             );
         });
     }
