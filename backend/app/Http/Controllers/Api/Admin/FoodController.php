@@ -62,6 +62,29 @@ class FoodController extends Controller
         return response()->json(['message' => "Merchant {$merchant->name} disetujui."]);
     }
 
+    public function indexOrders(Request $request): JsonResponse
+    {
+        $orders = \App\Models\FoodOrder::with([
+                'merchant:id,name',
+                'customer:id,name',
+                'mitra:id,name',
+                'items',
+            ])
+            ->when($request->status, function ($q) use ($request) {
+                $statuses = explode(',', $request->status);
+                $q->whereIn('status', $statuses);
+            })
+            ->when($request->search, fn($q) => $q->where(fn($q2) =>
+                $q2->where('order_number', 'like', "%{$request->search}%")
+                   ->orWhereHas('merchant', fn($m) => $m->where('name', 'like', "%{$request->search}%"))
+                   ->orWhereHas('customer', fn($c) => $c->where('name', 'like', "%{$request->search}%"))
+            ))
+            ->latest()
+            ->paginate(25);
+
+        return response()->json($orders);
+    }
+
     public function suspendMerchant(Request $request, int $id): JsonResponse
     {
         $data     = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Mitra;
 
 use App\Events\GpsSessionClosed;
 use App\Events\MitraLocationUpdated;
+use App\Models\FoodOrder;
 use App\Models\JastipSession;
 use App\Models\MitraDetail;
 use App\Models\Order;
@@ -66,13 +67,22 @@ class GpsController extends Controller
             'last_seen_at' => now(),
         ]);
 
-        // Broadcast ke semua order aktif mitra ini
+        // Broadcast ke semua order ZasaGo aktif mitra ini
         $activeOrders = Order::where('mitra_id', $mitra->id)
             ->whereIn('status', ['accepted', 'on_pickup', 'picked_up', 'on_delivery'])
             ->pluck('id');
 
         foreach ($activeOrders as $orderId) {
             broadcast(new MitraLocationUpdated($orderId, $mitra->id, $lat, $lng, $ts))->toOthers();
+        }
+
+        // Broadcast ke semua order ZasaFood aktif mitra ini
+        $activeFoodOrders = FoodOrder::where('mitra_id', $mitra->id)
+            ->whereIn('status', ['mitra_on_pickup', 'picked_up', 'on_delivery'])
+            ->pluck('id');
+
+        foreach ($activeFoodOrders as $foodOrderId) {
+            broadcast(new MitraLocationUpdated("food_{$foodOrderId}", $mitra->id, $lat, $lng, $ts))->toOthers();
         }
 
         return response()->json(['ok' => true]);

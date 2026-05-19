@@ -71,11 +71,11 @@ const PELANGGAN_ITEMS = (name) => [
 ]
 
 const MITRA_ITEMS = (name) => [
-  { to: '/dashboard',    icon: <IconHome />,               label: 'Beranda',  exact: true },
-  { to: '/mitra/orders', icon: <IconBox />,                label: 'Order' },
-  { to: '/mitra/jastip', icon: <IconBolt />,               label: 'JastipQu' },
-  { to: '/mitra/gps',    icon: <IconPin />,                label: 'GPS' },
-  { to: '/profile',      icon: <AvatarIcon name={name} />, label: 'Akun', avatar: true },
+  { to: '/dashboard',         icon: <IconHome />,               label: 'Beranda',  exact: true },
+  { to: '/mitra/orders',      icon: <IconBox />,                label: 'ZasaGo' },
+  { to: '/mitra/food/orders', icon: <IconFood />,               label: 'ZasaFood' },
+  { to: '/mitra/gps',         icon: <IconPin />,                label: 'GPS' },
+  { to: '/profile',           icon: <AvatarIcon name={name} />, label: 'Akun', avatar: true },
 ]
 
 export default function BottomNav() {

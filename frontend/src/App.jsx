@@ -33,6 +33,8 @@ import FoodMerchantPage from './pages/zasafood/FoodMerchantPage'
 import FoodCartPage from './pages/zasafood/FoodCartPage'
 import FoodOrdersPage from './pages/zasafood/FoodOrdersPage'
 import FoodTrackingPage from './pages/zasafood/FoodTrackingPage'
+import MitraFoodOrdersPage from './pages/zasafood/MitraFoodOrdersPage'
+import AdminFoodOrdersPage from './pages/admin/AdminFoodOrdersPage'
 import MerchantDashboardPage from './pages/merchant/MerchantDashboardPage'
 import MerchantMenuPage from './pages/merchant/MerchantMenuPage'
 import MerchantSettingsPage from './pages/merchant/MerchantSettingsPage'
@@ -103,10 +105,12 @@ function AppRoutes() {
       <Route path="/food/cart" element={<PrivateRoute><FoodCartPage /></PrivateRoute>} />
       <Route path="/food/orders" element={<PrivateRoute><FoodOrdersPage /></PrivateRoute>} />
       <Route path="/food/orders/:id" element={<PrivateRoute><FoodTrackingPage /></PrivateRoute>} />
+      <Route path="/mitra/food/orders" element={<PrivateRoute><MitraFoodOrdersPage /></PrivateRoute>} />
 
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
       <Route path="/admin/orders" element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />
       <Route path="/admin/food/merchants" element={<AdminRoute><AdminFoodMerchantsPage /></AdminRoute>} />
+      <Route path="/admin/food/orders" element={<AdminRoute><AdminFoodOrdersPage /></AdminRoute>} />
       <Route path="/admin/topup" element={<AdminRoute><AdminTopUpPage /></AdminRoute>} />
       <Route path="/admin/withdraw" element={<AdminRoute><AdminWithdrawPage /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />

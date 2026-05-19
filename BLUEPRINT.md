@@ -1,7 +1,7 @@
 # ZasaQu — Platform Blueprint
 
-> Versi dokumen: 19 Mei 2026
-> Status Platform: Fase 1 aktif (ZasaGo ~97%) · Fase 2 (ZasaFood) blueprint lengkap · Fase 3–5 dalam perencanaan
+> Versi dokumen: 19 Mei 2026 (rev 2)
+> Status Platform: Fase 1 aktif (ZasaGo ~97%) · Fase 2 (ZasaFood) ✅ implementasi selesai · Fase 3–5 dalam perencanaan
 
 ---
 
@@ -58,7 +58,7 @@ Pelanggan ──→  ZasaQu App  ──→  Mitra Terdekat
 | Modul | Brand | Ikon | Status | Deskripsi |
 |-------|-------|------|--------|-----------|
 | Pengiriman | **ZasaGo** | 📦 | ✅ Fase 1 | Kirim barang & JastipQu (titip sejalur) |
-| Makanan | **ZasaFood** | 🍜 | 🔲 Fase 2 | Order makanan dari warung/restoran lokal |
+| Makanan | **ZasaFood** | 🍜 | ✅ Fase 2 | Order makanan dari warung/restoran lokal |
 | Belanja | **ZasaMart** | 🛒 | 🔲 Fase 3 | Belanja kebutuhan sehari-hari, mitra berbelanja |
 | Transportasi | **ZasaRide** | 🛵 | 🔲 Fase 4 | Ojek, antar jemput, sewa kendaraan |
 | Jasa | **ZasaServ** | 🔧 | 🔲 Fase 5 | Tukang, salon, laundry, servis rumah |
@@ -410,7 +410,7 @@ Komisi = ongkir × commission_rate%  [di-snapshot saat order dibuat]
 
 ## 8. Modul ZasaFood — Makanan & Minuman
 
-> **Status: 🔲 Fase 2 (direncanakan — blueprint lengkap tersedia)**
+> **Status: ✅ Fase 2 — Implementasi Selesai (19 Mei 2026)**
 
 ### Konsep
 
@@ -1037,33 +1037,36 @@ bash zashaGo/start-tunnel.sh
 > Target: +3–4 bulan setelah Fase 1 stabil
 > Blueprint lengkap tersedia di Bagian 8
 
-**Database & Backend:**
-- [ ] Migration: tabel `food_merchants`, `food_menu_categories`, `food_menu_items`, `food_orders`, `food_order_items`
-- [ ] Migration: tambah role `merchant` ke `users.role` enum
-- [ ] Migration: tambah kolom `food_order_id` (nullable) ke tabel `ratings`
-- [ ] `FoodOrderService` — buat order, transisi status, kalkulasi komisi, settle wallet
-- [ ] `FoodMerchant*` controllers & model
-- [ ] `Merchant/OrderController` — terima/tolak/update status
-- [ ] `Food/FoodMitraController` — order tersedia & update status mitra
-- [ ] `Admin/FoodController` — approve merchant, monitor order
-- [ ] `NotificationService` — tambah event ZasaFood (foodOrderAccepted, foodOrderReady, dst)
-- [ ] Scheduled task `food:auto-confirm` dan `food:timeout-pending`
-- [ ] Isi `routes/modules/zasafood.php`
-- [ ] Konfigurasi `admin_settings` untuk ZasaFood
+**Database & Backend:** ✅ Semua selesai
+- [x] Migration: tabel `food_merchants`, `food_menu_categories`, `food_menu_items`, `food_orders`, `food_order_items`
+- [x] Migration: tambah role `merchant` ke `users.role` enum
+- [x] Migration: tambah kolom `food_order_id` (nullable) ke tabel `ratings`
+- [x] `FoodOrderService` — buat order, transisi status, kalkulasi komisi, settle wallet
+- [x] `FoodMerchant*` controllers & model
+- [x] `Merchant/OrderController` — terima/tolak/update status
+- [x] `Food/FoodMitraController` — order tersedia & update status mitra
+- [x] `Admin/FoodController` — approve merchant, monitor order
+- [x] `NotificationService` — event ZasaFood terintegrasi
+- [x] Scheduled task `food:auto-confirm` (auto-complete + cancel timeout)
+- [x] `routes/modules/zasafood.php` — 39 endpoint aktif
+- [x] Konfigurasi `admin_settings` untuk ZasaFood (5 setting)
+- [x] GPS broadcast ke food orders aktif di `GpsController`
 
-**Frontend:**
-- [ ] `FoodPage.jsx` — browse merchant by kategori & jarak
-- [ ] `FoodMerchantPage.jsx` — detail merchant + menu + keranjang
-- [ ] `FoodCartPage.jsx` — checkout + pilih alamat + estimasi ongkir
-- [ ] `FoodTrackingPage.jsx` — tracking mitra real-time (reuse komponen GPS ZasaGo)
-- [ ] `FoodOrdersPage.jsx` — riwayat order makanan
-- [ ] `MerchantDashboardPage.jsx` — dashboard merchant + order masuk real-time
-- [ ] `MerchantOrdersPage.jsx` — kelola order aktif
-- [ ] `MerchantMenuPage.jsx` — CRUD menu & kategori
-- [ ] `MerchantSettingsPage.jsx` — profil toko & jam operasional
-- [ ] `AdminFoodMerchantsPage.jsx` & `AdminFoodOrdersPage.jsx`
-- [ ] Extend `App.jsx` dengan route ZasaFood & Merchant
-- [ ] Extend `BottomNav` dengan tab ZasaFood untuk pelanggan
+**Frontend:** ✅ Semua selesai
+- [x] `FoodPage.jsx` — browse merchant by kategori & jarak
+- [x] `FoodMerchantPage.jsx` — detail merchant + menu + keranjang
+- [x] `FoodCartPage.jsx` — checkout + pilih alamat + estimasi ongkir
+- [x] `FoodTrackingPage.jsx` — tracking mitra real-time (GPS Leaflet, poll 10 detik)
+- [x] `FoodOrdersPage.jsx` — riwayat order makanan
+- [x] `MitraFoodOrdersPage.jsx` — mitra kelola food delivery (available, aktif, riwayat)
+- [x] `MerchantDashboardPage.jsx` — dashboard merchant
+- [x] `MerchantOrdersPage.jsx` — terima/tolak/masak/siap, poll 15 detik
+- [x] `MerchantMenuPage.jsx` — CRUD menu & kategori
+- [x] `MerchantSettingsPage.jsx` — profil toko & jam operasional
+- [x] `AdminFoodMerchantsPage.jsx` — approve/suspend merchant
+- [x] `AdminFoodOrdersPage.jsx` — monitor semua order food
+- [x] `App.jsx` — semua route ZasaFood, Merchant, dan Admin Food
+- [x] `BottomNav` — tab ZasaFood pelanggan & ZasaFood mitra
 
 ### Fase 3 — ZasaMart
 > Target: +2–3 bulan setelah ZasaFood
@@ -1143,6 +1146,23 @@ bash zashaGo/start-tunnel.sh
 | `ChatPage` | Banner merah saat room disuspend; textarea disabled |
 | `useChatRoom` | Return `suspended` state; update saat kirim pesan terblokir |
 | `App.jsx` | Route `/notifications` baru |
+
+---
+
+### 19 Mei 2026 (rev 2) — ZasaFood Implementasi Selesai (Sprint 4)
+
+| Komponen | Perubahan |
+|----------|-----------|
+| `GpsController` | Broadcast `MitraLocationUpdated` ke channel `food_{id}` saat mitra update GPS — FoodTrackingPage bisa terima realtime |
+| `Admin/FoodController` | Tambah `indexOrders()` dengan filter status (multi-value) dan search |
+| `routes/modules/zasafood.php` | Tambah `GET /admin/food/orders` |
+| `MitraFoodOrdersPage` | Halaman baru — 3 tab (Aktif, Tersedia, Riwayat), accept order, update status pickup/delivery, link Google Maps |
+| `AdminFoodOrdersPage` | Halaman baru — tabs Aktif/Selesai/Bermasalah/Semua, search, detail drawer (item, komisi breakdown) |
+| `AdminLayout` | Tambah nav "Order Food" |
+| `BottomNav` | Mitra: ganti JastipQu → ZasaFood di tab (route `/mitra/food/orders`) |
+| `App.jsx` | Route `/mitra/food/orders` dan `/admin/food/orders` |
+| `BLUEPRINT.md §2` | Status ZasaFood: 🔲 → ✅ |
+| `BLUEPRINT.md §16` | Semua 27 task Fase 2 ditandai selesai [x] |
 
 ---
 

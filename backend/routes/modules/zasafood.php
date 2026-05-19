@@ -78,4 +78,5 @@ Route::prefix('admin/food')
     Route::get('merchants/{id}',                  [AdminFoodController::class, 'showMerchant']);
     Route::post('merchants/{id}/approve',         [AdminFoodController::class, 'approveMerchant']);
     Route::post('merchants/{id}/suspend',         [AdminFoodController::class, 'suspendMerchant']);
+    Route::get('orders',                          [AdminFoodController::class, 'indexOrders']);
 });
