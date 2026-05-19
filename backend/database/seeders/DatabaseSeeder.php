@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             AdminSettingsSeeder::class,
             BankAccountSeeder::class,
             ItemCategorySeeder::class,
+            FoodSeeder::class,
         ]);
     }
 }

@@ -115,6 +115,43 @@ class AdminSettingsSeeder extends Seeder
                 'label'       => 'Tarif per KM Mobil (Rp)',
                 'description' => 'Biaya tambahan per kilometer untuk mobil',
             ],
+
+            // ── ZasaFood ─────────────────────────────────────────────────────
+            [
+                'key'         => 'food_commission_percent',
+                'value'       => '15',
+                'type'        => 'decimal',
+                'label'       => 'Komisi ZasaFood dari Subtotal Makanan (%)',
+                'description' => 'Persentase komisi platform dari total harga makanan',
+            ],
+            [
+                'key'         => 'food_commission_delivery_percent',
+                'value'       => '10',
+                'type'        => 'decimal',
+                'label'       => 'Komisi ZasaFood dari Ongkir (%)',
+                'description' => 'Persentase komisi platform dari ongkir delivery makanan',
+            ],
+            [
+                'key'         => 'food_auto_confirm_minutes',
+                'value'       => '120',
+                'type'        => 'integer',
+                'label'       => 'Auto-Confirm ZasaFood (menit)',
+                'description' => 'Menit sebelum order delivered dikonfirmasi otomatis jika pelanggan tidak respons',
+            ],
+            [
+                'key'         => 'food_merchant_timeout_minutes',
+                'value'       => '5',
+                'type'        => 'integer',
+                'label'       => 'Batas Waktu Merchant Terima Order (menit)',
+                'description' => 'Batas waktu merchant harus menerima order sebelum auto-cancel',
+            ],
+            [
+                'key'         => 'food_mitra_assign_radius_km',
+                'value'       => '5',
+                'type'        => 'decimal',
+                'label'       => 'Radius Broadcast Mitra ZasaFood (km)',
+                'description' => 'Radius notifikasi ke mitra saat pesanan siap diambil',
+            ],
         ];
 
         foreach ($settings as $setting) {

@@ -70,6 +70,16 @@ class User extends Authenticatable
         return $this->hasMany(Rating::class, 'rater_id');
     }
 
+    public function foodMerchant()
+    {
+        return $this->hasOne(FoodMerchant::class);
+    }
+
+    public function foodOrders()
+    {
+        return $this->hasMany(FoodOrder::class, 'customer_id');
+    }
+
     public function isMitra(): bool
     {
         return in_array($this->role, ['mitra_motor', 'mitra_mobil']);
@@ -78,6 +88,11 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function isMerchant(): bool
+    {
+        return $this->role === 'merchant';
     }
 
     public function isActive(): bool
