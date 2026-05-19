@@ -253,7 +253,7 @@ function PhotoViewer({ photos, orderId }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {['pickup', 'packing', 'delivery'].map(stage => {
             const hasPhoto = photos.some(p => p.stage === stage)
-            const url      = hasPhoto ? `/api/orders/${orderId}/photos/${stage}` : null
+            const url      = hasPhoto ? `/orders/${orderId}/photos/${stage}` : null
             return (
               <div key={stage}>
                 {url ? (
