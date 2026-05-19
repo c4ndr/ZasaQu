@@ -1,0 +1,58 @@
+/* ===== ZASHAGO MIDNIGHT THEME — override Tailwind lama ===== */
+
+/* Background */
+div[class*="min-h-screen"] { background-color: var(--k-bg) !important; }
+nav[class*="bg-white"], header[class*="bg-white"], aside[class*="bg-white"] {
+  background-color: var(--k-surface) !important;
+  border-color: var(--k-border) !important;
+}
+div[class*="bg-white"] { background-color: var(--k-card) !important; color: var(--k-text) !important; }
+div[class*="bg-gray-50"] { background-color: var(--k-card2) !important; }
+
+/* Text */
+[class*="text-gray-900"], h1, h2, h3, h4, h5, h6 { color: var(--k-text) !important; }
+[class*="text-gray-700"], [class*="text-gray-600"] { color: var(--k-sub) !important; }
+[class*="text-gray-500"], [class*="text-gray-400"] { color: var(--k-muted) !important; }
+
+/* Inputs */
+input:not([type=checkbox]):not([type=radio]), textarea, select {
+  background-color: var(--k-card2) !important;
+  color: var(--k-text) !important;
+  border-color: var(--k-border) !important;
+}
+input::placeholder, textarea::placeholder { color: var(--k-muted) !important; }
+select option { background-color: var(--k-card2); color: var(--k-text); }
+
+/* Borders */
+[class*="border-gray-100"], [class*="border-gray-200"] { border-color: var(--k-border) !important; }
+[class*="divide-gray-50"] > * + * { border-color: var(--k-border) !important; }
+
+/* Accent: blue → brand green */
+[class*="bg-blue-600"], [class*="bg-blue-500"] { background-color: var(--k-accent) !important; }
+[class*="text-blue-600"], [class*="text-blue-700"] { color: var(--k-accent) !important; }
+[class*="hover:bg-blue-700"]:hover { background-color: var(--k-accent2) !important; }
+[class*="bg-blue-50"] { background-color: var(--k-glow) !important; border-color: rgba(0,200,150,0.2) !important; }
+[class*="border-blue-500"] { border-color: var(--k-accent) !important; }
+[class*="accent-blue-600"] { accent-color: var(--k-accent) !important; }
+
+/* Status */
+[class*="bg-green-50"] { background-color: rgba(0,200,150,0.08) !important; }
+[class*="text-green-600"], [class*="text-green-700"] { color: #00C896 !important; }
+[class*="bg-red-50"] { background-color: rgba(245,101,101,0.08) !important; }
+[class*="text-red-600"], [class*="text-red-500"] { color: var(--k-danger) !important; }
+[class*="bg-yellow-50"] { background-color: rgba(246,173,85,0.08) !important; }
+[class*="text-yellow-700"], [class*="text-yellow-800"] { color: var(--k-warn) !important; }
+[class*="bg-purple-50"] { background-color: rgba(159,122,234,0.08) !important; }
+[class*="text-purple-700"] { color: #B794F4 !important; }
+
+/* Toggle / tab */
+[class*="bg-gray-100"] { background-color: var(--k-card) !important; }
+[class*="shadow-sm"][class*="bg-white"] { background-color: var(--k-border2) !important; color: var(--k-text) !important; }
+[class*="bg-gray-50"][class*="text-gray-6"],
+[class*="hover:bg-gray-100"] { background-color: var(--k-card2) !important; color: var(--k-sub) !important; }
+
+/* Nav active */
+[class*="bg-blue-50"][class*="text-blue-700"] {
+  background-color: var(--k-glow) !important;
+  color: var(--k-accent) !important;
+}
