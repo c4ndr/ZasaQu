@@ -258,16 +258,18 @@ export default function DashboardPage() {
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'rgba(0,200,150,0.1)', color: 'var(--k-accent)' }}>AKTIF</span>
               </div>
             </a>
-            {/* ZasaFood — Coming soon */}
-            <div style={{
-              background: 'var(--k-card)', border: '1px solid var(--k-border)',
-              borderRadius: 16, padding: '14px 14px', opacity: 0.6,
-            }}>
-              <div style={{ fontSize: 26, marginBottom: 8 }}>🍜</div>
-              <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--k-text)', marginBottom: 2 }}>ZasaFood</p>
-              <p style={{ fontSize: 11, color: 'var(--k-muted)', marginBottom: 8 }}>Makanan & minuman</p>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'var(--k-card2)', color: 'var(--k-muted)' }}>SEGERA</span>
-            </div>
+            {/* ZasaFood — Aktif */}
+            <a href="/food" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: 'var(--k-card)', border: '1px solid var(--k-border)',
+                borderRadius: 16, padding: '14px 14px',
+              }}>
+                <div style={{ fontSize: 26, marginBottom: 8 }}>🍜</div>
+                <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--k-text)', marginBottom: 2 }}>ZasaFood</p>
+                <p style={{ fontSize: 11, color: 'var(--k-muted)', marginBottom: 8 }}>Makanan & minuman</p>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'rgba(255,122,69,0.12)', color: '#FF7A45' }}>AKTIF</span>
+              </div>
+            </a>
             {/* ZasaMart — Coming soon */}
             <div style={{
               background: 'var(--k-card)', border: '1px solid var(--k-border)',
