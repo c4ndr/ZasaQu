@@ -245,7 +245,7 @@ function MapModal({ order, onClose }) {
 
 // Foto diakses via endpoint authenticated — gunakan AuthedImg agar Bearer token ikut dikirim
 function photoUrl(orderId, stage) {
-  return `/api/orders/${orderId}/photos/${stage}`
+  return `/orders/${orderId}/photos/${stage}`
 }
 
 // Fetch gambar via Axios (membawa Bearer token) lalu tampilkan sebagai blob URL
