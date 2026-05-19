@@ -10,6 +10,7 @@ use App\Models\AdminSetting;
 use App\Models\JastipSession;
 use App\Models\Order;
 use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -261,8 +262,9 @@ class OrderService
             $fee      = (float) $order->shipping_fee;
 
             if ($order->payment_method === 'wallet') {
-                // Kurangi locked balance dan potong saldo customer
-                $customer->wallet->decrement('locked_balance', $fee);
+                // Kurangi locked balance — lockForUpdate mencegah race condition
+                $custWallet = Wallet::lockForUpdate()->where('user_id', $customer->id)->firstOrFail();
+                $custWallet->decrement('locked_balance', $fee);
                 $this->walletService->debit($customer, $fee, 'order_payment',
                     "Pembayaran order #{$order->order_number}", $order);
             }
@@ -336,9 +338,10 @@ class OrderService
 
             $prevStatus = $locked->status;
 
-            // Kembalikan saldo yang terkunci
+            // Kembalikan saldo yang terkunci — lockForUpdate mencegah race condition
             if ($locked->payment_method === 'wallet' && $locked->payment_status === 'pending') {
-                $locked->customer->wallet->decrement('locked_balance', (float) $locked->shipping_fee);
+                $wallet = Wallet::lockForUpdate()->where('user_id', $locked->customer_id)->firstOrFail();
+                $wallet->decrement('locked_balance', (float) $locked->shipping_fee);
             }
 
             // Jika jastip: kurangi count di sesi

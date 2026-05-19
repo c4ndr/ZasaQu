@@ -24,7 +24,15 @@ class FoodController extends Controller
             ->latest()
             ->paginate(20);
 
-        return response()->json($merchants);
+        return response()->json([
+            'data' => $merchants->items(),
+            'meta' => [
+                'current_page' => $merchants->currentPage(),
+                'last_page'    => $merchants->lastPage(),
+                'total'        => $merchants->total(),
+                'per_page'     => $merchants->perPage(),
+            ],
+        ]);
     }
 
     public function showMerchant(int $id): JsonResponse

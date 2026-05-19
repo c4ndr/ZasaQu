@@ -9,15 +9,19 @@ export default function FoodCartPage() {
   const navigate   = useNavigate()
   const { merchant, cart } = state || {}
 
-  const [address,     setAddress]     = useState('')
-  const [lat,         setLat]         = useState(null)
-  const [lng,         setLng]         = useState(null)
-  const [payMethod,   setPayMethod]   = useState('wallet')
-  const [notes,       setNotes]       = useState('')
-  const [estimate,    setEstimate]    = useState(null)
-  const [loadingEst,  setLoadingEst]  = useState(false)
-  const [submitting,  setSubmitting]  = useState(false)
-  const [err,         setErr]         = useState('')
+  const [address,      setAddress]      = useState('')
+  const [lat,          setLat]          = useState(null)
+  const [lng,          setLng]          = useState(null)
+  const [payMethod,    setPayMethod]    = useState('wallet')
+  const [notes,        setNotes]        = useState('')
+  const [estimate,     setEstimate]     = useState(null)
+  const [loadingEst,   setLoadingEst]   = useState(false)
+  const [gpsLoading,   setGpsLoading]   = useState(true)
+  const [submitting,   setSubmitting]   = useState(false)
+  const [err,          setErr]          = useState('')
+  const [gpsErr,       setGpsErr]       = useState('')
+  const [manualLat,    setManualLat]    = useState('')
+  const [manualLng,    setManualLng]    = useState('')
   const timerRef = useRef(null)
 
   useEffect(() => {
@@ -30,13 +34,24 @@ export default function FoodCartPage() {
 
   // Coba dapatkan lokasi user otomatis
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(pos => {
+    if (!navigator.geolocation) {
+      setGpsLoading(false)
+      setGpsErr('Browser tidak mendukung GPS. Masukkan koordinat secara manual.')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
         setLat(pos.coords.latitude)
         setLng(pos.coords.longitude)
         setAddress('Lokasi saat ini (koordinat terdeteksi)')
-      })
-    }
+        setGpsErr('')
+        setGpsLoading(false)
+      },
+      () => {
+        setGpsLoading(false)
+        setGpsErr('Izin GPS ditolak. Masukkan koordinat secara manual.')
+      }
+    )
   }, [])
 
   // Hitung estimasi ongkir saat lat/lng tersedia
@@ -129,15 +144,66 @@ export default function FoodCartPage() {
             placeholder="Tulis alamat lengkap pengiriman..."
             style={{ ...inp, resize: 'vertical', marginBottom: 10 }}
           />
-          <div style={{ fontSize: 12, color: 'var(--k-sub)', marginBottom: 8 }}>
-            Koordinat: {lat && lng ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : 'Belum terdeteksi'}
+          <div style={{ fontSize: 12, marginBottom: 8, color: lat && lng ? '#00C896' : gpsLoading ? '#F6AD55' : 'var(--k-sub)' }}>
+            {gpsLoading
+              ? '⏳ Mendeteksi lokasi GPS...'
+              : lat && lng
+                ? `✓ Koordinat: ${lat.toFixed(5)}, ${lng.toFixed(5)}`
+                : '⚠ Koordinat belum terdeteksi'}
           </div>
-          <button onClick={() => navigator.geolocation?.getCurrentPosition(
-            pos => { setLat(pos.coords.latitude); setLng(pos.coords.longitude); setAddress('Lokasi saat ini') }
-          )} style={{
+          <button onClick={() => {
+            setGpsLoading(true)
+            setGpsErr('')
+            navigator.geolocation?.getCurrentPosition(
+              pos => {
+                setLat(pos.coords.latitude)
+                setLng(pos.coords.longitude)
+                setAddress('Lokasi saat ini')
+                setGpsErr('')
+                setGpsLoading(false)
+              },
+              () => {
+                setGpsLoading(false)
+                setGpsErr('GPS gagal. Pastikan izin lokasi diaktifkan di browser.')
+              }
+            )
+          }} disabled={gpsLoading} style={{
             padding: '8px 14px', borderRadius: 10, border: '1.5px solid var(--k-border)',
-            background: 'transparent', color: 'var(--k-sub)', cursor: 'pointer', fontSize: 12,
-          }}>📍 Gunakan Lokasi Saat Ini</button>
+            background: 'transparent', color: gpsLoading ? 'var(--k-border)' : 'var(--k-sub)',
+            cursor: gpsLoading ? 'default' : 'pointer', fontSize: 12,
+          }}>{gpsLoading ? '⏳ Mendeteksi lokasi...' : '📍 Gunakan Lokasi Saat Ini'}</button>
+
+          {gpsErr && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{
+                padding: '10px 12px', borderRadius: 10, fontSize: 12,
+                background: 'rgba(245,101,101,0.1)', color: '#F56565', marginBottom: 10,
+              }}>{gpsErr}</div>
+              <div style={{ fontSize: 12, color: 'var(--k-sub)', marginBottom: 6 }}>Masukkan koordinat secara manual:</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="number" step="any" placeholder="Latitude (mis. -6.2146)"
+                  value={manualLat}
+                  onChange={e => {
+                    setManualLat(e.target.value)
+                    const v = parseFloat(e.target.value)
+                    if (!isNaN(v) && v >= -90 && v <= 90) setLat(v)
+                  }}
+                  style={{ ...inp, flex: 1, fontSize: 12 }}
+                />
+                <input
+                  type="number" step="any" placeholder="Longitude (mis. 106.8451)"
+                  value={manualLng}
+                  onChange={e => {
+                    setManualLng(e.target.value)
+                    const v = parseFloat(e.target.value)
+                    if (!isNaN(v) && v >= -180 && v <= 180) setLng(v)
+                  }}
+                  style={{ ...inp, flex: 1, fontSize: 12 }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Catatan */}
@@ -196,13 +262,25 @@ export default function FoodCartPage() {
         width: '100%', maxWidth: 480, padding: '12px 16px', boxSizing: 'border-box',
         background: 'var(--k-card)', borderTop: '1px solid var(--k-border)',
       }}>
-        <button onClick={handleOrder} disabled={submitting || !estimate} style={{
-          width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-          background: (!estimate || submitting) ? 'var(--k-border)' : '#FF7A45',
-          color: '#fff', fontWeight: 700, fontSize: 15, cursor: (!estimate || submitting) ? 'default' : 'pointer',
-        }}>
-          {submitting ? 'Memproses...' : !estimate ? 'Masukkan alamat dulu' : `Pesan Sekarang · ${fmtRp(total)}`}
-        </button>
+        {(() => {
+          const isReady = !submitting && !gpsLoading && !loadingEst && estimate && address.trim() && lat && lng
+          const label = submitting       ? 'Memproses...'
+                      : gpsLoading      ? 'Mendeteksi lokasi GPS...'
+                      : !lat || !lng    ? 'Lokasi belum terdeteksi'
+                      : !address.trim() ? 'Isi alamat pengiriman'
+                      : loadingEst      ? 'Menghitung ongkir...'
+                      : !estimate       ? 'Menghitung ongkir...'
+                      : `Pesan Sekarang · ${fmtRp(total)}`
+          return (
+            <button onClick={handleOrder} disabled={!isReady} style={{
+              width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+              background: isReady ? '#FF7A45' : 'var(--k-border)',
+              color: '#fff', fontWeight: 700, fontSize: 15,
+              cursor: isReady ? 'pointer' : 'default',
+              transition: 'background 0.2s',
+            }}>{label}</button>
+          )
+        })()}
       </div>
     </div>
   )

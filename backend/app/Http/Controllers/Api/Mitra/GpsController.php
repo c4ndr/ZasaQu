@@ -21,7 +21,10 @@ class GpsController extends Controller
     // Redis TTL: 150 detik — toleran untuk jeda sinyal, layar HP mati, background app
     const GPS_TTL = 150;
 
-    public function __construct(private OrderService $orderService) {}
+    public function __construct(
+        private OrderService $orderService,
+        private \App\Services\NotificationService $notifService,
+    ) {}
 
     public function update(Request $request): JsonResponse
     {
@@ -113,6 +116,24 @@ class GpsController extends Controller
                     $session->id,
                     'gps_lost'
                 ));
+            }
+        }
+
+        // Notifikasi ke customer semua order ZasaGo aktif yang sedang berjalan
+        $activeOrders = Order::where('mitra_id', $mitra->id)
+            ->whereIn('status', ['accepted', 'on_pickup', 'picked_up', 'on_delivery'])
+            ->with('customer')
+            ->get();
+
+        foreach ($activeOrders as $activeOrder) {
+            if ($activeOrder->customer) {
+                $this->notifService->send(
+                    $activeOrder->customer,
+                    'mitra_gps_lost',
+                    'Sinyal GPS Mitra Terputus',
+                    "Sinyal GPS mitra pada order #{$activeOrder->order_number} hilang. Pelacakan real-time tidak tersedia sementara.",
+                    ['order_id' => $activeOrder->id, 'order_number' => $activeOrder->order_number]
+                );
             }
         }
 

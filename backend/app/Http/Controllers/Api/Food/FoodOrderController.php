@@ -45,7 +45,7 @@ class FoodOrderController extends Controller
     public function showMerchant(int $id): JsonResponse
     {
         $merchant = FoodMerchant::where('status', 'active')
-            ->with(['categories' => fn($q) => $q->where('is_active', true)->with(['items' => fn($q2) => $q2->where('is_available', true)->orderBy('sort_order')])])
+            ->with(['categories' => fn($q) => $q->where('is_active', true)->with(['items' => fn($q2) => $q2->orderBy('is_available', 'desc')->orderBy('sort_order')])])
             ->findOrFail($id);
 
         return response()->json(['data' => $merchant]);
@@ -119,9 +119,10 @@ class FoodOrderController extends Controller
             ->with(['merchant:id,name,slug,logo_path', 'items'])
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->latest()
-            ->paginate(15);
+            ->limit(100)
+            ->get();
 
-        return response()->json($orders);
+        return response()->json(['data' => $orders]);
     }
 
     public function show(Request $request, int $id): JsonResponse

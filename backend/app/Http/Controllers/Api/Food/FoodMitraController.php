@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\Food;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\FoodOrder;
 use App\Services\FoodOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redis;
 
 class FoodMitraController extends Controller
 {
@@ -20,6 +22,20 @@ class FoodMitraController extends Controller
             ->latest()
             ->get();
 
+        // Filter berdasarkan jarak GPS mitra jika tersedia
+        $gpsRaw = Redis::get("gps:mitra:{$request->user()->id}");
+        if ($gpsRaw) {
+            $gps      = json_decode($gpsRaw, true);
+            $radiusKm = (float) AdminSetting::valueOf('food_mitra_assign_radius_km', 5);
+
+            $orders = $orders->filter(function ($order) use ($gps, $radiusKm) {
+                if (!$order->merchant?->lat || !$order->merchant?->lng) {
+                    return true;
+                }
+                return $this->haversine($gps['lat'], $gps['lng'], $order->merchant->lat, $order->merchant->lng) <= $radiusKm;
+            })->values();
+        }
+
         return response()->json(['data' => $orders]);
     }
 
@@ -28,9 +44,10 @@ class FoodMitraController extends Controller
         $orders = FoodOrder::where('mitra_id', $request->user()->id)
             ->with(['merchant:id,name,address,lat,lng,logo_path', 'customer:id,name,phone', 'items'])
             ->latest()
-            ->paginate(20);
+            ->limit(100)
+            ->get();
 
-        return response()->json($orders);
+        return response()->json(['data' => $orders]);
     }
 
     public function accept(Request $request, int $id): JsonResponse
@@ -63,5 +80,14 @@ class FoodMitraController extends Controller
         }
 
         return response()->json(['message' => 'Status diperbarui.', 'data' => $updated]);
+    }
+
+    private function haversine(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $R    = 6371;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a    = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+        return $R * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 }

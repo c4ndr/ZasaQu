@@ -31,6 +31,9 @@ function MerchantDrawer({ merchant, onClose, onUpdated }) {
   const [toast,   setToast]     = useState(null)
 
   useEffect(() => {
+    setDetail(null)
+    setReason('')
+    setToast(null)
     api.get(`/admin/food/merchants/${merchant.id}`)
       .then(r => setDetail(r.data))
       .catch(() => setToast({ type: 'error', msg: 'Gagal memuat detail.' }))

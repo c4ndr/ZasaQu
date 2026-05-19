@@ -163,6 +163,14 @@ class MenuController extends Controller
         if ($err = $this->guardMerchant($request)) return $err;
 
         $item = $this->merchant($request)->menuItems()->findOrFail($id);
+
+        if ($item->photo_path) {
+            $fullPath = storage_path("app/public/{$item->photo_path}");
+            if (file_exists($fullPath)) {
+                @unlink($fullPath);
+            }
+        }
+
         $item->delete();
 
         return response()->json(['message' => 'Item dihapus.']);

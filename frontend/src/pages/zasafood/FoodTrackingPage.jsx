@@ -36,7 +36,20 @@ function MapFollower({ center }) {
   return null
 }
 
-function fmtRp(v)   { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
+function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
+
+function StarRow({ label, value, onChange }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 13, color: 'var(--k-sub)', marginBottom: 6 }}>{label}</div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {[1,2,3,4,5].map(s => (
+          <span key={s} onClick={() => onChange(s)} style={{ fontSize: 28, cursor: 'pointer', opacity: s <= value ? 1 : 0.3 }}>⭐</span>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const STATUS_META = {
   pending:           { label: 'Menunggu Merchant',  icon: '⏳', desc: 'Menunggu merchant konfirmasi pesananmu.' },
@@ -112,19 +125,6 @@ export default function FoodTrackingPage() {
   function showToast(type, msg) {
     setToast({ type, msg })
     setTimeout(() => setToast(null), 3000)
-  }
-
-  function StarRow({ label, key_, value, onChange }) {
-    return (
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 13, color: 'var(--k-sub)', marginBottom: 6 }}>{label}</div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {[1,2,3,4,5].map(s => (
-            <span key={s} onClick={() => onChange(s)} style={{ fontSize: 28, cursor: 'pointer', opacity: s <= value ? 1 : 0.3 }}>⭐</span>
-          ))}
-        </div>
-      </div>
-    )
   }
 
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: 'var(--k-sub)' }}>Memuat...</p></div>

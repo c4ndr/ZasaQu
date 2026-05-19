@@ -114,7 +114,12 @@ class ProfileController extends Controller
         $fullPath = "{$storageDir}/{$filename}";
 
         if (extension_loaded('gd')) {
-            $this->compressImage($file->getRealPath(), $fullPath, $file->getMimeType(), 1200, 1200);
+            try {
+                $this->compressImage($file->getRealPath(), $fullPath, $file->getMimeType(), 1200, 1200);
+            } catch (\Throwable $e) {
+                \Log::warning("Image compression failed for {$dir}/{$filename}: " . $e->getMessage());
+                copy($file->getRealPath(), $fullPath);
+            }
         } else {
             $file->storeAs($dir, $filename, 'public');
         }
@@ -133,12 +138,25 @@ class ProfileController extends Controller
 
         if (!$img) { copy($src, $dest); return; }
 
-        [$w, $h] = getimagesize($src);
+        $size = @getimagesize($src);
+        if (!$size || !$size[0] || !$size[1]) {
+            imagedestroy($img);
+            copy($src, $dest);
+            return;
+        }
+
+        [$w, $h] = $size;
         $ratio = min($maxW / $w, $maxH / $h, 1.0);
         $nw = (int) round($w * $ratio);
         $nh = (int) round($h * $ratio);
 
         $dst = imagecreatetruecolor($nw, $nh);
+        if (!$dst) {
+            imagedestroy($img);
+            copy($src, $dest);
+            return;
+        }
+
         imagecopyresampled($dst, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
         imagejpeg($dst, $dest, 85);
         imagedestroy($img);

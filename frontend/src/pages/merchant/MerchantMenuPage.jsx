@@ -134,10 +134,11 @@ export default function MerchantMenuPage() {
   const [categories, setCategories] = useState([])
   const [items,      setItems]      = useState([])
   const [loading,    setLoading]    = useState(true)
-  const [modal,      setModal]      = useState(null) // null | 'add' | item-object
+  const [modal,      setModal]      = useState(null)
   const [toast,      setToast]      = useState(null)
   const [newCatName, setNewCatName] = useState('')
   const [addingCat,  setAddingCat]  = useState(false)
+  const [togglingId, setTogglingId] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -156,10 +157,13 @@ export default function MerchantMenuPage() {
   }
 
   async function handleToggle(item) {
+    if (togglingId === item.id) return
+    setTogglingId(item.id)
     try {
       const res = await api.post(`/food/merchant/menu/items/${item.id}/toggle`)
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: res.data.is_available } : i))
     } catch { showToast('error', 'Gagal update.') }
+    finally { setTogglingId(null) }
   }
 
   async function handleDeleteItem(item) {
@@ -324,13 +328,17 @@ export default function MerchantMenuPage() {
 
                     {/* Aksi */}
                     <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                      <button onClick={() => handleToggle(item)} style={{
-                        padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                        fontSize: 12, fontWeight: 700,
-                        background: item.is_available ? 'rgba(245,101,101,0.12)' : 'rgba(0,200,150,0.12)',
-                        color: item.is_available ? '#F56565' : '#00C896',
-                      }}>
-                        {item.is_available ? 'Habis' : 'Tersedia'}
+                      <button
+                        onClick={() => handleToggle(item)}
+                        disabled={togglingId === item.id}
+                        style={{
+                          padding: '6px 12px', borderRadius: 8, border: 'none',
+                          cursor: togglingId === item.id ? 'default' : 'pointer',
+                          fontSize: 12, fontWeight: 700, opacity: togglingId === item.id ? 0.6 : 1,
+                          background: item.is_available ? 'rgba(245,101,101,0.12)' : 'rgba(0,200,150,0.12)',
+                          color: item.is_available ? '#F56565' : '#00C896',
+                        }}>
+                        {togglingId === item.id ? '...' : item.is_available ? 'Habis' : 'Tersedia'}
                       </button>
                       <button onClick={() => setModal(item)} style={{
                         padding: '6px 12px', borderRadius: 8, border: '1.5px solid var(--k-border)',

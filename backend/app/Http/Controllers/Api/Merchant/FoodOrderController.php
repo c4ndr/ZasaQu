@@ -28,9 +28,10 @@ class FoodOrderController extends Controller
             ->with(['customer:id,name,phone', 'items'])
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->latest()
-            ->paginate(20);
+            ->limit(100)
+            ->get();
 
-        return response()->json($orders);
+        return response()->json(['data' => $orders]);
     }
 
     public function show(Request $request, int $id): JsonResponse

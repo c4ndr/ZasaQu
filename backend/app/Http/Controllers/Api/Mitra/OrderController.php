@@ -23,15 +23,15 @@ class OrderController extends Controller
         $mitraId = $request->user()->id;
         $orders  = Order::where('mitra_id', $mitraId)
             ->with(['customer:id,name,phone','itemCategory','photos','jastipSession'])
-            ->latest()->paginate(20);
+            ->latest()->limit(100)->get();
 
         // Tandai apakah mitra sudah rating pelanggan di tiap order
-        $orders->getCollection()->transform(function (Order $order) use ($mitraId) {
+        $orders->transform(function (Order $order) use ($mitraId) {
             $order->mitra_rating = $order->ratings()->where('rater_id', $mitraId)->first()?->only(['score','comment']);
             return $order;
         });
 
-        return response()->json($orders);
+        return response()->json(['data' => $orders]);
     }
     public function accept(Request $request, int $id): JsonResponse {
         $mitra       = $request->user();

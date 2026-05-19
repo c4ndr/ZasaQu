@@ -9,6 +9,7 @@ use App\Models\FoodOrderItem;
 use App\Models\FoodMenuItem;
 use App\Models\MitraDetail;
 use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
@@ -113,9 +114,14 @@ class FoodOrderService
                     'notes'         => $line['notes'],
                 ]);
 
-                // Kurangi stok jika terbatas
+                // Kurangi stok jika terbatas; nonaktifkan item jika stok habis
                 if ($line['menu_item']->stock !== null) {
-                    $line['menu_item']->decrement('stock', $line['quantity']);
+                    $newStock = $line['menu_item']->stock - $line['quantity'];
+                    $updates  = ['stock' => $newStock];
+                    if ($newStock <= 0) {
+                        $updates['is_available'] = false;
+                    }
+                    $line['menu_item']->update($updates);
                 }
             }
 
@@ -168,6 +174,7 @@ class FoodOrderService
                 'rejection_reason' => $reason,
             ]);
 
+            $this->restoreStock($order);
             $this->refundCustomer($order);
 
             $this->notifService->send(
@@ -299,9 +306,14 @@ class FoodOrderService
         $this->assertStatus($order, 'delivered');
 
         return DB::transaction(function () use ($order) {
-            $order->update(['status' => 'completed', 'completed_at' => now()]);
-            $this->settleWallet($order);
-            return $order;
+            // Lock baris order agar concurrent request (mis. auto-confirm + manual confirm) tidak double-settle
+            $locked = FoodOrder::lockForUpdate()->findOrFail($order->id);
+            if ($locked->status !== 'delivered') {
+                throw new \Exception("Status order sudah berubah: {$locked->status}.");
+            }
+            $locked->update(['status' => 'completed', 'completed_at' => now()]);
+            $this->settleWallet($locked);
+            return $locked;
         });
     }
 
@@ -319,6 +331,7 @@ class FoodOrderService
                 'cancellation_reason' => 'Dibatalkan oleh pelanggan.',
             ]);
 
+            $this->restoreStock($order);
             $this->refundCustomer($order);
 
             $this->notifService->send(
@@ -366,6 +379,7 @@ class FoodOrderService
                             'cancelled_by'        => 'system',
                             'cancellation_reason' => 'Merchant tidak merespons dalam batas waktu.',
                         ]);
+                        $this->restoreStock($order);
                         $this->refundCustomer($order);
                         $this->notifService->send(
                             $order->customer, 'food_timeout',
@@ -423,12 +437,34 @@ class FoodOrderService
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    private function restoreStock(FoodOrder $order): void
+    {
+        $order->load('items.menuItem');
+        foreach ($order->items as $orderItem) {
+            $menuItem = $orderItem->menuItem;
+            if (!$menuItem || $menuItem->stock === null) {
+                continue;
+            }
+            $newStock = $menuItem->stock + $orderItem->quantity;
+            $updates  = ['stock' => $newStock];
+            if ($newStock > 0 && !$menuItem->is_available) {
+                $updates['is_available'] = true;
+            }
+            $menuItem->update($updates);
+        }
+    }
+
     private function settleWallet(FoodOrder $order): void
     {
-        // Lepas lock balance pelanggan
+        // Lepas lock balance pelanggan — lockForUpdate mencegah race condition concurrent settle
         if ($order->payment_method === 'wallet') {
-            $customerWallet = $order->customer->wallet;
+            $customerWallet = Wallet::lockForUpdate()->where('user_id', $order->customer_id)->firstOrFail();
             $customerWallet->decrement('locked_balance', min($order->total_amount, (float) $customerWallet->locked_balance));
+        }
+
+        // Tandai COD sebagai lunas
+        if ($order->payment_method === 'cod') {
+            $order->update(['payment_status' => 'paid', 'cod_confirmed_at' => now()]);
         }
 
         // Credit merchant
@@ -484,8 +520,8 @@ class FoodOrderService
             return;
         }
 
-        // Kembalikan locked balance
-        $wallet = $order->customer->wallet;
+        // Kembalikan locked balance — lockForUpdate mencegah race condition concurrent refund
+        $wallet = Wallet::lockForUpdate()->where('user_id', $order->customer_id)->firstOrFail();
         $wallet->decrement('locked_balance', min($order->total_amount, (float) $wallet->locked_balance));
 
         // Credit balik ke wallet

@@ -4,23 +4,49 @@ import BottomNav from '../components/BottomNav'
 import api from '../services/api'
 
 const TYPE_ICON = {
-  order_accepted:  '✅',
-  order_picked_up: '📦',
-  order_delivered: '🏠',
-  order_completed: '💰',
-  rating_request:  '⭐',
-  jastip_accepted: '⚡',
-  new_order:       '🔔',
+  order_accepted:      '✅',
+  order_picked_up:     '📦',
+  order_delivered:     '🏠',
+  order_completed:     '💰',
+  rating_request:      '⭐',
+  jastip_accepted:     '⚡',
+  new_order:           '🔔',
+  food_new_order:      '🍜',
+  food_accepted:       '✅',
+  food_rejected:       '❌',
+  food_preparing:      '👨‍🍳',
+  food_ready:          '🎉',
+  food_mitra_assigned: '🏍️',
+  food_picked_up:      '📦',
+  food_on_delivery:    '🚀',
+  food_delivered:      '🎊',
+  food_completed:      '⭐',
+  food_cancelled:      '❌',
+  food_timeout:        '⏰',
+  mitra_gps_lost:      '📡',
 }
 
 const TYPE_COLOR = {
-  order_accepted:  '#00C896',
-  order_picked_up: '#63B3ED',
-  order_delivered: '#00C896',
-  order_completed: '#00C896',
-  rating_request:  '#F6AD55',
-  jastip_accepted: '#00C896',
-  new_order:       '#B794F4',
+  order_accepted:      '#00C896',
+  order_picked_up:     '#63B3ED',
+  order_delivered:     '#00C896',
+  order_completed:     '#00C896',
+  rating_request:      '#F6AD55',
+  jastip_accepted:     '#00C896',
+  new_order:           '#B794F4',
+  food_new_order:      '#FF7A45',
+  food_accepted:       '#00C896',
+  food_rejected:       '#F56565',
+  food_preparing:      '#9F7AEA',
+  food_ready:          '#00C896',
+  food_mitra_assigned: '#63B3ED',
+  food_picked_up:      '#9F7AEA',
+  food_on_delivery:    '#63B3ED',
+  food_delivered:      '#00C896',
+  food_completed:      '#00C896',
+  food_cancelled:      '#A0A0BC',
+  food_timeout:        '#F56565',
+  mitra_gps_lost:      '#F6AD55',
 }
 
 function formatTime(dateStr) {
@@ -62,8 +88,10 @@ export default function NotificationsPage() {
       await api.post('/notifications/read', { id: notif.id }).catch(() => {})
       setNotifs(prev => prev.map(n => n.id === notif.id ? { ...n, read_at: new Date().toISOString() } : n))
     }
-    // Navigasi ke order jika ada
-    if (notif.data?.order_number) {
+    // Navigasi ke halaman yang sesuai
+    if (notif.data?.food_order_id) {
+      navigate(`/food/orders/${notif.data.food_order_id}`)
+    } else if (notif.data?.order_number) {
       navigate('/orders')
     }
   }

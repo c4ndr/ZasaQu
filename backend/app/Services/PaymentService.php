@@ -206,7 +206,8 @@ class PaymentService
                 throw new \Exception('Withdraw ini sudah diproses sebelumnya.');
             }
 
-            $wallet = $locked->user->wallet;
+            // lockForUpdate agar lepas-kunci locked_balance berjalan atomik
+            $wallet = \App\Models\Wallet::lockForUpdate()->where('user_id', $locked->user_id)->firstOrFail();
 
             if ($status === 'completed') {
                 // Lepas kunci dulu agar availableBalance cukup, baru debit
@@ -220,7 +221,6 @@ class PaymentService
                 );
             } elseif ($status === 'rejected') {
                 // Lepas kunci saldo — uang tidak pernah didebit, hanya dikunci
-                $wallet->refresh();
                 $currentBalance = (float) $wallet->balance;
                 $wallet->decrement('locked_balance', $locked->amount);
 

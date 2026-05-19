@@ -22,17 +22,22 @@ const STATUS_META = {
 const ACTIVE = ['pending','merchant_accepted','preparing','ready_for_pickup','mitra_on_pickup','picked_up','on_delivery','delivered']
 
 function PrepModal({ order, onClose, onAccepted }) {
-  const [mins, setMins]   = useState(15)
-  const [busy, setBusy]   = useState(false)
-  const [err,  setErr]    = useState('')
+  const [mins,      setMins]      = useState(15)
+  const [busy,      setBusy]      = useState(false)
+  const [err,       setErr]       = useState('')
+  const submitting = useRef(false)
 
   async function submit() {
+    if (submitting.current) return
+    submitting.current = true
     setBusy(true); setErr('')
     try {
       await api.post(`/food/merchant/orders/${order.id}/accept`, { prep_minutes: mins })
       onAccepted()
-    } catch (e) { setErr(e.response?.data?.message || 'Gagal.') }
-    finally { setBusy(false) }
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Gagal.')
+      submitting.current = false
+    } finally { setBusy(false) }
   }
 
   return (
@@ -65,14 +70,20 @@ function PrepModal({ order, onClose, onAccepted }) {
 function RejectModal({ order, onClose, onRejected }) {
   const [reason, setReason] = useState('')
   const [busy,   setBusy]   = useState(false)
+  const [err,    setErr]    = useState('')
+  const submitting = useRef(false)
 
   async function submit() {
-    setBusy(true)
+    if (submitting.current) return
+    submitting.current = true
+    setBusy(true); setErr('')
     try {
       await api.post(`/food/merchant/orders/${order.id}/reject`, { reason })
       onRejected()
-    } catch { }
-    finally { setBusy(false) }
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Gagal menolak order.')
+      submitting.current = false
+    } finally { setBusy(false) }
   }
 
   return (
@@ -80,6 +91,7 @@ function RejectModal({ order, onClose, onRejected }) {
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ background: 'var(--k-card)', borderRadius: '20px 20px 0 0', padding: '24px', width: '100%', maxWidth: 440 }}>
         <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>Tolak Order #{order.order_number}</div>
+        {err && <div style={{ color: '#F56565', fontSize: 13, marginBottom: 12 }}>{err}</div>}
         <textarea rows={3} value={reason} onChange={e => setReason(e.target.value)}
           placeholder="Alasan penolakan (opsional)..."
           style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 13, resize: 'vertical', boxSizing: 'border-box', marginBottom: 14 }} />
@@ -95,17 +107,18 @@ function RejectModal({ order, onClose, onRejected }) {
 }
 
 export default function MerchantOrdersPage() {
-  const [orders,  setOrders]  = useState([])
-  const [loading, setLoading] = useState(true)
-  const [tab,     setTab]     = useState('active')
-  const [modal,   setModal]   = useState(null) // { type: 'accept'|'reject', order }
-  const [toast,   setToast]   = useState(null)
+  const [orders,    setOrders]    = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [tab,       setTab]       = useState('active')
+  const [modal,     setModal]     = useState(null) // { type: 'accept'|'reject', order }
+  const [toast,     setToast]     = useState(null)
+  const [syncError, setSyncError] = useState(false)
   const pollRef = useRef(null)
 
   const load = useCallback(() => {
     api.get('/food/merchant/orders')
-      .then(r => setOrders(r.data.data || []))
-      .catch(() => {})
+      .then(r => { setOrders(r.data.data || []); setSyncError(false) })
+      .catch(() => setSyncError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -146,6 +159,14 @@ export default function MerchantOrdersPage() {
       {modal?.type === 'reject'  && <RejectModal order={modal.order} onClose={() => setModal(null)} onRejected={() => { setModal(null); showToast('success', 'Order ditolak.'); load() }} />}
 
       <div style={{ maxWidth: 700 }}>
+        {syncError && (
+          <div style={{
+            padding: '12px 16px', borderRadius: 10, marginBottom: 16,
+            background: 'rgba(245,101,101,0.1)', color: '#F56565', fontSize: 13, fontWeight: 600,
+          }}>
+            ⚠ Data order tidak dapat dimuat. Periksa koneksi internet.
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
           {[['active','Aktif'],['history','Riwayat']].map(([k,l]) => (
             <button key={k} onClick={() => setTab(k)} style={{

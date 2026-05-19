@@ -65,6 +65,19 @@ export default function MerchantSettingsPage() {
   async function handleUpload(e, type) {
     const file = e.target.files?.[0]
     if (!file) return
+
+    const maxBytes = type === 'logo' ? 5 * 1024 * 1024 : 10 * 1024 * 1024
+    if (!file.type.startsWith('image/')) {
+      showToast('error', 'File harus berupa gambar (JPG, PNG, WEBP).')
+      e.target.value = ''
+      return
+    }
+    if (file.size > maxBytes) {
+      showToast('error', `Ukuran maksimal ${type === 'logo' ? '5' : '10'}MB.`)
+      e.target.value = ''
+      return
+    }
+
     const fd = new FormData()
     fd.append('image', file)
     try {
@@ -74,6 +87,7 @@ export default function MerchantSettingsPage() {
     } catch (err) {
       showToast('error', err.response?.data?.message || 'Gagal upload.')
     }
+    e.target.value = ''
   }
 
   function showToast(type, msg) {
