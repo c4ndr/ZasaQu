@@ -33,18 +33,25 @@ class PaymentService
     public function confirmManualTopUp(TopUpRequest $request, User $admin): void
     {
         DB::transaction(function () use ($request, $admin) {
-            $request->update([
+            // Lock baris agar tidak bisa dikonfirmasi dua kali bersamaan
+            $locked = TopUpRequest::lockForUpdate()->findOrFail($request->id);
+
+            if ($locked->status !== 'pending') {
+                throw new \Exception('Top up ini sudah diproses sebelumnya.');
+            }
+
+            $locked->update([
                 'status'       => 'confirmed',
                 'confirmed_by' => $admin->id,
                 'confirmed_at' => now(),
             ]);
 
             $this->walletService->credit(
-                $request->user,
-                (float) $request->amount,
+                $locked->user,
+                (float) $locked->amount,
                 'topup',
                 'Top up via transfer bank manual',
-                $request
+                $locked
             );
         });
     }
@@ -180,40 +187,45 @@ class PaymentService
     public function processWithdraw(WithdrawRequest $request, User $admin, string $status, ?string $notes = null): void
     {
         DB::transaction(function () use ($request, $admin, $status, $notes) {
-            $wallet = $request->user->wallet;
+            // Lock baris agar tidak bisa diproses dua kali bersamaan
+            $locked = WithdrawRequest::lockForUpdate()->findOrFail($request->id);
+
+            if (!in_array($locked->status, ['pending', 'processing'])) {
+                throw new \Exception('Withdraw ini sudah diproses sebelumnya.');
+            }
+
+            $wallet = $locked->user->wallet;
 
             if ($status === 'completed') {
                 // Lepas kunci dulu agar availableBalance cukup, baru debit
-                $wallet->decrement('locked_balance', $request->amount);
+                $wallet->decrement('locked_balance', $locked->amount);
                 $this->walletService->debit(
-                    $request->user,
-                    (float) $request->amount,
+                    $locked->user,
+                    (float) $locked->amount,
                     'withdraw',
-                    'Withdraw ke ' . $request->destination_type . ' ' . $request->destination_number,
-                    $request
+                    'Withdraw ke ' . $locked->destination_type . ' ' . $locked->destination_number,
+                    $locked
                 );
             } elseif ($status === 'rejected') {
                 // Lepas kunci saldo — uang tidak pernah didebit, hanya dikunci
-                $wallet->refresh(); // pastikan pakai data terbaru
+                $wallet->refresh();
                 $currentBalance = (float) $wallet->balance;
-                $wallet->decrement('locked_balance', $request->amount);
+                $wallet->decrement('locked_balance', $locked->amount);
 
-                // Buat catatan WalletTransaction agar mitra bisa lihat di riwayat
-                // balance_before = balance_after = balance saat ini (tidak ada perubahan nyata)
                 \App\Models\WalletTransaction::create([
                     'wallet_id'      => $wallet->id,
                     'type'           => 'refund',
-                    'amount'         => (float) $request->amount,
+                    'amount'         => (float) $locked->amount,
                     'balance_before' => $currentBalance,
                     'balance_after'  => $currentBalance,
                     'description'    => 'Withdraw dibatalkan — saldo dikembalikan' . ($notes ? ': ' . $notes : ''),
                     'reference_type' => WithdrawRequest::class,
-                    'reference_id'   => $request->id,
+                    'reference_id'   => $locked->id,
                     'status'         => 'completed',
                 ]);
             }
 
-            $request->update([
+            $locked->update([
                 'status'       => $status,
                 'processed_by' => $admin->id,
                 'processed_at' => now(),
