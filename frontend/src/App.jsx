@@ -35,6 +35,8 @@ import FoodOrdersPage from './pages/zasafood/FoodOrdersPage'
 import FoodTrackingPage from './pages/zasafood/FoodTrackingPage'
 import MitraFoodOrdersPage from './pages/zasafood/MitraFoodOrdersPage'
 import AdminFoodOrdersPage from './pages/admin/AdminFoodOrdersPage'
+import AdminMitraVerificationPage from './pages/admin/AdminMitraVerificationPage'
+import MitraOnboardingPage from './pages/MitraOnboardingPage'
 import MerchantDashboardPage from './pages/merchant/MerchantDashboardPage'
 import MerchantMenuPage from './pages/merchant/MerchantMenuPage'
 import MerchantSettingsPage from './pages/merchant/MerchantSettingsPage'
@@ -66,9 +68,18 @@ function MerchantRoute({ children }) {
 
 function DashboardRedirect() {
   const { user } = useAuth()
-  if (user?.role === 'merchant') return <Navigate to="/merchant" replace />
-  if (user?.role === 'admin')    return <Navigate to="/admin" replace />
+  if (user?.role === 'merchant')                          return <Navigate to="/merchant" replace />
+  if (user?.role === 'admin')                             return <Navigate to="/admin" replace />
+  if (user?.isMitra && user?.status === 'pending_review') return <Navigate to="/mitra/onboarding" replace />
   return <DashboardPage />
+}
+
+function MitraRoute({ children }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (!user.role?.startsWith('mitra')) return <Navigate to="/dashboard" replace />
+  if (user.status === 'pending_review') return <Navigate to="/mitra/onboarding" replace />
+  return children
 }
 
 function AppRoutes() {
@@ -89,8 +100,8 @@ function AppRoutes() {
       {/* Admin Panel */}
       <Route path="/orders" element={<PrivateRoute><OrdersPage /></PrivateRoute>} />
       <Route path="/orders/create" element={<PrivateRoute><CreateOrderPage /></PrivateRoute>} />
-      <Route path="/mitra/orders" element={<PrivateRoute><MitraOrdersPage /></PrivateRoute>} />
-      <Route path="/mitra/gps" element={<PrivateRoute><MitraGpsPage /></PrivateRoute>} />
+      <Route path="/mitra/orders" element={<MitraRoute><MitraOrdersPage /></MitraRoute>} />
+      <Route path="/mitra/gps" element={<MitraRoute><MitraGpsPage /></MitraRoute>} />
       <Route path="/orders/:id/tracking" element={<PrivateRoute><TrackingPage /></PrivateRoute>} />
       <Route path="/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/mitra/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
@@ -105,7 +116,9 @@ function AppRoutes() {
       <Route path="/food/cart" element={<PrivateRoute><FoodCartPage /></PrivateRoute>} />
       <Route path="/food/orders" element={<PrivateRoute><FoodOrdersPage /></PrivateRoute>} />
       <Route path="/food/orders/:id" element={<PrivateRoute><FoodTrackingPage /></PrivateRoute>} />
-      <Route path="/mitra/food/orders" element={<PrivateRoute><MitraFoodOrdersPage /></PrivateRoute>} />
+      <Route path="/mitra/food/orders" element={<MitraRoute><MitraFoodOrdersPage /></MitraRoute>} />
+      <Route path="/mitra/onboarding" element={<PrivateRoute><MitraOnboardingPage /></PrivateRoute>} />
+      <Route path="/admin/mitra/verify" element={<AdminRoute><AdminMitraVerificationPage /></AdminRoute>} />
 
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
       <Route path="/admin/orders" element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />

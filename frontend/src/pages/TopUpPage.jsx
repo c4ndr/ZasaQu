@@ -55,6 +55,12 @@ const QUICK_AMOUNTS = [20000, 50000, 100000, 200000, 500000, 1000000]
 
 const METHODS = [
   {
+    id: 'midtrans', label: 'Midtrans', icon: '💳',
+    desc: 'Kartu kredit, GoPay, OVO, dll',
+    grad: 'linear-gradient(135deg, #00B4D8, #0096C7)',
+    color: '#00B4D8',
+  },
+  {
     id: 'qris', label: 'QRIS', icon: '⚡',
     desc: 'Scan & bayar otomatis',
     grad: 'linear-gradient(135deg, #00C896, #00A87D)',
@@ -244,7 +250,32 @@ export default function TopUpPage() {
     e.preventDefault(); setError(''); setLoading(true)
     try {
       let res
-      if (method === 'manual') {
+      if (method === 'midtrans') {
+        // Buka Midtrans Snap popup
+        res = await api.post('/topup/midtrans', { amount: Number(amount) })
+        const { snap_token, client_key } = res.data
+
+        // Load Snap.js jika belum
+        if (!window.snap) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script')
+            const env    = client_key?.startsWith('SB-') ? 'sandbox' : 'app'
+            script.src   = `https://${env}.midtrans.com/snap/snap.js`
+            script.setAttribute('data-client-key', client_key)
+            script.onload  = resolve
+            script.onerror = reject
+            document.head.appendChild(script)
+          })
+        }
+
+        window.snap.pay(snap_token, {
+          onSuccess: () => { navigate('/wallet') },
+          onPending: () => { navigate('/topup') },
+          onError:   () => setError('Pembayaran gagal atau dibatalkan.'),
+          onClose:   () => setLoading(false),
+        })
+        return
+      } else if (method === 'manual') {
         const fd = new FormData()
         fd.append('amount', amount)
         fd.append('bank_account_id', selectedBank)

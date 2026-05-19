@@ -11,11 +11,16 @@ class AuthService
 {
     public function registerEmail(array $data): User
     {
+        $role   = $data['role'] ?? 'pelanggan';
+        $isMitra = in_array($role, ['mitra_motor', 'mitra_mobil']);
+
         $user = User::create([
             'name'               => $data['name'],
             'email'              => $data['email'],
             'password'           => Hash::make($data['password']),
-            'role'               => $data['role'] ?? 'pelanggan',
+            'role'               => $role,
+            // Mitra baru → pending review, pelanggan langsung aktif
+            'status'             => $isMitra ? 'pending_review' : 'active',
             'email_verified_at'  => now(),
         ]);
 
@@ -30,11 +35,15 @@ class AuthService
 
     public function registerPhone(array $data): User
     {
+        $role    = $data['role'] ?? 'pelanggan';
+        $isMitra = in_array($role, ['mitra_motor', 'mitra_mobil']);
+
         $user = User::create([
             'name'              => $data['name'],
             'phone'             => $data['phone'],
             'password'          => Hash::make($data['password']),
-            'role'              => $data['role'] ?? 'pelanggan',
+            'role'              => $role,
+            'status'            => $isMitra ? 'pending_review' : 'active',
             'phone_verified_at' => now(),
         ]);
 

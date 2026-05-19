@@ -9,6 +9,7 @@ class TopUpRequest extends Model
     protected $fillable = [
         'user_id', 'amount', 'method', 'status',
         'proof_image', 'bank_account_id', 'confirmed_by', 'confirmed_at', 'notes',
+        'midtrans_order_id',
     ];
 
     protected function casts(): array

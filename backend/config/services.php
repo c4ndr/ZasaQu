@@ -39,4 +39,17 @@ return [
         'token' => env('FONNTE_TOKEN'),
     ],
 
+    'fcm' => [
+        'project_id'           => env('FCM_PROJECT_ID'),
+        'service_account_path' => env('FCM_SERVICE_ACCOUNT_PATH', storage_path('app/fcm-service-account.json')),
+    ],
+
+    'midtrans' => [
+        'server_key'    => env('MIDTRANS_SERVER_KEY'),
+        'client_key'    => env('MIDTRANS_CLIENT_KEY'),
+        'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
+        'is_sanitized'  => true,
+        'is_3ds'        => true,
+    ],
+
 ];

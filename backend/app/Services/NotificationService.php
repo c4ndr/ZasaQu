@@ -4,18 +4,26 @@ namespace App\Services;
 
 use App\Models\Notification;
 use App\Models\User;
+use Illuminate\Support\Facades\App;
 
 class NotificationService
 {
     public function send(User $user, string $type, string $title, string $body, array $data = []): Notification
     {
-        return Notification::create([
+        $notif = Notification::create([
             'user_id' => $user->id,
             'type'    => $type,
             'title'   => $title,
             'body'    => $body,
             'data'    => $data,
         ]);
+
+        // Kirim FCM push notification (best-effort, jangan sampai gagalkan in-app)
+        try {
+            App::make(FcmService::class)->sendToUser($user, $title, $body, array_merge($data, ['type' => $type]));
+        } catch (\Throwable) {}
+
+        return $notif;
     }
 
     public function markRead(User $user, ?int $notifId = null): void

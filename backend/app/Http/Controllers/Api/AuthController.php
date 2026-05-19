@@ -120,6 +120,13 @@ class AuthController extends Controller
         ]);
     }
 
+    public function saveFcmToken(Request $request): JsonResponse
+    {
+        $data = $request->validate(['fcm_token' => ['required', 'string', 'max:500']]);
+        $request->user()->update(['fcm_token' => $data['fcm_token']]);
+        return response()->json(['message' => 'FCM token tersimpan.']);
+    }
+
     public function changePassword(Request $request): JsonResponse
     {
         $data = $request->validate([

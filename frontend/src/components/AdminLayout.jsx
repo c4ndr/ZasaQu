@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { to: '/admin/topup',           emoji: '💰', label: 'Top Up' },
   { to: '/admin/withdraw',        emoji: '💸', label: 'Withdraw' },
   { to: '/admin/users',           emoji: '👥', label: 'Pengguna' },
+  { to: '/admin/mitra/verify',   emoji: '✅', label: 'Verif Mitra' },
   { to: '/admin/settings',        emoji: '⚙️', label: 'Pengaturan' },
   { to: '/admin/audit-logs',      emoji: '📋', label: 'Log Audit' },
 ]
@@ -23,6 +24,7 @@ const PAGE_TITLE = {
   '/admin/topup':             'Top Up',
   '/admin/withdraw':          'Withdraw',
   '/admin/users':             'Pengguna',
+  '/admin/mitra/verify':     'Verifikasi Mitra Baru',
   '/admin/settings':          'Pengaturan',
   '/admin/audit-logs':        'Log Audit',
 }

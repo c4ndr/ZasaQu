@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\WithdrawController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderPhotoController;
 use App\Http\Controllers\Api\JastipController;
+use App\Http\Controllers\Api\Mitra\OnboardingController as MitraOnboardingController;
 use App\Http\Controllers\Api\Mitra\OrderController as MitraOrderController;
 use App\Http\Controllers\Api\Mitra\GpsController;
 use App\Http\Controllers\Api\ChatController;
@@ -41,8 +42,12 @@ Route::prefix('auth')->group(function () {
         Route::get('me', [AuthController::class, 'me']);
         Route::patch('profile', [AuthController::class, 'updateProfile']);
         Route::post('change-password', [AuthController::class, 'changePassword']);
+        Route::post('fcm-token', [AuthController::class, 'saveFcmToken']);
     });
 });
+
+// ─── Webhook Midtrans (publik, tanpa auth) ─────────────────────────────────
+Route::post('topup/midtrans/callback', [TopUpController::class, 'midtransCallback']);
 
 // ─── Route yang butuh login & akun aktif ───────────────────────────────────
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
@@ -63,6 +68,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('manual', [TopUpController::class, 'createManual']);
         Route::post('virtual-account', [TopUpController::class, 'createVirtualAccount']);
         Route::post('qris', [TopUpController::class, 'createQris']);
+        Route::post('midtrans',           [TopUpController::class, 'createMidtrans']);
         if (!app()->isProduction()) {
             Route::post('{id}/simulate-qris', [TopUpController::class, 'simulateQrisCallback']);
             Route::post('{id}/simulate-va',   [TopUpController::class, 'simulateVaCallback']);
@@ -103,6 +109,12 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('orders/{orderId}', [ChatController::class, 'getOrCreateRoom']);
         Route::post('rooms/{roomId}/messages', [ChatController::class, 'sendMessage']);
         Route::get('templates', [ChatController::class, 'templates']);
+    });
+
+    // Onboarding mitra (boleh diakses pending_review)
+    Route::prefix('mitra/onboarding')->middleware('role:mitra_motor,mitra_mobil')->group(function () {
+        Route::get('status',         [MitraOnboardingController::class, 'status']);
+        Route::post('documents',     [MitraOnboardingController::class, 'uploadDocument']);
     });
 
     // GPS mitra
@@ -159,6 +171,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
             Route::get('{id}', [AdminUserController::class, 'show']);
             Route::patch('{id}/status', [AdminUserController::class, 'updateStatus']);
             Route::post('{id}/add-balance', [AdminUserController::class, 'addBalance']);
+        });
+
+        // Onboarding mitra
+        Route::prefix('mitra')->group(function () {
+            Route::get('pending',         [AdminUserController::class, 'pendingMitra']);
+            Route::post('{id}/approve',   [AdminUserController::class, 'approveMitra']);
+            Route::post('{id}/reject',    [AdminUserController::class, 'rejectMitra']);
         });
 
         Route::get('audit-logs', [AdminAuditLogController::class, 'index']);

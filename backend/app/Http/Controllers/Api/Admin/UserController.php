@@ -3,14 +3,19 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\MitraDocument;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function __construct(private AuditLogService $auditLogService) {}
+    public function __construct(
+        private AuditLogService     $auditLogService,
+        private NotificationService $notifService,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -98,5 +103,75 @@ class UserController extends Controller
         $labelMap = ['active' => 'diaktifkan', 'suspended' => 'disuspend', 'banned' => 'dibanned'];
 
         return response()->json(['message' => "User berhasil {$labelMap[$data['status']]}."]);
+    }
+
+    // ── Onboarding mitra ──────────────────────────────────────────────────────
+
+    public function pendingMitra(Request $request): JsonResponse
+    {
+        $mitra = User::whereIn('role', ['mitra_motor', 'mitra_mobil'])
+            ->where('status', 'pending_review')
+            ->with(['mitraDetail', 'mitraDocuments'])
+            ->when($request->search, fn($q) => $q->where(fn($q2) =>
+                $q2->where('name', 'like', "%{$request->search}%")
+                   ->orWhere('email', 'like', "%{$request->search}%")))
+            ->latest()
+            ->paginate(20);
+
+        return response()->json($mitra);
+    }
+
+    public function approveMitra(Request $request, int $id): JsonResponse
+    {
+        $mitra = User::whereIn('role', ['mitra_motor', 'mitra_mobil'])
+            ->where('status', 'pending_review')
+            ->findOrFail($id);
+
+        $mitra->update(['status' => 'active']);
+        MitraDocument::where('user_id', $mitra->id)->update([
+            'status'      => 'approved',
+            'reviewed_by' => $request->user()->id,
+            'reviewed_at' => now(),
+        ]);
+
+        $this->notifService->send(
+            $mitra, 'mitra_approved',
+            'Selamat! Akun Mitra Disetujui',
+            'Akun mitra Anda telah diverifikasi dan diaktifkan. Selamat bergabung!',
+            []
+        );
+
+        $this->auditLogService->log($request->user(), 'approve_mitra', $mitra,
+            ['status' => 'pending_review'], ['status' => 'active']);
+
+        return response()->json(['message' => "Mitra {$mitra->name} disetujui dan diaktifkan."]);
+    }
+
+    public function rejectMitra(Request $request, int $id): JsonResponse
+    {
+        $data  = $request->validate(['reason' => ['required', 'string', 'max:500']]);
+        $mitra = User::whereIn('role', ['mitra_motor', 'mitra_mobil'])
+            ->where('status', 'pending_review')
+            ->findOrFail($id);
+
+        // Tandai semua dokumen sebagai rejected
+        MitraDocument::where('user_id', $mitra->id)->update([
+            'status'           => 'rejected',
+            'rejection_reason' => $data['reason'],
+            'reviewed_by'      => $request->user()->id,
+            'reviewed_at'      => now(),
+        ]);
+
+        $this->notifService->send(
+            $mitra, 'mitra_rejected',
+            'Verifikasi Mitra Ditolak',
+            "Maaf, permohonan Anda ditolak: {$data['reason']}. Silakan upload ulang dokumen yang benar.",
+            ['reason' => $data['reason']]
+        );
+
+        $this->auditLogService->log($request->user(), 'reject_mitra', $mitra,
+            [], ['reason' => $data['reason']]);
+
+        return response()->json(['message' => "Permohonan mitra {$mitra->name} ditolak."]);
     }
 }

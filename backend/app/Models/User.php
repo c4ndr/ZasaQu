@@ -18,6 +18,7 @@ class User extends Authenticatable
         'email',
         'phone',
         'address',
+        'fcm_token',
         'password',
         'role',
         'status',
@@ -70,6 +71,11 @@ class User extends Authenticatable
         return $this->hasMany(Rating::class, 'rater_id');
     }
 
+    public function mitraDocuments()
+    {
+        return $this->hasMany(MitraDocument::class);
+    }
+
     public function foodMerchant()
     {
         return $this->hasOne(FoodMerchant::class);
@@ -98,5 +104,10 @@ class User extends Authenticatable
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    public function isPendingReview(): bool
+    {
+        return $this->status === 'pending_review';
     }
 }
