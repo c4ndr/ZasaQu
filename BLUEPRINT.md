@@ -1,7 +1,7 @@
 # ZasaQu — Platform Blueprint
 
-> Versi dokumen: 14 Mei 2026
-> Status Platform: Fase 1 aktif (ZasaGo ~97%) · Fase 2–5 dalam perencanaan
+> Versi dokumen: 19 Mei 2026
+> Status Platform: Fase 1 aktif (ZasaGo ~97%) · Fase 2 (ZasaFood) blueprint lengkap · Fase 3–5 dalam perencanaan
 
 ---
 
@@ -410,34 +410,385 @@ Komisi = ongkir × commission_rate%  [di-snapshot saat order dibuat]
 
 ## 8. Modul ZasaFood — Makanan & Minuman
 
-> **Status: 🔲 Fase 2 (direncanakan)**
+> **Status: 🔲 Fase 2 (direncanakan — blueprint lengkap tersedia)**
 
 ### Konsep
-Pelanggan order makanan dari merchant lokal (warung, restoran, kantin), mitra mengambil dan mengantarkan.
 
-### Aktor
-- **Pelanggan** — order via app, pilih merchant & menu
-- **Merchant** — terima order, siapkan pesanan
-- **Mitra** — ambil dari merchant, antar ke pelanggan
-- **Admin** — onboarding merchant, fee management
+Pelanggan order makanan dari merchant lokal (warung, restoran, kantin). Merchant siapkan pesanan, mitra terdekat pickup dan antar ke pelanggan. Semua pembayaran, notifikasi, GPS tracking, dan chat menggunakan infrastruktur core ZasaQu yang sudah ada.
 
-### Alur
+---
+
+### Aktor & Peran
+
+| Aktor | Role di `users.role` | Akses |
+|-------|---------------------|-------|
+| Pelanggan | `pelanggan` (sudah ada) | Browse merchant, order, rating |
+| Merchant | `merchant` **(role baru)** | Kelola menu, terima/tolak order, tandai siap |
+| Mitra | `mitra_motor` / `mitra_mobil` (sudah ada) | Pickup di merchant, antar ke pelanggan |
+| Admin | `admin` (sudah ada) | Onboarding merchant, monitor, fee management |
+
+> **Catatan implementasi:** Tambah nilai `merchant` ke enum `users.role` di migration baru. Merchant login dengan akun biasa, role menentukan dashboard yang tampil.
+
+---
+
+### Status Order ZasaFood (State Machine)
 
 ```
-Pelanggan pilih merchant → pilih menu → checkout → pembayaran
-        ↓
-Merchant terima order → siapkan pesanan → beri notif siap
-        ↓
-Mitra terdekat terima notif → pickup di merchant → antar ke pelanggan
+pending
+  ↓  (merchant konfirmasi, estimasi masak ditetapkan)
+merchant_accepted
+  ↓  (merchant mulai memasak)
+preparing
+  ↓  (merchant selesai, notif mitra terdekat)
+ready_for_pickup
+  ↓  (mitra terima & menuju merchant)
+mitra_on_pickup
+  ↓  (mitra tiba & ambil pesanan di merchant)
+picked_up
+  ↓  (mitra dalam perjalanan ke pelanggan)
+on_delivery
+  ↓  (mitra tiba di lokasi pelanggan)
+delivered
+  ↓  (pelanggan konfirmasi atau auto-confirm setelah X menit)
+completed
+
+── cancelled (dari pending / merchant_accepted oleh pelanggan atau merchant)
+── rejected  (merchant tolak order — pelanggan refund otomatis ke wallet)
 ```
 
-### Fitur yang Direncanakan
-- Browsing merchant by kategori & jarak
-- Manajemen menu (merchant dashboard)
-- Estimasi waktu masak + waktu kirim
-- Rating merchant & mitra per order
-- Jam operasional merchant
-- Promo & voucher per merchant
+Setiap transisi menyimpan timestamp dan mengirim notifikasi via `NotificationService` yang sudah ada.
+
+---
+
+### Alur Lengkap per Aktor
+
+#### 1. Onboarding Merchant (satu kali)
+
+```
+Merchant daftar akun biasa (role=merchant)
+  → isi profil toko: nama, alamat, koordinat, kategori, foto logo & banner
+  → set jam operasional (open_time, close_time)
+  → set estimasi waktu masak default (avg_prep_time_minutes)
+  → Admin review di Admin Panel → approve / suspend
+  → Merchant aktif, toko muncul di daftar
+```
+
+#### 2. Merchant Kelola Menu
+
+```
+Login sebagai merchant → Merchant Dashboard
+  → Buat kategori menu (Makanan Berat, Minuman, Snack, dll)
+  → Tambah item per kategori: nama, foto, harga, deskripsi, stok
+  → Toggle is_available per item (habis/tersedia)
+  → Toggle is_open toko (buka/tutup manual)
+```
+
+#### 3. Pelanggan Order
+
+```
+Buka ZasaFood → browse merchant terdekat (filter: kategori, jarak, is_open)
+  → Pilih merchant → lihat menu per kategori
+  → Tambah item ke keranjang (bisa multi-item, multi-kuantitas)
+  → Checkout:
+      - Isi catatan per item (opsional)
+      - Pilih alamat pengiriman (pin di peta)
+      - Lihat estimasi ongkir (OSRM/Haversine, tarif motor/mobil dari AdminSetting)
+      - Lihat total (subtotal + ongkir)
+      - Pilih metode bayar: Wallet / COD
+  → Konfirmasi order → debit wallet (jika non-COD) → status: pending
+  → Menunggu konfirmasi merchant (timeout: food_merchant_timeout_minutes, default 5 menit)
+```
+
+#### 4. Merchant Terima Order
+
+```
+Notif masuk: "Order baru dari [Nama Pelanggan]"
+  → Merchant Dashboard → lihat detail order (item, catatan, alamat pengiriman)
+  → Pilih:
+      [Terima] → isi estimasi waktu masak (bisa override default)
+               → status: merchant_accepted → notif ke pelanggan
+      [Tolak]  → isi alasan → status: rejected → refund otomatis ke wallet pelanggan
+  → Mulai masak → klik "Sedang Dimasak" → status: preparing
+  → Selesai masak → klik "Pesanan Siap" → status: ready_for_pickup
+               → sistem broadcast notif ke mitra terdekat (radius: food_mitra_assign_radius_km)
+```
+
+#### 5. Mitra Terima & Delivery
+
+```
+Notif: "Ada order makanan siap pickup di [Nama Merchant]"
+  → Mitra lihat detail: nama merchant, alamat merchant, nama pelanggan, alamat tujuan
+  → Klik "Terima" → status: mitra_on_pickup → GPS tracking aktif
+  → Menuju merchant → tiba → klik "Sudah Pickup" → status: picked_up
+  → Antar ke pelanggan → klik "Dalam Perjalanan" → status: on_delivery
+  → Tiba → klik "Sudah Diantar" → status: delivered
+  → Upload foto bukti pengiriman (opsional, sama seperti ZasaGo)
+```
+
+#### 6. Pelanggan Konfirmasi & Rating
+
+```
+Notif: "Pesanan sudah diantar"
+  → Pelanggan konfirmasi terima → status: completed
+  → (atau auto-confirm setelah food_auto_confirm_minutes, default 120 menit)
+  → Modal rating muncul:
+      - Rating untuk merchant (1–5 bintang + komentar)
+      - Rating untuk mitra (1–5 bintang + komentar)
+  → Dana mitra dan merchant masuk ke wallet masing-masing
+```
+
+---
+
+### Kalkulasi Harga & Komisi
+
+```
+Subtotal   = Σ (harga_item × qty)
+Ongkir     = base_fee + (jarak_km × per_km)   ← tarif motor/mobil dari AdminSetting (sama ZasaGo)
+Total      = subtotal + ongkir
+
+Komisi platform dari makanan    = subtotal × food_commission_percent      (snapshot)
+Komisi platform dari ongkir     = ongkir   × food_commission_delivery_percent (snapshot)
+
+Merchant dapat  = subtotal − komisi_makanan
+Mitra dapat     = ongkir   − komisi_ongkir
+```
+
+Semua rate di-snapshot ke kolom `food_orders` saat order dibuat, agar perubahan admin tidak mempengaruhi order berjalan.
+
+---
+
+### Integrasi dengan Core ZasaQu
+
+| Core | Cara Digunakan ZasaFood |
+|------|------------------------|
+| **Wallet** | `WalletService::debit()` saat order dibuat (non-COD). `WalletService::credit()` ke mitra dan merchant saat `completed`. Refund via `WalletService::credit()` saat `rejected` atau `cancelled`. |
+| **Notifikasi** | `NotificationService` dipanggil di setiap transisi status. Tambah method: `foodOrderAccepted`, `foodOrderReady`, `foodMitraAssigned`, `foodOrderDelivered`, dst. |
+| **GPS Tracking** | Mitra food delivery pakai sistem GPS yang sama (`GpsController`, Redis key `gps:mitra:{id}`). Pelanggan tracking mitra via Reverb WebSocket sama persis dengan ZasaGo. |
+| **Chat** | `chat_rooms.service_module = 'zasafood'`. Dua room per order: (1) pelanggan ↔ mitra, (2) mitra ↔ merchant. Eskalasi pelanggaran (suspend room) berlaku sama. |
+| **Rating** | Extend tabel `ratings` dengan kolom `food_order_id` (nullable). Tambah `rater_role`: `customer_to_merchant`, `customer_to_mitra`, `mitra_to_customer`. |
+| **Admin Panel** | Extend admin panel yang ada: tambah tab "Merchant" dan "Order Makanan". `AdminSetting` dipakai untuk konfigurasi ZasaFood. |
+| **OSRM/Haversine** | `ShippingController::estimate()` dan kalkulasi ongkir di `FoodOrderService` memakai `roadDistance()` yang sama. |
+
+---
+
+### Struktur Database ZasaFood
+
+#### Tabel Baru
+
+**`food_merchants`**
+```
+id, user_id (FK users — owner merchant), name, slug (unique)
+description, category (enum: makanan_berat, minuman, snack, lainnya)
+address, lat, lng
+phone, logo_path, banner_path
+is_open (boolean — toggle manual merchant), open_time, close_time
+avg_prep_time_minutes (default estimasi waktu masak)
+average_rating (dihitung ulang otomatis dari ratings)
+commission_rate_food (snapshot default dari admin_settings)
+status (enum: pending, active, suspended)
+timestamps
+```
+
+**`food_menu_categories`**
+```
+id, merchant_id (FK), name, sort_order, is_active, timestamps
+```
+
+**`food_menu_items`**
+```
+id, merchant_id (FK), category_id (FK food_menu_categories)
+name, description, price, photo_path
+is_available (boolean), stock (nullable — null = unlimited)
+sort_order, timestamps
+```
+
+**`food_orders`**
+```
+id, order_number (unique), customer_id (FK users), merchant_id (FK food_merchants)
+mitra_id (nullable FK users)
+status (enum: pending, merchant_accepted, preparing, ready_for_pickup,
+              mitra_on_pickup, picked_up, on_delivery, delivered, completed,
+              cancelled, rejected)
+subtotal, delivery_fee, total_amount
+commission_rate_food (snapshot %), commission_rate_delivery (snapshot %)
+delivery_address, delivery_lat, delivery_lng
+notes (catatan umum dari pelanggan)
+payment_method (enum: wallet, cod), payment_status (enum: pending, paid, refunded)
+estimated_prep_minutes (snapshot saat merchant accept)
+estimated_delivery_minutes
+merchant_accepted_at, preparing_at, ready_at
+mitra_assigned_at, mitra_on_pickup_at, picked_up_at
+on_delivery_at, delivered_at, completed_at
+cancelled_at, cancellation_reason, cancelled_by
+rejected_at, rejection_reason
+cod_confirmed_at
+timestamps
+```
+
+**`food_order_items`**
+```
+id, food_order_id (FK), menu_item_id (FK food_menu_items)
+item_name (snapshot), item_price (snapshot), quantity, subtotal
+notes (catatan per item), timestamps
+```
+
+#### Modifikasi Tabel Existing
+
+| Tabel | Perubahan |
+|-------|-----------|
+| `users.role` | Tambah nilai `merchant` ke enum |
+| `ratings` | Tambah kolom `food_order_id` (nullable FK food_orders) — salah satu dari `order_id` atau `food_order_id` diisi |
+| `chat_rooms` | `service_module` sudah support `zasafood` — tidak perlu ubah schema |
+| `wallet_transactions` | `service_module` sudah support `zasafood` — tidak perlu ubah schema |
+
+---
+
+### API Endpoints ZasaFood
+
+#### Pelanggan
+
+| Endpoint | Fungsi |
+|----------|--------|
+| `GET /food/merchants` | List merchant (filter: `?category=`, `?lat=`, `?lng=`, `?is_open=`) |
+| `GET /food/merchants/{id}` | Detail merchant + semua menu per kategori |
+| `POST /food/orders` | Buat order (validasi: merchant is_open, semua item is_available, saldo cukup) |
+| `GET /food/orders` | Riwayat order pelanggan |
+| `GET /food/orders/{id}` | Detail order + tracking status |
+| `POST /food/orders/{id}/cancel` | Batalkan (hanya dari status `pending`) |
+| `POST /food/orders/{id}/confirm` | Pelanggan konfirmasi terima |
+| `POST /food/orders/{id}/rate` | Submit rating merchant & mitra sekaligus |
+| `GET /food/orders/{id}/rating` | Cek rating user untuk order ini |
+
+#### Merchant
+
+| Endpoint | Fungsi |
+|----------|--------|
+| `GET /food/merchant/profile` | Profil toko sendiri |
+| `PATCH /food/merchant/profile` | Update nama, deskripsi, jam, estimasi masak |
+| `POST /food/merchant/toggle-open` | Buka / tutup toko |
+| `GET /food/merchant/menu/categories` | Daftar kategori menu |
+| `POST /food/merchant/menu/categories` | Tambah kategori |
+| `PATCH /food/merchant/menu/categories/{id}` | Edit kategori |
+| `DELETE /food/merchant/menu/categories/{id}` | Hapus kategori |
+| `GET /food/merchant/menu/items` | Daftar item menu |
+| `POST /food/merchant/menu/items` | Tambah item (dengan foto) |
+| `PATCH /food/merchant/menu/items/{id}` | Edit item |
+| `DELETE /food/merchant/menu/items/{id}` | Hapus item |
+| `POST /food/merchant/menu/items/{id}/toggle` | Toggle is_available |
+| `GET /food/merchant/orders` | Order masuk (filter: `?status=`) |
+| `POST /food/merchant/orders/{id}/accept` | Terima order + set estimasi masak |
+| `POST /food/merchant/orders/{id}/reject` | Tolak order + alasan |
+| `POST /food/merchant/orders/{id}/preparing` | Mulai masak → status: preparing |
+| `POST /food/merchant/orders/{id}/ready` | Selesai masak → status: ready_for_pickup |
+
+#### Mitra
+
+| Endpoint | Fungsi |
+|----------|--------|
+| `GET /food/mitra/orders/available` | Order siap pickup di sekitar GPS mitra |
+| `POST /food/mitra/orders/{id}/accept` | Terima order → status: mitra_on_pickup |
+| `PATCH /food/mitra/orders/{id}/status` | Update status: `picked_up`, `on_delivery`, `delivered` |
+
+#### Admin
+
+| Endpoint | Fungsi |
+|----------|--------|
+| `GET /admin/food/merchants` | List semua merchant + filter status |
+| `GET /admin/food/merchants/{id}` | Detail merchant |
+| `POST /admin/food/merchants/{id}/approve` | Approve merchant baru |
+| `POST /admin/food/merchants/{id}/suspend` | Suspend merchant |
+| `GET /admin/food/orders` | Monitor semua order makanan |
+| `POST /admin/food/orders/{id}/force-complete` | Force complete (intervensi admin) |
+
+---
+
+### Struktur Kode Backend
+
+```
+app/
+├── Http/Controllers/Api/
+│   ├── Food/
+│   │   ├── MerchantController.php       ← CRUD profil & menu merchant
+│   │   ├── FoodOrderController.php      ← Order pelanggan
+│   │   └── FoodMitraController.php      ← Order mitra delivery
+│   ├── Merchant/
+│   │   └── OrderController.php          ← Merchant terima/tolak/update order
+│   └── Admin/
+│       └── FoodController.php           ← Admin approve merchant & monitor
+├── Models/
+│   ├── FoodMerchant.php
+│   ├── FoodMenuCategory.php
+│   ├── FoodMenuItem.php
+│   ├── FoodOrder.php
+│   └── FoodOrderItem.php
+└── Services/
+    └── FoodOrderService.php             ← Logika bisnis: buat order, transisi status,
+                                            kalkulasi komisi, settle wallet
+
+routes/
+└── modules/zasafood.php                 ← Route ZasaFood (sudah ada, tinggal diisi)
+```
+
+### Struktur Kode Frontend
+
+```
+src/pages/zasafood/
+├── FoodPage.jsx               ← Browse merchant (list + map view)
+├── FoodMerchantPage.jsx       ← Detail merchant + menu + keranjang
+├── FoodCartPage.jsx           ← Review keranjang + checkout + pilih alamat
+├── FoodTrackingPage.jsx       ← Tracking order aktif (GPS mitra real-time)
+└── FoodOrdersPage.jsx         ← Riwayat order makanan
+
+src/pages/merchant/
+├── MerchantDashboardPage.jsx  ← Statistik hari ini + order masuk real-time
+├── MerchantOrdersPage.jsx     ← Kelola order aktif & riwayat
+├── MerchantMenuPage.jsx       ← CRUD menu & kategori
+└── MerchantSettingsPage.jsx   ← Profil toko, jam buka, estimasi masak
+
+src/pages/admin/
+├── AdminFoodMerchantsPage.jsx ← Approve/suspend merchant
+└── AdminFoodOrdersPage.jsx    ← Monitor order makanan
+```
+
+---
+
+### Scheduled Tasks Baru
+
+| Perintah | Frekuensi | Fungsi |
+|----------|-----------|--------|
+| `food:auto-confirm` | Setiap menit | Auto-complete order `delivered` melewati `food_auto_confirm_minutes` |
+| `food:timeout-pending` | Setiap menit | Cancel order `pending` yang tidak diterima merchant melewati `food_merchant_timeout_minutes`, refund ke wallet pelanggan |
+
+Daftarkan di `routes/console.php` bersama scheduled tasks ZasaGo yang sudah ada.
+
+---
+
+### Konfigurasi Admin (admin_settings)
+
+| Key | Default | Keterangan |
+|-----|---------|------------|
+| `food_commission_percent` | 15 | % komisi dari subtotal makanan |
+| `food_commission_delivery_percent` | 10 | % komisi dari ongkir delivery |
+| `food_auto_confirm_minutes` | 120 | Menit auto-confirm setelah delivered |
+| `food_merchant_timeout_minutes` | 5 | Batas merchant harus terima order sebelum auto-cancel |
+| `food_mitra_assign_radius_km` | 5 | Radius broadcast notif ke mitra saat order ready_for_pickup |
+
+Tarif ongkir delivery memakai setting ZasaGo yang sudah ada (`shipping_motor_base`, `shipping_motor_per_km`, dst).
+
+---
+
+### Notifikasi ZasaFood (via NotificationService)
+
+| Event | Penerima | Pesan |
+|-------|----------|-------|
+| Order masuk | Merchant | "Order baru dari [Nama Pelanggan]" |
+| Order diterima merchant | Pelanggan | "Pesananmu sedang disiapkan (~X menit)" |
+| Order ditolak merchant | Pelanggan | "Pesananmu ditolak: [alasan]. Saldo dikembalikan." |
+| Pesanan siap | — | Broadcast ke mitra terdekat |
+| Mitra menerima | Pelanggan | "Mitra [Nama] sedang menuju ke [Merchant]" |
+| Mitra pickup | Pelanggan | "Mitra sudah mengambil pesananmu, sedang dalam perjalanan" |
+| Pesanan diantar | Pelanggan | "Pesananmu sudah diantar. Konfirmasi terima?" |
+| Order selesai | Merchant + Mitra | "Order selesai. Saldo masuk ke dompetmu." |
 
 ---
 
@@ -684,12 +1035,35 @@ bash zashaGo/start-tunnel.sh
 
 ### Fase 2 — ZasaFood
 > Target: +3–4 bulan setelah Fase 1 stabil
+> Blueprint lengkap tersedia di Bagian 8
 
-- [ ] Onboarding & dashboard merchant
-- [ ] Manajemen menu & stok
-- [ ] Order makanan end-to-end
-- [ ] Estimasi waktu masak + delivery
-- [ ] Rating merchant & driver per order
+**Database & Backend:**
+- [ ] Migration: tabel `food_merchants`, `food_menu_categories`, `food_menu_items`, `food_orders`, `food_order_items`
+- [ ] Migration: tambah role `merchant` ke `users.role` enum
+- [ ] Migration: tambah kolom `food_order_id` (nullable) ke tabel `ratings`
+- [ ] `FoodOrderService` — buat order, transisi status, kalkulasi komisi, settle wallet
+- [ ] `FoodMerchant*` controllers & model
+- [ ] `Merchant/OrderController` — terima/tolak/update status
+- [ ] `Food/FoodMitraController` — order tersedia & update status mitra
+- [ ] `Admin/FoodController` — approve merchant, monitor order
+- [ ] `NotificationService` — tambah event ZasaFood (foodOrderAccepted, foodOrderReady, dst)
+- [ ] Scheduled task `food:auto-confirm` dan `food:timeout-pending`
+- [ ] Isi `routes/modules/zasafood.php`
+- [ ] Konfigurasi `admin_settings` untuk ZasaFood
+
+**Frontend:**
+- [ ] `FoodPage.jsx` — browse merchant by kategori & jarak
+- [ ] `FoodMerchantPage.jsx` — detail merchant + menu + keranjang
+- [ ] `FoodCartPage.jsx` — checkout + pilih alamat + estimasi ongkir
+- [ ] `FoodTrackingPage.jsx` — tracking mitra real-time (reuse komponen GPS ZasaGo)
+- [ ] `FoodOrdersPage.jsx` — riwayat order makanan
+- [ ] `MerchantDashboardPage.jsx` — dashboard merchant + order masuk real-time
+- [ ] `MerchantOrdersPage.jsx` — kelola order aktif
+- [ ] `MerchantMenuPage.jsx` — CRUD menu & kategori
+- [ ] `MerchantSettingsPage.jsx` — profil toko & jam operasional
+- [ ] `AdminFoodMerchantsPage.jsx` & `AdminFoodOrdersPage.jsx`
+- [ ] Extend `App.jsx` dengan route ZasaFood & Merchant
+- [ ] Extend `BottomNav` dengan tab ZasaFood untuk pelanggan
 
 ### Fase 3 — ZasaMart
 > Target: +2–3 bulan setelah ZasaFood
@@ -772,5 +1146,17 @@ bash zashaGo/start-tunnel.sh
 
 ---
 
+### 19 Mei 2026 — Blueprint ZasaFood Lengkap
+
+| Komponen | Perubahan |
+|----------|-----------|
+| `BLUEPRINT.md §8` | Tulis ulang lengkap: state machine 10 status, alur per aktor (onboarding merchant, pelanggan order, merchant terima, mitra delivery, rating), kalkulasi komisi ganda (makanan + ongkir), tabel integrasi dengan 8 core ZasaQu (Wallet, Notifikasi, GPS, Chat, Rating, Admin, OSRM, AdminSetting) |
+| `BLUEPRINT.md §8 Database` | Definisi 4 tabel baru (food_merchants, food_menu_categories, food_menu_items, food_orders, food_order_items) + modifikasi 2 tabel existing (users.role tambah merchant, ratings tambah food_order_id) |
+| `BLUEPRINT.md §8 API` | 26 endpoint baru terdefinisi lengkap (Pelanggan 9, Merchant 14, Mitra 3, Admin 5) |
+| `BLUEPRINT.md §8 Kode` | Struktur folder backend (FoodOrderService, 4 controller grup) dan frontend (5 halaman pelanggan, 4 halaman merchant, 2 halaman admin) |
+| `BLUEPRINT.md §16` | Roadmap Fase 2 diperinci menjadi 23 task implementasi (database, backend, frontend) |
+
+---
+
 *Dokumen ini adalah living document — diperbarui seiring perkembangan platform.*
-*Terakhir diperbarui: 14 Mei 2026*
+*Terakhir diperbarui: 19 Mei 2026*
