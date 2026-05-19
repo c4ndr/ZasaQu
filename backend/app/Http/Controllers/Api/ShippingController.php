@@ -79,7 +79,9 @@ class ShippingController extends Controller
                     return round($data['routes'][0]['distance'] / 1000, 1);
                 }
             }
-        } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            \Log::warning('OSRM request failed, falling back to Haversine', ['error' => $e->getMessage()]);
+        }
 
         // Fallback: Haversine (garis lurus)
         return round($this->haversine($lat1, $lng1, $lat2, $lng2), 1);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import api from '../../services/api'
 
@@ -8,9 +8,11 @@ export default function AdminSettingsPage() {
   const [editing, setEditing] = useState({})
   const [saving, setSaving] = useState(null)
   const [success, setSuccess] = useState(null)
+  const timerRef = useRef(null)
 
   useEffect(() => {
     api.get('/admin/settings').then(r => setSettings(r.data)).finally(() => setLoading(false))
+    return () => clearTimeout(timerRef.current)
   }, [])
 
   const handleEdit = (key, val) => setEditing({ ...editing, [key]: val })
@@ -22,7 +24,7 @@ export default function AdminSettingsPage() {
       setSettings(prev => prev.map(s => s.key === setting.key ? { ...s, value: editing[setting.key] } : s))
       setEditing(prev => { const n = { ...prev }; delete n[setting.key]; return n })
       setSuccess(setting.key)
-      setTimeout(() => setSuccess(null), 2000)
+      timerRef.current = setTimeout(() => setSuccess(null), 2000)
     } catch (e) {
       alert(e.response?.data?.message || 'Gagal menyimpan.')
     } finally {

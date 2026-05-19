@@ -63,9 +63,10 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('manual', [TopUpController::class, 'createManual']);
         Route::post('virtual-account', [TopUpController::class, 'createVirtualAccount']);
         Route::post('qris', [TopUpController::class, 'createQris']);
-        // Simulasi (development only)
-        Route::post('{id}/simulate-qris', [TopUpController::class, 'simulateQrisCallback']);
-        Route::post('{id}/simulate-va', [TopUpController::class, 'simulateVaCallback']);
+        if (!app()->isProduction()) {
+            Route::post('{id}/simulate-qris', [TopUpController::class, 'simulateQrisCallback']);
+            Route::post('{id}/simulate-va',   [TopUpController::class, 'simulateVaCallback']);
+        }
     });
 
     // Withdraw (mitra only)

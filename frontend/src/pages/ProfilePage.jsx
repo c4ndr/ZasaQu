@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import BottomNav from '../components/BottomNav'
@@ -91,6 +91,15 @@ function Avatar({ name, size = 72 }) {
 export default function ProfilePage() {
   const { user, logout, updateUser } = useAuth()
   const navigate = useNavigate()
+  const timerEditRef = useRef(null)
+  const timerPassRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(timerEditRef.current)
+      clearTimeout(timerPassRef.current)
+    }
+  }, [])
 
   // ── State form edit profil ────────────────────────────────────────────────
   const [showEdit,   setShowEdit]   = useState(false)
@@ -146,7 +155,7 @@ export default function ProfilePage() {
       const res = await api.patch('/auth/profile', payload)
       updateUser(res.data.user)
       setEditOk(true)
-      setTimeout(() => setShowEdit(false), 1200)
+      timerEditRef.current = setTimeout(() => setShowEdit(false), 1200)
     } catch (err) {
       const errs = err.response?.data?.errors
       setEditErr(errs ? Object.values(errs).flat().join(' ') : (err.response?.data?.message ?? 'Gagal menyimpan.'))
@@ -162,7 +171,7 @@ export default function ProfilePage() {
     try {
       await api.post('/auth/change-password', { current_password: oldPass, new_password: newPass, new_password_confirmation: confPass })
       setPassOk(true); setOldPass(''); setNewPass(''); setConfPass('')
-      setTimeout(() => setShowPassForm(false), 1500)
+      timerPassRef.current = setTimeout(() => setShowPassForm(false), 1500)
     } catch (err) {
       setPassErr(err.response?.data?.message ?? 'Gagal mengubah password.')
     } finally { setSavingPass(false) }
