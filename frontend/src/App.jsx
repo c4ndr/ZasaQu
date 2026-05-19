@@ -70,7 +70,7 @@ function DashboardRedirect() {
   const { user } = useAuth()
   if (user?.role === 'merchant')                          return <Navigate to="/merchant" replace />
   if (user?.role === 'admin')                             return <Navigate to="/admin" replace />
-  if (user?.isMitra && user?.status === 'pending_review') return <Navigate to="/mitra/onboarding" replace />
+  if (user?.role?.startsWith('mitra') && user?.status === 'pending_review') return <Navigate to="/mitra/onboarding" replace />
   return <DashboardPage />
 }
 

@@ -64,7 +64,7 @@ const IconFood = () => (
 
 const PELANGGAN_ITEMS = (name) => [
   { to: '/dashboard', icon: <IconHome />,                    label: 'Beranda',  exact: true },
-  { to: '/orders',    icon: <IconBox />,                     label: 'Order' },
+  { to: '/orders',    icon: <IconBox />,                     label: 'ZasaGo' },
   { to: '/food',      icon: <IconFood />,                    label: 'ZasaFood' },
   { to: '/wallet',    icon: <IconWallet />,                  label: 'Wallet' },
   { to: '/profile',   icon: <AvatarIcon name={name} />,      label: 'Akun', avatar: true },
@@ -80,7 +80,7 @@ const MITRA_ITEMS = (name) => [
 
 export default function BottomNav() {
   const { user } = useAuth()
-  if (!user || user.role === 'admin') return null
+  if (!user || user.role === 'admin' || user.role === 'merchant') return null
 
   const items = user.role?.startsWith('mitra') ? MITRA_ITEMS(user.name) : PELANGGAN_ITEMS(user.name)
 

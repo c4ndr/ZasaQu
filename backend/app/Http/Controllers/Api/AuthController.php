@@ -52,6 +52,16 @@ class AuthController extends Controller
             ]);
         }
 
+        if ($user->isPendingReview()) {
+            // Mitra pending_review boleh login — frontend redirect ke onboarding
+            $token = $this->authService->createToken($user);
+            return response()->json([
+                'message' => 'Login berhasil. Akun Anda sedang dalam proses verifikasi.',
+                'user'    => $user->load('wallet', 'mitraDetail'),
+                'token'   => $token,
+            ]);
+        }
+
         if (!$user->isActive()) {
             return response()->json([
                 'message' => 'Akun Anda ' . $user->status . '. Hubungi admin untuk informasi lebih lanjut.',

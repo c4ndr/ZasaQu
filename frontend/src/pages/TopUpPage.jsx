@@ -369,7 +369,7 @@ export default function TopUpPage() {
                     rejected:  { label: 'Ditolak',       color: '#F56565' },
                     expired:   { label: 'Kedaluwarsa',   color: '#A0A0BC' },
                   }
-                  const METHOD_MAP = { bank_manual: '📋 Manual', virtual_account: '🏦 VA', qris: '⚡ QRIS' }
+                  const METHOD_MAP = { bank_manual: '📋 Manual', virtual_account: '🏦 VA', qris: '⚡ QRIS', midtrans: '💳 Midtrans' }
                   const s = STATUS_MAP[r.status] ?? { label: r.status, color: '#A0A0BC' }
                   return (
                     <div key={r.id} style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '14px 16px' }}>
