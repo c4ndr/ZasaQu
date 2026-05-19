@@ -1,0 +1,24 @@
+# Backend
+backend/vendor/
+backend/.env
+backend/storage/*.key
+backend/public/storage
+backend/public/hot
+backend/public/build
+backend/.phpunit.result.cache
+backend/.phpunit.cache
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.env
+frontend/*.local
+
+# Common
+.DS_Store
+Thumbs.db
+*.log
+
+# Storage uploads (tidak di-track di git)
+backend/storage/app/public/order-photos/
