@@ -87,6 +87,10 @@ export default function FoodTrackingPage() {
 
   useEffect(() => {
     loadOrder()
+    // Cek apakah sudah pernah rating (agar form tidak muncul lagi setelah refresh)
+    api.get(`/food/orders/${id}/rating`)
+      .then(r => { if (r.data.rated) setRated(true) })
+      .catch(() => {})
     pollRef.current = setInterval(loadOrder, 10000)
     return () => clearInterval(pollRef.current)
   }, [loadOrder])

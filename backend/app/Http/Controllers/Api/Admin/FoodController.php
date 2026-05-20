@@ -90,7 +90,15 @@ class FoodController extends Controller
             ->latest()
             ->paginate(25);
 
-        return response()->json($orders);
+        return response()->json([
+            'data' => $orders->items(),
+            'meta' => [
+                'current_page' => $orders->currentPage(),
+                'last_page'    => $orders->lastPage(),
+                'total'        => $orders->total(),
+                'per_page'     => $orders->perPage(),
+            ],
+        ]);
     }
 
     public function suspendMerchant(Request $request, int $id): JsonResponse

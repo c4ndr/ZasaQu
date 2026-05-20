@@ -52,8 +52,9 @@ class RatingService
 
     private function recalculateMitraRating(User $mitra): void
     {
+        // Gabungkan rating ZasaGo ('customer') dan ZasaFood ('customer_to_mitra')
         $avg = Rating::where('ratee_id', $mitra->id)
-            ->where('rater_role', 'customer')
+            ->whereIn('rater_role', ['customer', 'customer_to_mitra'])
             ->avg('score');
 
         $mitra->mitraDetail?->update([

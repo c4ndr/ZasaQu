@@ -319,8 +319,8 @@ class FoodOrderService
 
     public function customerCancel(FoodOrder $order): FoodOrder
     {
-        if (!in_array($order->status, ['pending'])) {
-            throw new \Exception('Order hanya bisa dibatalkan saat masih pending.');
+        if (!in_array($order->status, ['pending', 'merchant_accepted'])) {
+            throw new \Exception('Order hanya bisa dibatalkan saat status pending atau merchant_accepted.');
         }
 
         return DB::transaction(function () use ($order) {
@@ -430,6 +430,7 @@ class FoodOrderService
                         'score'         => $ratings['mitra_score'],
                         'comment'       => $ratings['mitra_comment'] ?? null,
                     ]);
+                    $this->recalculateMitraRating($order->mitra_id);
                 }
             }
         });
@@ -564,6 +565,17 @@ class FoodOrderService
                 );
             }
         }
+    }
+
+    private function recalculateMitraRating(int $mitraId): void
+    {
+        // Gabungkan rating dari ZasaGo (rater_role='customer') dan ZasaFood (rater_role='customer_to_mitra')
+        $avg = \App\Models\Rating::where('ratee_id', $mitraId)
+            ->whereIn('rater_role', ['customer', 'customer_to_mitra'])
+            ->avg('score');
+
+        \App\Models\MitraDetail::where('user_id', $mitraId)
+            ->update(['average_rating' => round((float) $avg, 2)]);
     }
 
     private function recalculateMerchantRating(\App\Models\FoodMerchant $merchant): void

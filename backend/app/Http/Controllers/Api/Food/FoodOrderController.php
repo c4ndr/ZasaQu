@@ -187,6 +187,24 @@ class FoodOrderController extends Controller
         return response()->json(['message' => 'Rating berhasil dikirim. Terima kasih!']);
     }
 
+    public function getRating(Request $request, int $id): JsonResponse
+    {
+        $order = FoodOrder::where('customer_id', $request->user()->id)->findOrFail($id);
+
+        $ratings = \App\Models\Rating::where('food_order_id', $order->id)
+            ->where('rater_id', $request->user()->id)
+            ->get(['rater_role', 'score', 'comment']);
+
+        $merchantRating = $ratings->firstWhere('rater_role', 'customer_to_merchant');
+        $mitraRating    = $ratings->firstWhere('rater_role', 'customer_to_mitra');
+
+        return response()->json([
+            'rated'           => $ratings->isNotEmpty(),
+            'merchant_rating' => $merchantRating ? $merchantRating->only(['score', 'comment']) : null,
+            'mitra_rating'    => $mitraRating    ? $mitraRating->only(['score', 'comment'])    : null,
+        ]);
+    }
+
     public function mitraLocation(Request $request, int $id): JsonResponse
     {
         $order = FoodOrder::where('customer_id', $request->user()->id)->findOrFail($id);

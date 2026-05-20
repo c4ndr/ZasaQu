@@ -20,6 +20,7 @@ Route::prefix('food')->group(function () {
     Route::post('orders/{id}/cancel',          [FoodOrderController::class, 'cancel']);
     Route::post('orders/{id}/confirm',         [FoodOrderController::class, 'confirm']);
     Route::post('orders/{id}/rate',            [FoodOrderController::class, 'rate']);
+    Route::get('orders/{id}/rating',           [FoodOrderController::class, 'getRating']);
     Route::get('orders/{id}/mitra-location',   [FoodOrderController::class, 'mitraLocation']);
 });
 
