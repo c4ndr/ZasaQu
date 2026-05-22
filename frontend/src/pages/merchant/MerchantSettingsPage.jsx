@@ -67,7 +67,8 @@ export default function MerchantSettingsPage() {
     if (!file) return
 
     const maxBytes = type === 'logo' ? 5 * 1024 * 1024 : 10 * 1024 * 1024
-    if (!file.type.startsWith('image/')) {
+    const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|heic|gif)$/i.test(file.name)
+    if (!isImage) {
       showToast('error', 'File harus berupa gambar (JPG, PNG, WEBP).')
       e.target.value = ''
       return

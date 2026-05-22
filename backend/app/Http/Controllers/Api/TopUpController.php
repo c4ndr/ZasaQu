@@ -179,7 +179,7 @@ class TopUpController extends Controller
 
                 if (!$topUp) return;
 
-                $topUp->update(['status' => 'confirmed']);
+                $topUp->update(['status' => 'confirmed', 'confirmed_at' => now()]);
 
                 $this->walletService->credit(
                     $topUp->user,

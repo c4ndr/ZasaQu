@@ -41,7 +41,7 @@ function FitRoute({ pickup, dropoff }) {
   const map = useMap()
   useEffect(() => {
     try { map.fitBounds([pickup, dropoff], { padding: [48, 48] }) } catch {}
-  }, []) // eslint-disable-line
+  }, [map, pickup, dropoff])
   return null
 }
 

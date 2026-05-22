@@ -38,7 +38,7 @@ class OrderService
                                 ->pluck('value', 'key');
 
             if ($data['payment_method'] === 'wallet') {
-                $wallet = $customer->wallet;
+                $wallet = Wallet::lockForUpdate()->where('user_id', $customer->id)->firstOrFail();
                 if ($wallet->availableBalance() < $fee) {
                     throw new \Exception('Saldo tidak mencukupi. Silakan top up terlebih dahulu.');
                 }
@@ -115,7 +115,7 @@ class OrderService
             $fee = (float) $data['shipping_fee'];
 
             if ($data['payment_method'] === 'wallet') {
-                $wallet = $customer->wallet;
+                $wallet = Wallet::lockForUpdate()->where('user_id', $customer->id)->firstOrFail();
                 if ($wallet->availableBalance() < $fee) {
                     throw new \Exception('Saldo tidak mencukupi.');
                 }
@@ -341,7 +341,7 @@ class OrderService
             // Kembalikan saldo yang terkunci — lockForUpdate mencegah race condition
             if ($locked->payment_method === 'wallet' && $locked->payment_status === 'pending') {
                 $wallet = Wallet::lockForUpdate()->where('user_id', $locked->customer_id)->firstOrFail();
-                $wallet->decrement('locked_balance', (float) $locked->shipping_fee);
+                $wallet->decrement('locked_balance', min((float) $locked->shipping_fee, (float) $wallet->locked_balance));
             }
 
             // Jika jastip: kurangi count di sesi

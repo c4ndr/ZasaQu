@@ -32,7 +32,7 @@ class WithdrawController extends Controller
             'destination_type'   => ['required', 'in:dana,ovo,gopay,bank'],
             'destination_number' => ['required', 'string', 'max:30'],
             'destination_name'   => ['required', 'string', 'max:100'],
-            'bank_name'          => ['required_if:destination_type,bank', 'nullable', 'string', 'max:50'],
+            'bank_name'          => ['required_if:destination_type,bank', 'string', 'max:50'],
         ]);
 
         try {

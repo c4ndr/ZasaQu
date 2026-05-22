@@ -3,9 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\QrisTransaction;
-use App\Models\TopUpRequest;
 use App\Models\VirtualAccount;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Expire VA dan QRIS yang sudah melewati waktu.
@@ -24,9 +24,17 @@ class ExpirePayments extends Command
             ->where('expired_at', '<', $now)
             ->get();
 
+        $vaCount = 0;
         foreach ($expiredVa as $va) {
-            $va->update(['status' => 'expired']);
-            $va->topUpRequest()->where('status', 'pending')->update(['status' => 'expired']);
+            try {
+                DB::transaction(function () use ($va) {
+                    $locked = VirtualAccount::lockForUpdate()->findOrFail($va->id);
+                    if ($locked->status !== 'pending') return; // sudah dibayar atau diproses
+                    $locked->update(['status' => 'expired']);
+                    $locked->topUpRequest()->where('status', 'pending')->update(['status' => 'expired']);
+                });
+                $vaCount++;
+            } catch (\Throwable) {}
         }
 
         // Expire QRIS
@@ -34,11 +42,19 @@ class ExpirePayments extends Command
             ->where('expired_at', '<', $now)
             ->get();
 
+        $qrisCount = 0;
         foreach ($expiredQris as $qris) {
-            $qris->update(['status' => 'expired']);
-            $qris->topUpRequest()->where('status', 'pending')->update(['status' => 'expired']);
+            try {
+                DB::transaction(function () use ($qris) {
+                    $locked = QrisTransaction::lockForUpdate()->findOrFail($qris->id);
+                    if ($locked->status !== 'pending') return; // sudah dibayar atau diproses
+                    $locked->update(['status' => 'expired']);
+                    $locked->topUpRequest()->where('status', 'pending')->update(['status' => 'expired']);
+                });
+                $qrisCount++;
+            } catch (\Throwable) {}
         }
 
-        $this->info("Expired: {$expiredVa->count()} VA, {$expiredQris->count()} QRIS.");
+        $this->info("Expired: {$vaCount} VA, {$qrisCount} QRIS.");
     }
 }

@@ -40,6 +40,7 @@ class FoodOrderService
             $itemLines = [];
             foreach ($data['items'] as $line) {
                 $menuItem = FoodMenuItem::where('merchant_id', $merchant->id)
+                    ->lockForUpdate()
                     ->findOrFail($line['menu_item_id']);
 
                 if (!$menuItem->is_available) {
@@ -72,7 +73,7 @@ class FoodOrderService
 
             // Debit wallet pelanggan (non-COD)
             if ($data['payment_method'] === 'wallet') {
-                $wallet = $customer->wallet;
+                $wallet = Wallet::lockForUpdate()->where('user_id', $customer->id)->firstOrFail();
                 if ($wallet->availableBalance() < $total) {
                     throw new \Exception('Saldo tidak mencukupi. Silakan top up terlebih dahulu.');
                 }
@@ -457,10 +458,18 @@ class FoodOrderService
 
     private function settleWallet(FoodOrder $order): void
     {
-        // Lepas lock balance pelanggan — lockForUpdate mencegah race condition concurrent settle
+        // Debit & lepas lock balance pelanggan
         if ($order->payment_method === 'wallet') {
             $customerWallet = Wallet::lockForUpdate()->where('user_id', $order->customer_id)->firstOrFail();
             $customerWallet->decrement('locked_balance', min($order->total_amount, (float) $customerWallet->locked_balance));
+            $this->walletService->debit(
+                $order->customer,
+                $order->total_amount,
+                'order_payment',
+                "Pembayaran order #{$order->order_number}",
+                $order,
+                'zasafood'
+            );
         }
 
         // Tandai COD sebagai lunas

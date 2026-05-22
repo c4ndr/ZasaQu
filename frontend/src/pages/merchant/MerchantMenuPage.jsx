@@ -35,9 +35,9 @@ function ItemModal({ item, categories, onClose, onSaved }) {
       Object.entries(form).forEach(([k, v]) => { if (v !== '' && v !== null) fd.append(k, v) })
       if (photo) fd.append('photo', photo)
 
-      const url   = item ? `/food/merchant/menu/items/${item.id}` : '/food/merchant/menu/items'
-      const method = item ? 'patch' : 'post'
-      const res   = await api[method](url, fd)
+      const url = item ? `/food/merchant/menu/items/${item.id}` : '/food/merchant/menu/items'
+      if (item) fd.append('_method', 'PATCH')
+      const res = await api.post(url, fd)
       onSaved(res.data.data)
     } catch (err) {
       const errs = err.response?.data?.errors
