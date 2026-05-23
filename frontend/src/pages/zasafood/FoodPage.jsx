@@ -21,6 +21,7 @@ export default function FoodPage() {
 
   useEffect(() => {
     setLoading(true)
+    const controller = new AbortController()
     const params = {}
     if (category) params.category = category
     if (search)   params.search   = search
@@ -40,11 +41,13 @@ export default function FoodPage() {
     }
 
     function fetch_() {
-      api.get('/food/merchants', { params })
+      api.get('/food/merchants', { params, signal: controller.signal })
         .then(r => setMerchants(r.data.data))
-        .catch(() => {})
+        .catch(err => { if (err.name !== 'CanceledError' && err.name !== 'AbortError') {} })
         .finally(() => setLoading(false))
     }
+
+    return () => controller.abort()
   }, [category, search])
 
   return (

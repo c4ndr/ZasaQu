@@ -15,6 +15,13 @@ frontend/dist-ssr/
 frontend/.env
 frontend/*.local
 
+# Android (Capacitor)
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/local.properties
+frontend/.env.production
+
 # Common
 .DS_Store
 Thumbs.db

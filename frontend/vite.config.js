@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  // base: './' diperlukan agar Capacitor (file://) bisa load asset dengan benar
+  base: './',
   plugins: [react(), tailwindcss()],
   server: {
     host: '0.0.0.0',

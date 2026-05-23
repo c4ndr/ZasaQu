@@ -238,7 +238,7 @@ export default function FoodCartPage() {
           {[
             ['Subtotal', fmtRp(subtotal)],
             ['Ongkir', loadingEst ? 'Menghitung...' : estimate ? fmtRp(deliveryFee) : 'Masukkan alamat'],
-            estimate ? [`Estimasi tiba ~${estimate.estimated_minutes} menit`, ''] : null,
+            estimate?.estimated_minutes ? [`Estimasi tiba ~${estimate.estimated_minutes} menit`, ''] : null,
           ].filter(Boolean).map(([l, v]) => v && (
             <div key={l} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
               <span style={{ color: 'var(--k-sub)' }}>{l}</span>

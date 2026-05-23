@@ -162,7 +162,9 @@ export default function FoodTrackingPage() {
           <MapContainer center={[gps.lat, gps.lng]} zoom={15} style={{ height: '100%' }} zoomControl={false}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <Marker position={[gps.lat, gps.lng]} icon={mitraIcon} />
-            <Marker position={[order.merchant.lat, order.merchant.lng]} icon={merchantPin} />
+            {order.merchant?.lat && order.merchant?.lng && (
+              <Marker position={[order.merchant.lat, order.merchant.lng]} icon={merchantPin} />
+            )}
             <Marker position={[order.delivery_lat, order.delivery_lng]} icon={destPin} />
             <MapFollower center={gps} />
           </MapContainer>

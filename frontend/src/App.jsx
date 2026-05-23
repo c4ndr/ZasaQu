@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { unlockAudio } from './hooks/useNewOrderNotif'
@@ -83,6 +83,14 @@ function MitraRoute({ children }) {
 }
 
 function AppRoutes() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const handler = () => navigate('/login', { replace: true })
+    window.addEventListener('zasaqu:unauthorized', handler)
+    return () => window.removeEventListener('zasaqu:unauthorized', handler)
+  }, [navigate])
+
   return (
     <>
       {/* Notifikasi order untuk mitra — aktif di semua halaman */}

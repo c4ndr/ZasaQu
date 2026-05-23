@@ -20,7 +20,8 @@ api.interceptors.response.use(
     if (err.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      // Pakai custom event agar React Router yang navigasi (aman di Capacitor WebView)
+      window.dispatchEvent(new CustomEvent('zasaqu:unauthorized'))
     }
     return Promise.reject(err)
   }
