@@ -20,10 +20,14 @@ use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Api\Admin\StatController as AdminStatController;
 use App\Http\Controllers\Api\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Api\Admin\PromoController as AdminPromoController;
 use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\NotificationController;
 use Illuminate\Support\Facades\Route;
+
+// ─── Health Check ──────────────────────────────────────────────────────────
+Route::get('health', \App\Http\Controllers\Api\HealthController::class);
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
 Route::prefix('auth')->group(function () {
@@ -48,6 +52,47 @@ Route::prefix('auth')->group(function () {
 
 // ─── Webhook Midtrans (publik, tanpa auth) ─────────────────────────────────
 Route::post('topup/midtrans/callback', [TopUpController::class, 'midtransCallback']);
+
+// ─── Promo publik (tanpa auth) ─────────────────────────────────────────────
+Route::get('promos', function () {
+    $promos = \App\Models\Promo::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
+    $result = $promos->map(function ($promo) {
+        $data = $promo->toArray();
+        if (!empty($promo->image_path)) {
+            $fullPath = storage_path('app/public/' . $promo->image_path);
+            if (file_exists($fullPath)) {
+                $mime = mime_content_type($fullPath) ?: 'image/jpeg';
+                $data['image_data_url'] = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($fullPath));
+            }
+        }
+        return $data;
+    });
+    return response()->json($result);
+});
+
+// ─── Info aplikasi publik (tanpa auth) ─────────────────────────────────────
+Route::get('app-info', function () {
+    $keys = ['app_name', 'app_tagline', 'app_logo_path', 'maintenance_mode'];
+    $rows = \App\Models\AdminSetting::whereIn('key', $keys)->get()->keyBy('key');
+    $logoPath = $rows['app_logo_path']->value ?? '';
+
+    // Return logo sebagai base64 data URL agar tidak bergantung HTTP image loading di WebView
+    $logoDataUrl = null;
+    if ($logoPath) {
+        $fullPath = storage_path('app/public/' . $logoPath);
+        if (file_exists($fullPath)) {
+            $mime        = mime_content_type($fullPath) ?: 'image/jpeg';
+            $logoDataUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($fullPath));
+        }
+    }
+
+    return response()->json([
+        'app_name'         => $rows['app_name']->value         ?? 'ZasaQu',
+        'app_tagline'      => $rows['app_tagline']->value      ?? '',
+        'app_logo_url'     => $logoDataUrl,
+        'maintenance_mode' => ($rows['maintenance_mode']->value ?? '0') === '1',
+    ]);
+});
 
 // ─── Route yang butuh login & akun aktif ───────────────────────────────────
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
@@ -120,7 +165,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // GPS mitra
     Route::prefix('mitra/gps')->middleware('role:mitra_motor,mitra_mobil')->group(function () {
         Route::get('status', [GpsController::class, 'status']);
-        Route::post('update', [GpsController::class, 'update']);
+        Route::post('update', [GpsController::class, 'update'])->middleware('throttle:30,1'); // max 30x/menit per mitra
         Route::post('lost', [GpsController::class, 'reportLost']);
     });
     Route::get('orders/{id}/location', [GpsController::class, 'getLocation']);
@@ -164,6 +209,15 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::prefix('settings')->group(function () {
             Route::get('/', [AdminSettingController::class, 'index']);
             Route::put('{key}', [AdminSettingController::class, 'update']);
+            Route::post('upload-logo', [AdminSettingController::class, 'uploadLogo']);
+            Route::post('upload-logo-base64', [AdminSettingController::class, 'uploadLogoBase64']);
+        });
+
+        Route::prefix('promos')->group(function () {
+            Route::get('/', [AdminPromoController::class, 'index']);
+            Route::post('/', [AdminPromoController::class, 'store']);
+            Route::post('{id}', [AdminPromoController::class, 'update']); // POST+_method=PUT for multipart
+            Route::delete('{id}', [AdminPromoController::class, 'destroy']);
         });
 
         Route::prefix('users')->group(function () {

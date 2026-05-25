@@ -23,9 +23,11 @@ function playChatSound() {
 // orderIds: array string/number ID order aktif
 export default function useOrderChatBadges(orderIds) {
   const [unread, setUnread] = useState({})   // { [orderId]: true }
-  const roomMap   = useRef({})               // { [orderId]: roomId }
-  const location  = useLocation()
-  const locRef    = useRef(location.pathname)
+  const roomMap    = useRef({})              // { [orderId]: roomId }
+  // Ref berisi Map roomId → cleanup fn; diisi async tapi dibaca sync saat unmount
+  const channelMap = useRef({})             // { [roomId]: cleanup fn }
+  const location   = useLocation()
+  const locRef     = useRef(location.pathname)
 
   useEffect(() => { locRef.current = location.pathname }, [location.pathname])
 
@@ -37,20 +39,20 @@ export default function useOrderChatBadges(orderIds) {
 
   useEffect(() => {
     if (!orderIds?.length) return
-    const cleanups = []
+    let cancelled = false
 
     orderIds.forEach(orderId => {
       if (roomMap.current[orderId]) return // sudah subscribe
 
       api.get(`/chat/orders/${orderId}`)
         .then(res => {
+          if (cancelled) return
           const roomId = res.data.room?.id
-          if (!roomId) return
+          if (!roomId || channelMap.current[roomId]) return
           roomMap.current[orderId] = roomId
 
-          const ch = echo.channel(`chat.${roomId}`)
-          ch.listen('.message.new', (data) => {
-            // Cek apakah user sedang buka chat order ini
+          const ch = echo.private(`chat.${roomId}`)
+          ch.listen('.message.new', () => {
             const path = locRef.current
             const onThisChat = path.includes(`/orders/${orderId}/chat`) ||
                                path.includes(`/mitra/orders/${orderId}/chat`)
@@ -59,14 +61,16 @@ export default function useOrderChatBadges(orderIds) {
               setUnread(prev => ({ ...prev, [String(orderId)]: true }))
             }
           })
-          cleanups.push(() => echo.leave(`chat.${roomId}`))
+          channelMap.current[roomId] = () => echo.leave(`chat.${roomId}`)
         })
         .catch(() => {})
     })
 
     return () => {
-      cleanups.forEach(fn => fn())
-      roomMap.current = {}
+      cancelled = true
+      Object.values(channelMap.current).forEach(fn => fn())
+      channelMap.current = {}
+      roomMap.current    = {}
     }
   }, [orderIds?.join?.(',')]) // eslint-disable-line
 

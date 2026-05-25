@@ -41,13 +41,24 @@ class FoodMitraController extends Controller
 
     public function myOrders(Request $request): JsonResponse
     {
-        $orders = FoodOrder::where('mitra_id', $request->user()->id)
+        $activeStatuses = ['mitra_on_pickup', 'picked_up', 'on_delivery', 'delivered'];
+
+        // Order aktif: semua dimuat agar mitra tidak melewatkan tugas
+        $active = FoodOrder::where('mitra_id', $request->user()->id)
             ->with(['merchant:id,name,address,lat,lng,logo_path', 'customer:id,name,phone', 'items'])
+            ->whereIn('status', $activeStatuses)
             ->latest()
-            ->limit(100)
             ->get();
 
-        return response()->json(['data' => $orders]);
+        // Riwayat selesai: 30 terbaru cukup
+        $history = FoodOrder::where('mitra_id', $request->user()->id)
+            ->with(['merchant:id,name,address,lat,lng,logo_path', 'customer:id,name,phone', 'items'])
+            ->whereNotIn('status', $activeStatuses)
+            ->latest()
+            ->limit(30)
+            ->get();
+
+        return response()->json(['data' => $active->concat($history)->values()]);
     }
 
     public function accept(Request $request, int $id): JsonResponse

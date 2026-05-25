@@ -152,6 +152,47 @@ class AdminSettingsSeeder extends Seeder
                 'label'       => 'Radius Broadcast Mitra ZasaFood (km)',
                 'description' => 'Radius notifikasi ke mitra saat pesanan siap diambil',
             ],
+
+            // ── Foto & Penyimpanan ────────────────────────────────────────────
+            [
+                'key'         => 'photos_expire_days',
+                'value'       => '90',
+                'type'        => 'integer',
+                'label'       => 'Masa Simpan Foto Order (hari)',
+                'description' => 'Berapa hari foto order disimpan sebelum dihapus otomatis',
+            ],
+
+            // ── Identitas Aplikasi ────────────────────────────────────────────
+            [
+                'key'         => 'app_name',
+                'value'       => 'ZasaQu',
+                'type'        => 'string',
+                'label'       => 'Nama Aplikasi',
+                'description' => 'Nama aplikasi yang ditampilkan di seluruh platform',
+            ],
+            [
+                'key'         => 'app_tagline',
+                'value'       => 'Kurir & Kuliner Lokal Andalan',
+                'type'        => 'string',
+                'label'       => 'Tagline Aplikasi',
+                'description' => 'Slogan singkat aplikasi yang ditampilkan di halaman utama',
+            ],
+            [
+                'key'         => 'app_logo_path',
+                'value'       => '',
+                'type'        => 'string',
+                'label'       => 'Path Logo Aplikasi',
+                'description' => 'Path relatif logo di storage publik (dikelola via upload logo)',
+            ],
+
+            // ── Operasional ───────────────────────────────────────────────────
+            [
+                'key'         => 'maintenance_mode',
+                'value'       => '0',
+                'type'        => 'boolean',
+                'label'       => 'Mode Maintenance',
+                'description' => 'Aktifkan untuk menutup akses pelanggan & mitra sementara',
+            ],
         ];
 
         foreach ($settings as $setting) {

@@ -37,6 +37,12 @@ class OrderService
             $settings       = AdminSetting::whereIn('key', [$baseSetting, $perKmSetting, $commSetting])
                                 ->pluck('value', 'key');
 
+            // Validasi asuransi: item_value melebihi batas maksimal yang tidak diasuransikan
+            $insuranceMax = (float) (AdminSetting::where('key', 'insurance_max_value')->value('value') ?? 200000);
+            if (($data['item_value'] ?? 0) > $insuranceMax && !($data['requires_disclaimer'] ?? false)) {
+                throw new \Exception("Nilai barang melebihi Rp " . number_format($insuranceMax, 0, ',', '.') . ". Wajib menyetujui disclaimer risiko pengiriman.");
+            }
+
             if ($data['payment_method'] === 'wallet') {
                 $wallet = Wallet::lockForUpdate()->where('user_id', $customer->id)->firstOrFail();
                 if ($wallet->availableBalance() < $fee) {
@@ -83,7 +89,7 @@ class OrderService
     public function notifyMitrasNewOrder(Order $order, array $mitras): void
     {
         foreach ($mitras as $mitra) {
-            $this->notifService->newOrderAvailable($mitra, $order->order_number);
+            $this->notifService->newOrderAvailable($mitra, $order->order_number, $order->id);
         }
     }
 
@@ -113,6 +119,12 @@ class OrderService
 
         return DB::transaction(function () use ($customer, $session, $data) {
             $fee = (float) $data['shipping_fee'];
+
+            // Validasi asuransi untuk order jastip
+            $insuranceMax = (float) (AdminSetting::where('key', 'insurance_max_value')->value('value') ?? 200000);
+            if (($data['item_value'] ?? 0) > $insuranceMax && !($data['requires_disclaimer'] ?? false)) {
+                throw new \Exception("Nilai barang melebihi Rp " . number_format($insuranceMax, 0, ',', '.') . ". Wajib menyetujui disclaimer risiko pengiriman.");
+            }
 
             if ($data['payment_method'] === 'wallet') {
                 $wallet = Wallet::lockForUpdate()->where('user_id', $customer->id)->firstOrFail();
@@ -166,7 +178,7 @@ class OrderService
                 ));
             }
 
-            $this->notifService->jastipOrderReceived($customer, $order->order_number);
+            $this->notifService->jastipOrderReceived($customer, $order->order_number, $order->id);
 
             return $order;
         });
@@ -194,12 +206,7 @@ class OrderService
 
     public function updateStatus(Order $order, string $newStatus): void
     {
-        $allowed = $this->allowedNextStatus($order->status);
-        if (!in_array($newStatus, $allowed)) {
-            throw new \Exception("Tidak bisa ubah status dari '{$order->status}' ke '{$newStatus}'.");
-        }
-
-        // Gate foto per transisi — hanya aktif jika pelanggan mengaktifkan wajib foto
+        // Cek foto sebelum masuk transaction (tidak butuh lock, hanya baca)
         if ($order->require_photo) {
             $photoGate = [
                 'picked_up'   => ['stage' => 'pickup',   'label' => 'tiba di pickup'],
@@ -222,31 +229,46 @@ class OrderService
             'completed'   => 'completed_at',
         ];
 
-        $updateData = ['status' => $newStatus];
-        if (!empty($timestamps[$newStatus])) {
-            $updateData[$timestamps[$newStatus]] = now();
-        }
+        $prevStatus = DB::transaction(function () use ($order, $newStatus, $timestamps) {
+            // Lock baris order agar concurrent request (mis. mitra double-tap + admin force-complete)
+            // tidak bisa keduanya lolos validasi status dan double-trigger finalizeOrder
+            $locked = Order::lockForUpdate()->findOrFail($order->id);
 
-        $prevStatus = $order->status;
-        $order->update($updateData);
+            $allowed = $this->allowedNextStatus($locked->status);
+            if (!in_array($newStatus, $allowed)) {
+                throw new \Exception("Tidak bisa ubah status dari '{$locked->status}' ke '{$newStatus}'.");
+            }
+
+            $updateData = ['status' => $newStatus];
+            if (!empty($timestamps[$newStatus])) {
+                $updateData[$timestamps[$newStatus]] = now();
+            }
+
+            $prev = $locked->status;
+            $locked->update($updateData);
+
+            // Sync objek $order agar caller mendapat data terbaru
+            $order->setRawAttributes($locked->fresh()->getAttributes());
+
+            if ($newStatus === 'completed') {
+                $this->finalizeOrder($locked);
+            }
+
+            return $prev;
+        });
 
         broadcast(new OrderStatusUpdated($order->fresh(), $prevStatus));
 
-        // Kirim notifikasi ke customer berdasarkan status baru
         $customer = $order->customer;
         match ($newStatus) {
-            'accepted'    => $this->notifService->orderAccepted($customer, $order->order_number),
-            'on_pickup'   => $this->notifService->orderOnPickup($customer, $order->order_number),
-            'picked_up'   => $this->notifService->orderPickedUp($customer, $order->order_number),
-            'on_delivery' => $this->notifService->orderOnDelivery($customer, $order->order_number),
-            'delivered'   => $this->notifService->orderDelivered($customer, $order->order_number),
-            'completed'   => $this->notifService->orderCompleted($customer, $order->mitra, $order->order_number),
+            'accepted'    => $this->notifService->orderAccepted($customer, $order->order_number, $order->id),
+            'on_pickup'   => $this->notifService->orderOnPickup($customer, $order->order_number, $order->id),
+            'picked_up'   => $this->notifService->orderPickedUp($customer, $order->order_number, $order->id),
+            'on_delivery' => $this->notifService->orderOnDelivery($customer, $order->order_number, $order->id),
+            'delivered'   => $this->notifService->orderDelivered($customer, $order->order_number, $order->id),
+            'completed'   => $this->notifService->orderCompleted($customer, $order->mitra, $order->order_number, $order->id),
             default       => null,
         };
-
-        if ($newStatus === 'completed') {
-            $this->finalizeOrder($order);
-        }
     }
 
     // ─── Selesaikan order dan transfer saldo ────────────────────────────────
@@ -362,7 +384,7 @@ class OrderService
 
             // Notifikasi ke mitra jika order sudah diterima — mungkin sedang di jalan
             if ($locked->mitra_id) {
-                $this->notifService->orderCancelledForMitra($locked->mitra, $locked->order_number);
+                $this->notifService->orderCancelledForMitra($locked->mitra, $locked->order_number, $locked->id);
             }
         });
     }

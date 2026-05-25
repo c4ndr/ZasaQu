@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet'
+import { MapContainer, Marker, useMap } from 'react-leaflet'
+import SatelliteTiles from '../../components/SatelliteTiles'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import api from '../../services/api'
+import echo from '../../services/echo'
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -13,7 +15,7 @@ L.Icon.Default.mergeOptions({
 })
 
 const mitraIcon = L.divIcon({
-  html: `<div style="width:40px;height:40px;border-radius:50%;background:#FF7A45;border:3px solid #fff;box-shadow:0 4px 12px rgba(255,122,69,0.5);display:flex;align-items:center;justify-content:center;font-size:18px;">🏍️</div>`,
+  html: `<div style="width:40px;height:40px;border-radius:50%;background:#F97316;border:3px solid #fff;box-shadow:0 4px 12px rgba(249,115,22,0.5);display:flex;align-items:center;justify-content:center;font-size:18px;">🏍️</div>`,
   iconSize: [40, 40], iconAnchor: [20, 20], className: '',
 })
 const merchantPin = L.divIcon({
@@ -87,13 +89,26 @@ export default function FoodTrackingPage() {
 
   useEffect(() => {
     loadOrder()
-    // Cek apakah sudah pernah rating (agar form tidak muncul lagi setelah refresh)
     api.get(`/food/orders/${id}/rating`)
       .then(r => { if (r.data.rated) setRated(true) })
       .catch(() => {})
-    pollRef.current = setInterval(loadOrder, 10000)
-    return () => clearInterval(pollRef.current)
-  }, [loadOrder])
+
+    // WebSocket real-time: status update + GPS mitra
+    const channel = echo.channel(`food.${id}`)
+    channel.listen('.food.order.status', (e) => {
+      setOrder(prev => prev ? { ...prev, status: e.status, estimated_prep_minutes: e.estimated_prep_minutes ?? prev.estimated_prep_minutes, mitra_id: e.mitra_id ?? prev.mitra_id } : prev)
+    })
+    channel.listen('.mitra.location', (e) => {
+      setGps({ lat: e.lat, lng: e.lng })
+    })
+
+    // Polling fallback tiap 30 detik (bukan 10 detik) karena WebSocket sudah handle real-time
+    pollRef.current = setInterval(loadOrder, 30000)
+    return () => {
+      clearInterval(pollRef.current)
+      echo.leave(`food.${id}`)
+    }
+  }, [loadOrder, id])
 
   async function handleConfirm() {
     try {
@@ -160,7 +175,7 @@ export default function FoodTrackingPage() {
       {showMap && (
         <div style={{ height: 240 }}>
           <MapContainer center={[gps.lat, gps.lng]} zoom={15} style={{ height: '100%' }} zoomControl={false}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <SatelliteTiles />
             <Marker position={[gps.lat, gps.lng]} icon={mitraIcon} />
             {order.merchant?.lat && order.merchant?.lng && (
               <Marker position={[order.merchant.lat, order.merchant.lng]} icon={merchantPin} />
@@ -182,7 +197,7 @@ export default function FoodTrackingPage() {
           <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{sm.label}</div>
           <div style={{ fontSize: 14, color: 'var(--k-sub)' }}>{sm.desc}</div>
           {order.estimated_prep_minutes && ['merchant_accepted','preparing'].includes(order.status) && (
-            <div style={{ marginTop: 8, fontSize: 13, color: '#FF7A45', fontWeight: 700 }}>
+            <div style={{ marginTop: 8, fontSize: 13, color: '#F97316', fontWeight: 700 }}>
               ⏱ Estimasi siap ~{order.estimated_prep_minutes} menit
             </div>
           )}
@@ -199,7 +214,7 @@ export default function FoodTrackingPage() {
           ))}
           <div style={{ borderTop: '1px solid var(--k-border)', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
             <span>Total</span>
-            <span style={{ color: '#FF7A45' }}>{fmtRp(order.total_amount)}</span>
+            <span style={{ color: '#F97316' }}>{fmtRp(order.total_amount)}</span>
           </div>
         </div>
 
@@ -230,7 +245,7 @@ export default function FoodTrackingPage() {
             )}
             <button onClick={handleRate} style={{
               width: '100%', marginTop: 8, padding: '12px', borderRadius: 12, border: 'none',
-              background: '#FF7A45', color: '#fff', fontWeight: 700, cursor: 'pointer',
+              background: '#F97316', color: '#fff', fontWeight: 700, cursor: 'pointer',
             }}>Kirim Rating</button>
           </div>
         )}

@@ -82,7 +82,7 @@ function OrderDrawer({ order, onClose }) {
           </div>
         ))}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 15, marginTop: 8, borderTop: '1px solid var(--k-border)', paddingTop: 10 }}>
-          <span>Total</span><span style={{ color: '#FF7A45' }}>{fmtRp(order.total_amount)}</span>
+          <span>Total</span><span style={{ color: '#F97316' }}>{fmtRp(order.total_amount)}</span>
         </div>
       </div>
     </div>
@@ -107,7 +107,6 @@ export default function AdminFoodOrdersPage() {
       if (activeTab?.statuses) params.status = activeTab.statuses.join(',')
       if (search) params.search = search
 
-      // Re-use admin food orders endpoint (need to add it)
       const res = await api.get('/admin/food/orders', { params })
       setOrders(res.data.data || [])
       setMeta(res.data.meta ?? {})
@@ -130,7 +129,7 @@ export default function AdminFoodOrdersPage() {
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               padding: '8px 18px', borderRadius: 20, border: 'none', cursor: 'pointer',
               fontWeight: tab === t.key ? 700 : 400, fontSize: 13,
-              background: tab === t.key ? '#FF7A45' : 'var(--k-input)',
+              background: tab === t.key ? '#F97316' : 'var(--k-input)',
               color: tab === t.key ? '#fff' : 'var(--k-sub)',
             }}>{t.label}</button>
           ))}
@@ -172,7 +171,7 @@ export default function AdminFoodOrdersPage() {
                     <div style={{ fontSize: 11, color: 'var(--k-sub)', marginTop: 2 }}>{fmtDate(order.created_at)}</div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: '#FF7A45' }}>{fmtRp(order.total_amount)}</div>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#F97316' }}>{fmtRp(order.total_amount)}</div>
                     <div style={{ fontSize: 11, color: '#00C896' }}>+{fmtRp(order.platform_commission_food + order.platform_commission_delivery)}</div>
                   </div>
                 </div>

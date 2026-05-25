@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet'
+import { MapContainer, Marker, useMap } from 'react-leaflet'
+import SatelliteTiles from '../components/SatelliteTiles'
 import RoadPolyline from '../components/RoadPolyline'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -8,6 +9,7 @@ import BottomNav from '../components/BottomNav'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { requestNotifPermission } from '../utils/systemNotif'
+import { isNative } from '../utils/nativePlatform'
 import useOrderChatBadges from '../hooks/useOrderChatBadges'
 import ChatButton from '../components/ChatButton'
 
@@ -114,7 +116,7 @@ function MiniMap({ order, height = 160 }) {
         zoomControl={false} attributionControl={false} dragging={false}
         scrollWheelZoom={false} doubleClickZoom={false}
       >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <SatelliteTiles />
         <FitRoute pickup={pickup} dropoff={dropoff} />
         <RoadPolyline pickup={pickup} dropoff={dropoff} weight={3} opacity={0.7} />
         <Marker position={pickup}  icon={pickupPin} />
@@ -167,10 +169,7 @@ function MapModal({ order, onClose }) {
       {/* Peta */}
       <div className="map-modal" style={{ flex: 1 }}>
         <MapContainer center={pickup} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl>
-          <TileLayer
-            attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <SatelliteTiles />
           <FitRoute pickup={pickup} dropoff={dropoff} />
           <RoadPolyline pickup={pickup} dropoff={dropoff} weight={4} opacity={0.8} />
           <Marker position={pickup}  icon={pickupPin} />
@@ -409,14 +408,37 @@ function PhotoSlot({ orderId, stage, label, emoji, desc, initialDone, onUploaded
 
   const handleChange = (e) => handleFile(e.target.files[0])
 
-  const openPicker = () => {
+  const openPicker = async () => {
     setError('')
-    inputRef.current?.click()
+    if (isNative) {
+      // Capacitor Camera: buka kamera native langsung (lebih andal di Android)
+      try {
+        const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera')
+        const photo = await Camera.getPhoto({
+          quality:      78,
+          width:        1280,
+          resultType:   CameraResultType.DataUrl,
+          source:       CameraSource.Prompt, // tawari kamera atau galeri
+          allowEditing: false,
+          correctOrientation: true,
+        })
+        const res  = await fetch(photo.dataUrl)
+        const blob = await res.blob()
+        await handleFile(new File([blob], 'photo.jpg', { type: 'image/jpeg' }))
+      } catch (err) {
+        if (err?.message !== 'User cancelled photos app') {
+          setError('Gagal membuka kamera. Coba lagi.')
+        }
+      }
+    } else {
+      inputRef.current?.click()
+    }
   }
 
   return (
     <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${done ? 'rgba(0,200,150,0.2)' : 'var(--k-border)'}`, background: done ? 'rgba(0,200,150,0.06)' : 'var(--k-card)', transition: 'all 0.2s' }}>
-      <input ref={inputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleChange} />
+      {/* Input file hanya dipakai di browser (web), di native pakai Capacitor Camera */}
+      {!isNative && <input ref={inputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleChange} />}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px' }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: done ? 'rgba(0,200,150,0.12)' : 'var(--k-card2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>

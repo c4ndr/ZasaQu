@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import MerchantLayout from '../../components/MerchantLayout'
-import api from '../../services/api'
+import api, { storageUrl } from '../../services/api'
 
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 
@@ -12,7 +12,7 @@ function ItemModal({ item, categories, onClose, onSaved }) {
     stock: item?.stock ?? '', sort_order: item?.sort_order || 0,
   })
   const [photo,   setPhoto]   = useState(null)
-  const [preview, setPreview] = useState(item?.photo_path ? `/storage/${item.photo_path}` : null)
+  const [preview, setPreview] = useState(item?.photo_path ? storageUrl(item.photo_path) : null)
   const [saving,  setSaving]  = useState(false)
   const [err,     setErr]     = useState('')
 
@@ -118,7 +118,7 @@ function ItemModal({ item, categories, onClose, onSaved }) {
             }}>Batal</button>
             <button type="submit" disabled={saving} style={{
               flex: 2, padding: '12px', borderRadius: 12, border: 'none', cursor: saving ? 'default' : 'pointer',
-              background: '#FF7A45', color: '#fff', fontWeight: 700,
+              background: '#F97316', color: '#fff', fontWeight: 700,
             }}>
               {saving ? 'Menyimpan...' : 'Simpan'}
             </button>
@@ -252,7 +252,7 @@ export default function MerchantMenuPage() {
             />
             <button type="submit" disabled={addingCat || !newCatName.trim()} style={{
               padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: '#FF7A45', color: '#fff', fontWeight: 700, fontSize: 13,
+              background: '#F97316', color: '#fff', fontWeight: 700, fontSize: 13,
               opacity: (!newCatName.trim() || addingCat) ? 0.5 : 1,
             }}>Tambah</button>
           </form>
@@ -262,7 +262,7 @@ export default function MerchantMenuPage() {
                 <div key={c.id} style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                  background: 'rgba(255,122,69,0.1)', color: '#FF7A45',
+                  background: 'rgba(249,115,22,0.1)', color: '#F97316',
                 }}>
                   {c.name}
                   <button onClick={() => handleDeleteCategory(c)} style={{
@@ -279,7 +279,7 @@ export default function MerchantMenuPage() {
         <button onClick={() => setModal('add')} style={{
           width: '100%', padding: '14px', borderRadius: 14,
           border: '2px dashed var(--k-border)', background: 'transparent',
-          color: '#FF7A45', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+          color: '#F97316', fontWeight: 700, fontSize: 14, cursor: 'pointer',
         }}>
           + Tambah Item Menu
         </button>
@@ -312,7 +312,7 @@ export default function MerchantMenuPage() {
                       background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {item.photo_path
-                        ? <img src={`/storage/${item.photo_path}`} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ? <img src={storageUrl(item.photo_path)} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : <span style={{ fontSize: 28 }}>🍽️</span>
                       }
                     </div>
@@ -320,7 +320,7 @@ export default function MerchantMenuPage() {
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{item.name}</div>
-                      <div style={{ color: '#FF7A45', fontWeight: 700, fontSize: 13 }}>{fmtRp(item.price)}</div>
+                      <div style={{ color: '#F97316', fontWeight: 700, fontSize: 13 }}>{fmtRp(item.price)}</div>
                       {item.stock !== null && (
                         <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>Stok: {item.stock}</div>
                       )}

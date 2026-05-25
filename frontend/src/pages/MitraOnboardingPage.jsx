@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import api from '../services/api'
+import api, { storageUrl } from '../services/api'
 
 const DOC_CONFIG = [
   { type: 'ktp',           label: 'KTP',           desc: 'Kartu Tanda Penduduk yang masih berlaku',       emoji: '🪪' },
@@ -67,7 +67,7 @@ function DocCard({ config, doc, onUpload, uploading }) {
       {(prev || doc?.file_path) && !isApproved && (
         <div style={{ padding: '0 16px', marginBottom: 12 }}>
           <img
-            src={prev || `/storage/${doc.file_path}`}
+            src={prev || storageUrl(doc.file_path)}
             alt={config.label}
             style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 10 }}
           />

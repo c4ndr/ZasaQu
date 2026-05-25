@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import AdminLayout from '../../components/AdminLayout'
-import api from '../../services/api'
+import api, { storageUrl } from '../../services/api'
 import useAdminAlert from '../../hooks/useAdminAlert'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const STORAGE_URL  = ''  // URL relatif — Vite proxy /storage → backend:8000
+const STORAGE_URL  = null // digantikan storageUrl() dari api.js
 function fmtRp(v)  { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 function fmtDate(d){ return new Date(d).toLocaleString('id-ID', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) }
 function fmtTime(d){ return new Date(d).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' }) }
@@ -239,15 +239,15 @@ function TopUpCard({ item, isNew, onConfirm, onReject, actionLoading }) {
               <div style={{ background: 'var(--k-card2)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '14px 16px' }}>
                 <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Bukti Transfer</p>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                  <a href={`${STORAGE_URL}/storage/${item.proof_image}`} target="_blank" rel="noreferrer"
+                  <a href={storageUrl(item.proof_image)} target="_blank" rel="noreferrer"
                     style={{ display: 'block', borderRadius: 12, overflow: 'hidden', border: '2px solid var(--k-border)', flexShrink: 0 }}>
-                    <img src={`${STORAGE_URL}/storage/${item.proof_image}`} alt="Bukti Transfer"
+                    <img src={storageUrl(item.proof_image)} alt="Bukti Transfer"
                       style={{ width: 160, height: 120, objectFit: 'cover', display: 'block' }}
                       onError={e => { e.target.style.display='none' }} />
                   </a>
                   <div>
                     <p style={{ fontSize: 12, color: 'var(--k-sub)', marginBottom: 8 }}>Klik gambar untuk membuka ukuran penuh.</p>
-                    <a href={`${STORAGE_URL}/storage/${item.proof_image}`} target="_blank" rel="noreferrer"
+                    <a href={storageUrl(item.proof_image)} target="_blank" rel="noreferrer"
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10,
                         fontSize: 12, fontWeight: 700, background: 'rgba(99,179,237,0.1)', color: 'var(--k-info)',
                         border: '1px solid rgba(99,179,237,0.25)', textDecoration: 'none' }}>

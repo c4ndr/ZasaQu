@@ -44,90 +44,90 @@ class NotificationService
 
     // ─── Helper shortcut per event ────────────────────────────────────────────
 
-    public function orderAccepted(User $customer, string $orderNumber): void
+    public function orderAccepted(User $customer, string $orderNumber, int $orderId): void
     {
         $this->send($customer, 'order_accepted',
             'Order Diterima!',
             "Mitra sudah menerima order #{$orderNumber} dan segera menuju lokasi pickup.",
-            ['order_number' => $orderNumber]
+            ['order_number' => $orderNumber, 'order_id' => $orderId]
         );
     }
 
-    public function orderOnPickup(User $customer, string $orderNumber): void
+    public function orderOnPickup(User $customer, string $orderNumber, int $orderId): void
     {
         $this->send($customer, 'order_on_pickup',
             'Mitra Menuju Pickup',
             "Mitra sedang dalam perjalanan menuju lokasi pickup order #{$orderNumber}.",
-            ['order_number' => $orderNumber]
+            ['order_number' => $orderNumber, 'order_id' => $orderId]
         );
     }
 
-    public function orderPickedUp(User $customer, string $orderNumber): void
+    public function orderPickedUp(User $customer, string $orderNumber, int $orderId): void
     {
         $this->send($customer, 'order_picked_up',
             'Barang Diambil',
             "Mitra sudah mengambil barang untuk order #{$orderNumber}.",
-            ['order_number' => $orderNumber]
+            ['order_number' => $orderNumber, 'order_id' => $orderId]
         );
     }
 
-    public function orderOnDelivery(User $customer, string $orderNumber): void
+    public function orderOnDelivery(User $customer, string $orderNumber, int $orderId): void
     {
         $this->send($customer, 'order_on_delivery',
             'Barang Dalam Perjalanan',
             "Order #{$orderNumber} sedang dalam perjalanan ke lokasi Anda.",
-            ['order_number' => $orderNumber]
+            ['order_number' => $orderNumber, 'order_id' => $orderId]
         );
     }
 
-    public function orderDelivered(User $customer, string $orderNumber): void
+    public function orderDelivered(User $customer, string $orderNumber, int $orderId): void
     {
         $this->send($customer, 'order_delivered',
             'Barang Terkirim!',
             "Order #{$orderNumber} sudah sampai tujuan. Konfirmasi penerimaan dalam 2 jam.",
-            ['order_number' => $orderNumber]
+            ['order_number' => $orderNumber, 'order_id' => $orderId]
         );
     }
 
-    public function orderCompleted(User $customer, User $mitra, string $orderNumber): void
+    public function orderCompleted(User $customer, User $mitra, string $orderNumber, int $orderId): void
     {
         $this->send($customer, 'rating_request',
             'Beri Rating Mitra',
             "Order #{$orderNumber} selesai. Bagaimana pengalaman Anda?",
-            ['order_number' => $orderNumber, 'action' => 'rate']
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'action' => 'rate']
         );
 
         $this->send($mitra, 'order_completed',
             'Order Selesai',
             "Order #{$orderNumber} dikonfirmasi selesai. Pendapatan sudah masuk ke dompet Anda.",
-            ['order_number' => $orderNumber]
+            ['order_number' => $orderNumber, 'order_id' => $orderId]
         );
     }
 
-    public function jastipOrderReceived(User $customer, string $orderNumber): void
+    public function jastipOrderReceived(User $customer, string $orderNumber, int $orderId): void
     {
         $this->send($customer, 'jastip_accepted',
             'Titipan Diterima',
             "Mitra menerima titipan Anda untuk order #{$orderNumber}.",
-            ['order_number' => $orderNumber]
+            ['order_number' => $orderNumber, 'order_id' => $orderId]
         );
     }
 
-    public function orderCancelledForMitra(User $mitra, string $orderNumber): void
+    public function orderCancelledForMitra(User $mitra, string $orderNumber, int $orderId): void
     {
         $this->send($mitra, 'order_cancelled',
             'Order Dibatalkan',
             "Order #{$orderNumber} dibatalkan oleh pelanggan.",
-            ['order_number' => $orderNumber]
+            ['order_number' => $orderNumber, 'order_id' => $orderId]
         );
     }
 
-    public function newOrderAvailable(User $mitra, string $orderNumber): void
+    public function newOrderAvailable(User $mitra, string $orderNumber, int $orderId): void
     {
         $this->send($mitra, 'new_order',
             'Ada Order Baru!',
             "Order #{$orderNumber} tersedia di sekitar Anda. Segera ambil sebelum didahului!",
-            ['order_number' => $orderNumber]
+            ['order_number' => $orderNumber, 'order_id' => $orderId]
         );
     }
 }

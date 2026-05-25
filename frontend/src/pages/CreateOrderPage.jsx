@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
+import { MapContainer, Marker, useMapEvents, useMap } from 'react-leaflet'
+import SatelliteTiles from '../components/SatelliteTiles'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import api from '../services/api'
@@ -151,10 +152,7 @@ function LocationPicker({ label, color, lat, lng, address, onchange }) {
           style={{ height: '100%', width: '100%' }}
           zoomControl={false}
         >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
-          />
+          <SatelliteTiles />
           <MapClicker onClick={pick} />
           {position && (
             <>

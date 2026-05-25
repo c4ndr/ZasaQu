@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import MerchantLayout from '../../components/MerchantLayout'
-import api from '../../services/api'
+import api, { storageUrl } from '../../services/api'
 
 function fmtStatus(s) {
   return { pending: 'Menunggu Persetujuan', active: 'Aktif', suspended: 'Disuspend' }[s] ?? s
@@ -154,7 +154,7 @@ export default function MerchantSettingsPage() {
                   overflow: 'hidden', marginBottom: 6,
                 }}>
                   {merchant?.[`${type}_path`]
-                    ? <img src={`/storage/${merchant[`${type}_path`]}`} alt={type} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <img src={storageUrl(merchant[`${type}_path`])} alt={type} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <span style={{ fontSize: 24 }}>{type === 'logo' ? '🏪' : '🖼️'}</span>
                   }
                 </div>
@@ -220,7 +220,7 @@ export default function MerchantSettingsPage() {
 
           <button type="submit" disabled={saving} style={{
             padding: '12px', borderRadius: 12, border: 'none', cursor: saving ? 'default' : 'pointer',
-            background: saving ? 'var(--k-border)' : '#FF7A45', color: '#fff',
+            background: saving ? 'var(--k-border)' : '#F97316', color: '#fff',
             fontWeight: 700, fontSize: 14,
           }}>
             {saving ? 'Menyimpan...' : 'Simpan Perubahan'}

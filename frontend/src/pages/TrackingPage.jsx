@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
+import { MapContainer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
+import SatelliteTiles from '../components/SatelliteTiles'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import useOrderTracking from '../hooks/useOrderTracking'
@@ -416,14 +417,16 @@ export default function TrackingPage() {
             🎯
           </button>
 
-          {/* Chat */}
-          <Link to={`/orders/${id}/chat`} style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: 'linear-gradient(135deg, #00C896, #00A87D)',
-            boxShadow: '0 4px 16px rgba(0,200,150,0.45)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            textDecoration: 'none', fontSize: 20,
-          }}>💬</Link>
+          {/* Chat — hanya tampil setelah mitra menerima order */}
+          {order.mitra && (
+            <Link to={`/orders/${id}/chat`} style={{
+              width: 40, height: 40, borderRadius: 12,
+              background: 'linear-gradient(135deg, #00C896, #00A87D)',
+              boxShadow: '0 4px 16px rgba(0,200,150,0.45)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none', fontSize: 20,
+            }}>💬</Link>
+          )}
         </div>
       </nav>
 
@@ -480,10 +483,7 @@ export default function TrackingPage() {
           style={{ height: '100%', width: '100%', minHeight: 300 }}
           zoomControl={true}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <SatelliteTiles />
 
           {/* Fit semua titik saat pertama load */}
           {!mitraLocation && <FitBounds points={allPoints} />}

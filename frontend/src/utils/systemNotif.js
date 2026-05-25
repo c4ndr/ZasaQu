@@ -1,14 +1,19 @@
-// Utilitas notifikasi sistem (notification bar) — bekerja saat browser minimize
+import { isNative } from './nativePlatform'
+
+// ── Permission ────────────────────────────────────────────────────────────────
 
 export async function requestNotifPermission() {
+  if (isNative) return true // permission diminta saat initPushNotifications di App.jsx
   if (!('Notification' in window)) return false
   if (Notification.permission === 'granted') return true
   if (Notification.permission === 'denied')  return false
-  const result = await Notification.requestPermission()
-  return result === 'granted'
+  return (await Notification.requestPermission()) === 'granted'
 }
 
+// ── Tampilkan notifikasi ───────────────────────────────────────────────────────
+
 export function showOrderStatusNotif({ emoji, message, order_number }) {
+  if (isNative) return // di native, notif ditampilkan oleh FCM (sudah dari backend)
   if (!('Notification' in window) || Notification.permission !== 'granted') return
   try {
     const n = new Notification(`${emoji ?? '📦'} Update Order ${order_number ?? ''}`.trim(), {
@@ -21,6 +26,7 @@ export function showOrderStatusNotif({ emoji, message, order_number }) {
 }
 
 export function showNewOrderNotif({ shipping_fee, pickup_address }) {
+  if (isNative) return // di native, notif ditampilkan oleh FCM (sudah dari backend)
   if (!('Notification' in window) || Notification.permission !== 'granted') return
   try {
     const n = new Notification('🚀 Order Baru Masuk!', {

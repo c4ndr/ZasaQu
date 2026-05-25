@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import BottomNav from '../components/BottomNav'
 import api from '../services/api'
+import { useTheme } from '../hooks/useTheme'
 
 // ── Baris notifikasi yang bisa diklik ────────────────────────────────────────
 function NotifRow() {
@@ -120,6 +121,7 @@ export default function ProfilePage() {
   const [showNewPass,     setShowNewPass]     = useState(false)
   const [showConfPass,    setShowConfPass]    = useState(false)
 
+  const { theme, toggle: toggleTheme, isDark } = useTheme()
   const roleInfo = ROLE_LABEL[user?.role] ?? { label: user?.role, color: '#A0A0BC', bg: 'rgba(160,160,188,0.1)' }
   const isMitra  = user?.role?.startsWith('mitra')
 
@@ -379,6 +381,37 @@ export default function ProfilePage() {
 
           {/* Notifikasi — bisa diklik untuk minta/cek izin */}
           <NotifRow />
+
+          {/* Mode Tampilan */}
+          <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--k-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 18 }}>{isDark ? '🌙' : '☀️'}</span>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--k-text)', marginBottom: 2 }}>Tampilan</p>
+                <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>{isDark ? 'Mode Gelap aktif' : 'Mode Terang aktif'}</p>
+              </div>
+            </div>
+            {/* Toggle switch */}
+            <div
+              onClick={toggleTheme}
+              style={{
+                width: 52, height: 28, borderRadius: 14, cursor: 'pointer',
+                background: isDark ? 'var(--k-primary)' : 'var(--k-border2)',
+                position: 'relative', transition: 'background 0.25s', flexShrink: 0,
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: 3, left: isDark ? 27 : 3,
+                width: 22, height: 22, borderRadius: '50%',
+                background: '#fff', transition: 'left 0.25s',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12,
+              }}>
+                {isDark ? '🌙' : '☀️'}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Logout */}

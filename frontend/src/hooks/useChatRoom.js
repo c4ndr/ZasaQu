@@ -30,7 +30,7 @@ export default function useChatRoom(orderId) {
   // Subscribe WebSocket real-time
   useEffect(() => {
     if (!room) return
-    const channel = echo.channel(`chat.${room.id}`)
+    const channel = echo.private(`chat.${room.id}`)
     channel.listen('.message.new', (data) => {
       setMessages(prev => prev.find(m => m.id === data.id) ? prev : [...prev, data])
     })
@@ -50,6 +50,7 @@ export default function useChatRoom(orderId) {
             const newMsgs = res.data.messages.filter(m => !existingIds.has(m.id))
             return newMsgs.length ? [...prev, ...newMsgs] : prev
           })
+          if (res.data.room_suspended) setSuspended(true)
         })
         .catch(() => {})
     }, 5000)

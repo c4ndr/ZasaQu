@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import AdminLayout from '../../components/AdminLayout'
-import api from '../../services/api'
+import api, { storageUrl } from '../../services/api'
 import useAdminAlert from '../../hooks/useAdminAlert'
 
 function fmtDate(d) { return new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
@@ -22,6 +22,116 @@ const STATUS_TABS = [
   { key: 'suspended', label: 'Suspended', color: '#F56565' },
   { key: 'all',       label: 'Semua',     color: 'var(--k-sub)' },
 ]
+
+// ── Create Merchant Modal ─────────────────────────────────────────────────────
+const EMPTY_FORM = {
+  name: '', category: 'makanan_berat', address: '', phone: '',
+  open_time: '08:00', close_time: '21:00', avg_prep_time_minutes: '20',
+  owner_name: '', owner_email: '', owner_password: '', owner_phone: '',
+}
+
+function CreateMerchantModal({ onClose, onCreated }) {
+  const [form,    setForm]    = useState(EMPTY_FORM)
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState(null)
+
+  function set(key, val) { setForm(p => ({ ...p, [key]: val })) }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    try {
+      const res = await api.post('/admin/food/merchants', {
+        ...form,
+        avg_prep_time_minutes: form.avg_prep_time_minutes ? parseInt(form.avg_prep_time_minutes) : undefined,
+      })
+      onCreated(res.data.data)
+      onClose()
+    } catch (err) {
+      const msg = err.response?.data?.errors
+        ? Object.values(err.response.data.errors).flat().join(', ')
+        : err.response?.data?.message || 'Gagal membuat merchant.'
+      setError(msg)
+    } finally { setLoading(false) }
+  }
+
+  const inp = (key, placeholder, type = 'text', required = true) => (
+    <input
+      type={type} value={form[key]} required={required}
+      onChange={e => set(key, e.target.value)}
+      placeholder={placeholder}
+      style={{
+        width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 13,
+        border: '1.5px solid var(--k-border)', background: 'var(--k-input)',
+        color: 'var(--k-text)', boxSizing: 'border-box', outline: 'none',
+      }}
+    />
+  )
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ width: '100%', maxWidth: 500, background: 'var(--k-card)', borderRadius: 18, overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--k-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p style={{ fontWeight: 800, fontSize: 16, color: 'var(--k-text)' }}>Tambah Merchant Baru</p>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--k-sub)', fontSize: 22, lineHeight: 1 }}>×</button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {error && (
+            <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(245,101,101,0.12)', color: '#F56565', fontSize: 13 }}>{error}</div>
+          )}
+
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-sub)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Info Toko</p>
+          {inp('name', 'Nama toko*')}
+
+          <select value={form.category} onChange={e => set('category', e.target.value)}
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 13, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', boxSizing: 'border-box' }}>
+            <option value="makanan_berat">Makanan Berat</option>
+            <option value="minuman">Minuman</option>
+            <option value="snack">Snack</option>
+            <option value="lainnya">Lainnya</option>
+          </select>
+
+          {inp('address', 'Alamat toko*')}
+          {inp('phone', 'Nomor HP toko (opsional)', 'tel', false)}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <p style={{ fontSize: 11, color: 'var(--k-sub)', marginBottom: 4 }}>Jam Buka</p>
+              {inp('open_time', 'Jam buka', 'time', false)}
+            </div>
+            <div>
+              <p style={{ fontSize: 11, color: 'var(--k-sub)', marginBottom: 4 }}>Jam Tutup</p>
+              {inp('close_time', 'Jam tutup', 'time', false)}
+            </div>
+          </div>
+
+          <div>
+            <p style={{ fontSize: 11, color: 'var(--k-sub)', marginBottom: 4 }}>Est. Waktu Masak (menit)</p>
+            {inp('avg_prep_time_minutes', 'Contoh: 20', 'number', false)}
+          </div>
+
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-sub)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '6px 0 0' }}>Akun Pemilik</p>
+          {inp('owner_name', 'Nama pemilik*')}
+          {inp('owner_email', 'Email login*', 'email')}
+          {inp('owner_password', 'Password (min. 8 karakter)*', 'password')}
+          {inp('owner_phone', 'Nomor HP pemilik (opsional)', 'tel', false)}
+
+          <button type="submit" disabled={loading} style={{
+            width: '100%', padding: '13px', borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+            background: '#00C896', color: '#0C0C16', fontWeight: 800, fontSize: 14,
+            opacity: loading ? 0.6 : 1, marginTop: 4,
+          }}>
+            {loading ? 'Membuat...' : '+ Tambah Merchant'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
 
 // ── Detail Drawer ─────────────────────────────────────────────────────────────
 function MerchantDrawer({ merchant, onClose, onUpdated }) {
@@ -93,7 +203,7 @@ function MerchantDrawer({ merchant, onClose, onUpdated }) {
             width: 60, height: 60, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
             background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
           }}>
-            {m?.logo_path ? <img src={`/storage/${m.logo_path}`} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
+            {m?.logo_path ? <img src={storageUrl(m.logo_path)} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 16 }}>{m?.name}</div>
@@ -188,13 +298,14 @@ function MerchantDrawer({ merchant, onClose, onUpdated }) {
 
 // ── Halaman Utama ─────────────────────────────────────────────────────────────
 export default function AdminFoodMerchantsPage() {
-  const [merchants, setMerchants] = useState([])
-  const [meta,      setMeta]      = useState({})
-  const [loading,   setLoading]   = useState(true)
-  const [tab,       setTab]       = useState('pending')
-  const [search,    setSearch]    = useState('')
-  const [selected,  setSelected]  = useState(null)
-  const [page,      setPage]      = useState(1)
+  const [merchants,    setMerchants]    = useState([])
+  const [meta,         setMeta]         = useState({})
+  const [loading,      setLoading]      = useState(true)
+  const [tab,          setTab]          = useState('pending')
+  const [search,       setSearch]       = useState('')
+  const [selected,     setSelected]     = useState(null)
+  const [page,         setPage]         = useState(1)
+  const [showCreate,   setShowCreate]   = useState(false)
   const alert = useAdminAlert()
 
   const load = useCallback(async () => {
@@ -215,8 +326,19 @@ export default function AdminFoodMerchantsPage() {
     setSelected(null)
   }
 
+  function handleCreated(newMerchant) {
+    alert.success(`Merchant ${newMerchant.name} berhasil dibuat.`)
+    load()
+  }
+
   return (
     <AdminLayout>
+      {showCreate && (
+        <CreateMerchantModal
+          onClose={() => setShowCreate(false)}
+          onCreated={handleCreated}
+        />
+      )}
       {selected && (
         <MerchantDrawer
           merchant={selected}
@@ -226,7 +348,13 @@ export default function AdminFoodMerchantsPage() {
       )}
 
       <div style={{ padding: '28px', maxWidth: 900 }}>
-        <h1 style={{ margin: '0 0 24px', fontSize: 22, fontWeight: 800 }}>Merchant ZasaFood</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Merchant ZasaFood</h1>
+          <button onClick={() => setShowCreate(true)} style={{
+            padding: '10px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
+            background: '#00C896', color: '#0C0C16', fontWeight: 700, fontSize: 13,
+          }}>+ Tambah Merchant</button>
+        </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -274,7 +402,7 @@ export default function AdminFoodMerchantsPage() {
                     width: 48, height: 48, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
                     background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
                   }}>
-                    {m.logo_path ? <img src={`/storage/${m.logo_path}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
+                    {m.logo_path ? <img src={storageUrl(m.logo_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>

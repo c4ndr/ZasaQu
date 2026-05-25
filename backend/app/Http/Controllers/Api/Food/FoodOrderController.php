@@ -23,6 +23,7 @@ class FoodOrderController extends Controller
             ->when($request->search,   fn($q) => $q->where('name', 'like', "%{$request->search}%"))
             ->withCount('menuItems')
             ->orderByDesc('average_rating')
+            ->limit(100)
             ->get();
 
         // Hitung jarak jika ada koordinat
@@ -115,14 +116,34 @@ class FoodOrderController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $activeStatuses = ['pending','merchant_accepted','preparing','ready_for_pickup','mitra_on_pickup','picked_up','on_delivery','delivered'];
+
+        // Tab aktif: tampilkan semua (jarang melebihi puluhan)
+        if ($request->boolean('active_only')) {
+            $orders = FoodOrder::where('customer_id', $request->user()->id)
+                ->with(['merchant:id,name,slug,logo_path', 'items'])
+                ->whereIn('status', $activeStatuses)
+                ->latest()
+                ->get();
+            return response()->json(['data' => $orders, 'meta' => null]);
+        }
+
+        // Tab riwayat: paginated
         $orders = FoodOrder::where('customer_id', $request->user()->id)
             ->with(['merchant:id,name,slug,logo_path', 'items'])
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->whereNotIn('status', $activeStatuses)
             ->latest()
-            ->limit(100)
-            ->get();
+            ->paginate(20);
 
-        return response()->json(['data' => $orders]);
+        return response()->json([
+            'data' => $orders->items(),
+            'meta' => [
+                'current_page' => $orders->currentPage(),
+                'last_page'    => $orders->lastPage(),
+                'total'        => $orders->total(),
+                'per_page'     => $orders->perPage(),
+            ],
+        ]);
     }
 
     public function show(Request $request, int $id): JsonResponse

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AdminSetting;
 use App\Models\BankAccount;
 use App\Models\QrisTransaction;
 use App\Models\TopUpRequest;
@@ -170,7 +171,7 @@ class PaymentService
 
     public function createWithdraw(User $user, array $data): WithdrawRequest
     {
-        $minBalance = (float) config('zasaqu.min_mitra_balance', 10000);
+        $minBalance = (float) (AdminSetting::where('key', 'wallet_minimum_mitra')->value('value') ?? 10000);
 
         return DB::transaction(function () use ($user, $data, $minBalance) {
             // Lock baris wallet agar cek saldo dan increment berjalan atomik

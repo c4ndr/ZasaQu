@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet'
+import { MapContainer, Marker, useMap } from 'react-leaflet'
+import SatelliteTiles from '../components/SatelliteTiles'
 import RoadPolyline from '../components/RoadPolyline'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -141,7 +142,7 @@ function MiniMap({ order, height = 150 }) {
           style={{ height: '100%', width: '100%' }}
           zoomControl={false} attributionControl={false}
           dragging={false} scrollWheelZoom={false} doubleClickZoom={false}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <SatelliteTiles />
           <FitRoute pickup={pickup} dropoff={dropoff} />
           <RoadPolyline pickup={pickup} dropoff={dropoff} weight={3} opacity={0.7} />
           <Marker position={pickup}  icon={pickupPin} />
@@ -207,10 +208,7 @@ function MapModal({ order, onClose }) {
       {/* Peta */}
       <div className="map-fs" style={{ flex: 1 }}>
         <MapContainer center={pickup} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl>
-          <TileLayer
-            attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <SatelliteTiles />
           <FitRoute pickup={pickup} dropoff={dropoff} />
           <RoadPolyline pickup={pickup} dropoff={dropoff} weight={4} opacity={0.8} />
           <Marker position={pickup}  icon={pickupPin} />
@@ -367,13 +365,13 @@ function RatingModal({ order, onClose, onSubmitted }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'flex-end', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
          onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ width: '100%', background: '#111120', borderRadius: '24px 24px 0 0', border: '1.5px solid rgba(0,200,150,0.2)', borderBottom: 'none', padding: '8px 0 36px', boxShadow: '0 -8px 40px rgba(0,200,150,0.1)' }}>
-        <div style={{ width: 40, height: 4, borderRadius: 2, background: '#333', margin: '8px auto 20px' }} />
+      <div style={{ width: '100%', background: 'var(--k-surface)', borderRadius: '24px 24px 0 0', border: '1px solid var(--k-border)', borderBottom: 'none', padding: '8px 0 36px', boxShadow: '0 -8px 32px rgba(0,0,0,0.10)' }}>
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--k-border2)', margin: '8px auto 20px' }} />
 
         <div style={{ padding: '0 20px' }}>
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
             <p style={{ fontSize: 28, marginBottom: 8 }}>⭐</p>
-            <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--k-text)', marginBottom: 4 }}>Beri Rating Mitra</p>
+            <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--k-text)', marginBottom: 4, zIndex:1, position:'relative' }}>Beri Rating Mitra</p>
             <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>
               Order <span style={{ fontFamily: 'monospace' }}>{order.order_number}</span>
             </p>
@@ -412,8 +410,8 @@ function RatingModal({ order, onClose, onSubmitted }) {
             </button>
             <button onClick={submit} disabled={submitting || !score} style={{
               flex: 2, padding: '14px', borderRadius: 16, fontSize: 14, fontWeight: 800,
-              background: submitting || !score ? 'var(--k-card2)' : 'var(--k-accent)',
-              color: submitting || !score ? 'var(--k-muted)' : '#0C0C16',
+              background: submitting || !score ? 'var(--k-input)' : 'var(--k-accent)',
+              color: submitting || !score ? 'var(--k-muted)' : '#fff',
               border: 'none', cursor: submitting || !score ? 'not-allowed' : 'pointer',
             }}>
               {submitting ? 'Mengirim...' : 'Kirim Rating ⭐'}
@@ -447,8 +445,8 @@ function CancelModal({ order, onConfirm, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'flex-end', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
          onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ width: '100%', background: '#111120', borderRadius: '24px 24px 0 0', border: '1.5px solid rgba(245,101,101,0.3)', borderBottom: 'none', padding: '8px 0 32px', boxShadow: '0 -8px 40px rgba(245,101,101,0.15)' }}>
-        <div style={{ width: 40, height: 4, borderRadius: 2, background: '#333', margin: '8px auto 20px' }} />
+      <div style={{ width: '100%', background: 'var(--k-surface)', borderRadius: '24px 24px 0 0', border: '1px solid var(--k-border)', borderBottom: 'none', padding: '8px 0 32px', boxShadow: '0 -8px 32px rgba(0,0,0,0.10)' }}>
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--k-border2)', margin: '8px auto 20px' }} />
 
         <div style={{ padding: '0 20px' }}>
           <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--k-danger)', marginBottom: 4 }}>❌ Batalkan Order</p>
@@ -528,9 +526,11 @@ function OrderCard({ order, onCancelled, hasUnreadChat }) {
 
       <div style={{
         background: 'var(--k-card)',
-        border: `1px solid ${isActive ? `${color}33` : 'var(--k-border)'}`,
+        border: `1px solid ${isActive ? `${color}30` : 'var(--k-border)'}`,
+        borderLeft: isActive ? `3.5px solid ${color}` : `1px solid var(--k-border)`,
         borderRadius: 20, overflow: 'hidden',
         transition: 'border-color 0.2s',
+        boxShadow: isActive ? `0 2px 12px ${color}15` : 'var(--k-shadow)',
       }}>
         {/* Mini peta (collapsible) */}
         {showMap && (
@@ -650,7 +650,7 @@ function OrderCard({ order, onCancelled, hasUnreadChat }) {
               {isActive ? (
                 <Link to={`/orders/${order.id}/tracking`} style={{
                   padding: '9px 16px', borderRadius: 12, fontSize: 13, fontWeight: 800,
-                  background: 'var(--k-accent)', color: '#0C0C16', textDecoration: 'none',
+                  background: 'var(--k-primary)', color: '#fff', textDecoration: 'none',
                   display: 'flex', alignItems: 'center', gap: 6,
                 }}>
                   📡 Lacak
@@ -743,31 +743,44 @@ export default function OrdersPage() {
 
       {/* Header */}
       <div style={{
-        padding: '52px 20px 16px',
-        background: 'linear-gradient(180deg, #0F1C22 0%, var(--k-bg) 100%)',
+        padding: '52px 16px 0',
+        background: 'var(--k-surface)',
+        borderBottom: '1px solid var(--k-border)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--k-text)' }}>Order Saya</h1>
-          <Link to="/orders/create" style={{
-            background: 'var(--k-accent)', color: '#0C0C16',
-            fontSize: 12, fontWeight: 800, padding: '8px 16px',
-            borderRadius: 12, textDecoration: 'none',
-          }}>
-            + Buat Order
-          </Link>
+        {/* Hero banner ZasaGo */}
+        <div style={{
+          background: 'linear-gradient(135deg, #EBF5FF 0%, #F0FBFF 100%)',
+          border: '1.5px solid rgba(59,130,246,0.15)',
+          borderRadius: 20, padding: '16px 18px',
+          position: 'relative', overflow: 'hidden', marginBottom: 14,
+        }}>
+          <div style={{ position:'absolute', right:-10, top:-10, fontSize:80, opacity:0.08, transform:'rotate(10deg)', pointerEvents:'none' }}>🚚</div>
+          <div style={{ position:'absolute', right:52, bottom:-12, fontSize:56, opacity:0.07, transform:'rotate(-8deg)', pointerEvents:'none' }}>📦</div>
+          <div style={{ position:'absolute', left:-16, bottom:-16, width:70, height:70, borderRadius:'50%', background:'rgba(59,130,246,0.08)', pointerEvents:'none' }} />
+          <div style={{ position:'relative', zIndex:1 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--k-text)', marginBottom: 4 }}>📦 Order Saya</h1>
+            <p style={{ fontSize: 12, color: 'var(--k-sub)', marginBottom: 14 }}>Lacak semua pengiriman kamu</p>
+            <Link to="/orders/create" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'var(--k-primary)', color: '#fff',
+              fontSize: 13, fontWeight: 800, padding: '9px 18px',
+              borderRadius: 12, textDecoration: 'none',
+            }}>+ Buat Order Baru</Link>
+          </div>
         </div>
 
         {/* Tabs */}
         <div style={{
-          display: 'flex', background: 'var(--k-card)',
-          border: '1px solid var(--k-border)', borderRadius: 16, padding: 4, gap: 4,
+          display: 'flex', background: 'var(--k-input)',
+          borderRadius: 14, padding: 4, gap: 4, marginBottom: 14,
         }}>
           {tabs.map(({ k, l, count }) => (
             <button key={k} onClick={() => setTab(k)} style={{
-              flex: 1, padding: '10px 4px', fontSize: 12, fontWeight: 700,
-              borderRadius: 12, border: 'none', cursor: 'pointer', transition: 'all 0.2s',
-              background: tab === k ? 'var(--k-accent)' : 'transparent',
-              color: tab === k ? '#0C0C16' : 'var(--k-muted)',
+              flex: 1, padding: '10px 4px', fontSize: 13, fontWeight: 700,
+              borderRadius: 10, border: 'none', cursor: 'pointer', transition: 'all 0.18s',
+              background: tab === k ? 'var(--k-surface)' : 'transparent',
+              color: tab === k ? 'var(--k-primary)' : 'var(--k-muted)',
+              boxShadow: tab === k ? 'var(--k-shadow)' : 'none',
             }}>
               {l}{count !== null && count > 0 ? ` (${count})` : ''}
             </button>
@@ -783,17 +796,24 @@ export default function OrdersPage() {
           </div>
         ) : tab === 'active' ? (
           active.length === 0 ? (
-            <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 20, padding: '48px 20px', textAlign: 'center' }}>
-              <p style={{ fontSize: 40, marginBottom: 12 }}>📦</p>
-              <p style={{ color: 'var(--k-text)', fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Belum ada order aktif</p>
-              <p style={{ color: 'var(--k-muted)', fontSize: 13, marginBottom: 20 }}>Buat order pertama Anda sekarang</p>
-              <Link to="/orders/create" style={{
-                display: 'inline-block', padding: '12px 28px',
-                background: 'var(--k-accent)', color: '#0C0C16',
-                fontWeight: 800, fontSize: 14, borderRadius: 14, textDecoration: 'none',
-              }}>
-                Buat Order
-              </Link>
+            <div style={{
+              borderRadius: 20, padding: '40px 20px', textAlign: 'center',
+              background: 'linear-gradient(145deg, #EBF5FF 0%, #F5F9FF 100%)',
+              border: '1.5px solid rgba(59,130,246,0.12)',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{ position:'absolute', right:-16, top:-16, fontSize:100, opacity:0.06, transform:'rotate(15deg)', pointerEvents:'none' }}>📦</div>
+              <div style={{ position:'absolute', left:-10, bottom:-10, width:80, height:80, borderRadius:'50%', background:'rgba(59,130,246,0.07)', pointerEvents:'none' }} />
+              <div style={{ position:'relative', zIndex:1 }}>
+                <p style={{ fontSize: 52, marginBottom: 12 }}>📦</p>
+                <p style={{ color: 'var(--k-text)', fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Belum ada order aktif</p>
+                <p style={{ color: 'var(--k-sub)', fontSize: 13, marginBottom: 20 }}>Yuk, buat order pengiriman pertama kamu</p>
+                <Link to="/orders/create" style={{
+                  display: 'inline-block', padding: '12px 28px',
+                  background: 'var(--k-primary)', color: '#fff',
+                  fontWeight: 800, fontSize: 14, borderRadius: 14, textDecoration: 'none',
+                }}>🚀 Buat Order</Link>
+              </div>
             </div>
           ) : active.map(order => <OrderCard key={order.id} order={order} onCancelled={fetchOrders} hasUnreadChat={!!chatUnread[String(order.id)]} />)
         ) : (
@@ -804,8 +824,8 @@ export default function OrdersPage() {
                 {[['all','Semua'],['completed','Selesai'],['cancelled','Dibatalkan']].map(([k, l]) => (
                   <button key={k} onClick={() => setHistFilter(k)} style={{
                     padding: '6px 14px', borderRadius: 100, fontSize: 12, fontWeight: 700,
-                    background: histFilter === k ? 'var(--k-accent)' : 'var(--k-card)',
-                    color: histFilter === k ? '#0C0C16' : 'var(--k-muted)',
+                    background: histFilter === k ? 'var(--k-primary)' : 'var(--k-surface)',
+                    color: histFilter === k ? '#fff' : 'var(--k-muted)',
                     border: `1px solid ${histFilter === k ? 'transparent' : 'var(--k-border)'}`,
                     cursor: 'pointer', transition: 'all 0.15s',
                   }}>{l}</button>

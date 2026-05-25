@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import api from '../../services/api'
+import api, { storageUrl } from '../../services/api'
 
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 
@@ -10,14 +10,14 @@ function QtyControl({ qty, onDec, onInc }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <button onClick={onDec} style={{
         width: 30, height: 30, borderRadius: '50%', border: 'none', cursor: 'pointer',
-        background: qty > 0 ? 'rgba(255,122,69,0.15)' : 'var(--k-input)',
-        color: '#FF7A45', fontWeight: 800, fontSize: 18, lineHeight: 1,
+        background: qty > 0 ? 'rgba(249,115,22,0.15)' : 'var(--k-input)',
+        color: '#F97316', fontWeight: 800, fontSize: 18, lineHeight: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>−</button>
       <span style={{ fontWeight: 700, minWidth: 18, textAlign: 'center', fontSize: 14 }}>{qty}</span>
       <button onClick={onInc} style={{
         width: 30, height: 30, borderRadius: '50%', border: 'none', cursor: 'pointer',
-        background: '#FF7A45', color: '#fff', fontWeight: 800, fontSize: 18, lineHeight: 1,
+        background: '#F97316', color: '#fff', fontWeight: 800, fontSize: 18, lineHeight: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>+</button>
     </div>
@@ -78,7 +78,7 @@ export default function FoodMerchantPage() {
       <div style={{ position: 'relative' }}>
         <div style={{ height: 160, background: 'var(--k-input)', overflow: 'hidden' }}>
           {merchant?.banner_path
-            ? <img src={`/storage/${merchant.banner_path}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img src={storageUrl(merchant.banner_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>🍜</div>
           }
         </div>
@@ -97,7 +97,7 @@ export default function FoodMerchantPage() {
             background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
             marginTop: -32, border: '3px solid var(--k-card)',
           }}>
-            {merchant?.logo_path ? <img src={`/storage/${merchant.logo_path}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
+            {merchant?.logo_path ? <img src={storageUrl(merchant.logo_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
           </div>
           <div style={{ flex: 1, marginTop: 4 }}>
             <div style={{ fontWeight: 800, fontSize: 17 }}>{merchant?.name}</div>
@@ -147,12 +147,12 @@ export default function FoodMerchantPage() {
                         width: 72, height: 72, borderRadius: 10, flexShrink: 0, overflow: 'hidden',
                         background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
                       }}>
-                        {item.photo_path ? <img src={`/storage/${item.photo_path}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
+                        {item.photo_path ? <img src={storageUrl(item.photo_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: 14 }}>{item.name}</div>
                         {item.description && <div style={{ fontSize: 12, color: 'var(--k-sub)', marginTop: 2 }}>{item.description}</div>}
-                        <div style={{ fontWeight: 800, color: '#FF7A45', fontSize: 14, marginTop: 6 }}>{fmtRp(item.price)}</div>
+                        <div style={{ fontWeight: 800, color: '#F97316', fontSize: 14, marginTop: 6 }}>{fmtRp(item.price)}</div>
                         {item.stock !== null && <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>Stok: {item.stock}</div>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'flex-end', flexShrink: 0 }}>
@@ -184,7 +184,7 @@ export default function FoodMerchantPage() {
         }}>
           <button onClick={goToCart} style={{
             width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-            background: '#FF7A45', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer',
+            background: '#F97316', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <span style={{

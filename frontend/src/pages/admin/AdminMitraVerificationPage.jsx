@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import AdminLayout from '../../components/AdminLayout'
-import api from '../../services/api'
+import api, { storageUrl } from '../../services/api'
 
 function fmtDate(d) { return new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
 
@@ -135,9 +135,9 @@ function MitraDrawer({ mitra, onClose, onUpdated }) {
                   </div>
                   {doc.file_path && (
                     <img
-                      src={`/storage/${doc.file_path}`}
+                      src={storageUrl(doc.file_path)}
                       alt={doc.type}
-                      onClick={() => setImgModal(`/storage/${doc.file_path}`)}
+                      onClick={() => setImgModal(storageUrl(doc.file_path))}
                       style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8, cursor: 'zoom-in' }}
                     />
                   )}

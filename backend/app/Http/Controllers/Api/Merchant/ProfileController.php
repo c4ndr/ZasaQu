@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\Merchant;
 
 use App\Http\Controllers\Controller;
 use App\Models\FoodMerchant;
+use App\Models\FoodOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ProfileController extends Controller
@@ -19,6 +21,40 @@ class ProfileController extends Controller
         }
 
         return response()->json(['data' => $merchant->load('categories.items')]);
+    }
+
+    public function statistics(Request $request): JsonResponse
+    {
+        $merchant = $request->user()->foodMerchant;
+
+        if (!$merchant) {
+            return response()->json(['message' => 'Anda belum terdaftar sebagai merchant.'], 404);
+        }
+
+        $base = FoodOrder::where('merchant_id', $merchant->id);
+
+        $today = now()->startOfDay();
+
+        $stats = $base->clone()
+            ->selectRaw("
+                COUNT(*) as total_orders,
+                SUM(CASE WHEN status = 'completed' THEN merchant_income ELSE 0 END) as total_revenue,
+                SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as orders_today,
+                SUM(CASE WHEN status = 'completed' AND created_at >= ? THEN merchant_income ELSE 0 END) as revenue_today,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders
+            ", [$today, $today])
+            ->first();
+
+        return response()->json([
+            'data' => [
+                'orders_today'    => (int)   ($stats->orders_today   ?? 0),
+                'revenue_today'   => (float) ($stats->revenue_today  ?? 0),
+                'pending_orders'  => (int)   ($stats->pending_orders ?? 0),
+                'total_orders'    => (int)   ($stats->total_orders   ?? 0),
+                'total_revenue'   => (float) ($stats->total_revenue  ?? 0),
+                'average_rating'  => round((float) ($merchant->average_rating ?? 0), 1),
+            ],
+        ]);
     }
 
     public function update(Request $request): JsonResponse

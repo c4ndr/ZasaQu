@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet'
+import { MapContainer, Marker, useMap } from 'react-leaflet'
+import SatelliteTiles from './SatelliteTiles'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import RoadPolyline from './RoadPolyline'
@@ -47,9 +48,7 @@ export default function SessionRouteMap({ session, height = 180 }) {
         scrollWheelZoom={false}
         doubleClickZoom={false}
       >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <SatelliteTiles />
         <RoadPolyline pickup={origin} dropoff={dest} color="#818CF8" weight={4} opacity={0.85} />
         <Marker position={origin} icon={originIcon} />
         <Marker position={dest}   icon={destIcon} />

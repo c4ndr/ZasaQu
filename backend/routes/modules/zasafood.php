@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Food\FoodOrderController;
 use App\Http\Controllers\Api\Food\FoodMitraController;
+use App\Http\Controllers\Api\Food\FoodJastipController;
 use App\Http\Controllers\Api\Merchant\ProfileController as MerchantProfileController;
 use App\Http\Controllers\Api\Merchant\MenuController as MerchantMenuController;
 use App\Http\Controllers\Api\Merchant\FoodOrderController as MerchantFoodOrderController;
@@ -24,6 +25,24 @@ Route::prefix('food')->group(function () {
     Route::get('orders/{id}/mitra-location',   [FoodOrderController::class, 'mitraLocation']);
 });
 
+// ── Food Jastip: Sesi Hemat Ongkir ───────────────────────────────────────
+Route::prefix('food/jastip')->group(function () {
+    // Literal routes FIRST — must come before parameterized sessions/{session}
+    Route::get('sessions/available',                  [FoodJastipController::class, 'availableSessions']);
+
+    // Mitra: kelola sesi kuliner (literal 'current' before the {session} wildcard)
+    Route::middleware('role:mitra_motor,mitra_mobil')->group(function () {
+        Route::get('sessions/current',                        [FoodJastipController::class, 'currentSession']);
+        Route::post('sessions',                               [FoodJastipController::class, 'startSession']);
+        Route::delete('sessions/current',                     [FoodJastipController::class, 'closeSession']);
+        Route::post('orders/{order}/pickup-from-merchant',    [FoodJastipController::class, 'pickupFromMerchant']);
+    });
+
+    // Parameterized routes AFTER literals
+    Route::get('sessions/{session}',                  [FoodJastipController::class, 'showSession']);
+    Route::post('sessions/{session}/join',            [FoodJastipController::class, 'joinSession']);
+});
+
 // ── Mitra delivery ZasaFood ───────────────────────────────────────────────
 Route::prefix('food/mitra')
     ->middleware('role:mitra_motor,mitra_mobil')
@@ -41,6 +60,7 @@ Route::prefix('food/merchant')
     ->group(function () {
 
     Route::get('profile',            [MerchantProfileController::class, 'show']);
+    Route::get('statistics',         [MerchantProfileController::class, 'statistics']);
     Route::patch('profile',          [MerchantProfileController::class, 'update']);
     Route::post('toggle-open',       [MerchantProfileController::class, 'toggleOpen']);
     Route::post('upload-logo',       [MerchantProfileController::class, 'uploadLogo']);
@@ -76,8 +96,11 @@ Route::prefix('admin/food')
     ->group(function () {
 
     Route::get('merchants',                       [AdminFoodController::class, 'indexMerchants']);
+    Route::post('merchants',                      [AdminFoodController::class, 'createMerchant']);
     Route::get('merchants/{id}',                  [AdminFoodController::class, 'showMerchant']);
     Route::post('merchants/{id}/approve',         [AdminFoodController::class, 'approveMerchant']);
     Route::post('merchants/{id}/suspend',         [AdminFoodController::class, 'suspendMerchant']);
     Route::get('orders',                          [AdminFoodController::class, 'indexOrders']);
+    Route::post('orders/{id}/force-cancel',       [AdminFoodController::class, 'forceCancelOrder']);
+    Route::post('orders/{id}/force-complete',     [AdminFoodController::class, 'forceCompleteOrder']);
 });

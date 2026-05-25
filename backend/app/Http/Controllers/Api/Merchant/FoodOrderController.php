@@ -24,14 +24,24 @@ class FoodOrderController extends Controller
             return response()->json(['message' => 'Merchant tidak ditemukan.'], 404);
         }
 
-        $orders = FoodOrder::where('merchant_id', $merchant->id)
+        $activeStatuses = ['pending','merchant_accepted','preparing','ready_for_pickup','mitra_on_pickup','picked_up','on_delivery','delivered'];
+
+        // Order aktif: semua dimuat (merchant harus lihat semua order aktif)
+        $active = FoodOrder::where('merchant_id', $merchant->id)
             ->with(['customer:id,name,phone', 'items'])
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->whereIn('status', $activeStatuses)
             ->latest()
-            ->limit(100)
             ->get();
 
-        return response()->json(['data' => $orders]);
+        // Riwayat: 50 terbaru cukup untuk dashboard merchant
+        $history = FoodOrder::where('merchant_id', $merchant->id)
+            ->with(['customer:id,name,phone', 'items'])
+            ->whereNotIn('status', $activeStatuses)
+            ->latest()
+            ->limit(50)
+            ->get();
+
+        return response()->json(['data' => $active->concat($history)->values()]);
     }
 
     public function show(Request $request, int $id): JsonResponse

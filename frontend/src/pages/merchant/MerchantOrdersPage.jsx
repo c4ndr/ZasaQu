@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import MerchantLayout from '../../components/MerchantLayout'
 import api from '../../services/api'
+import echo from '../../services/echo'
+import { useAuth } from '../../context/AuthContext'
 
 function fmtRp(v)   { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 function fmtTime(d) { return new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }
@@ -51,7 +53,7 @@ function PrepModal({ order, onClose, onAccepted }) {
           {[10,15,20,30,45,60].map(m => (
             <button key={m} onClick={() => setMins(m)} style={{
               flex: 1, padding: '10px 4px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: mins === m ? '#FF7A45' : 'var(--k-input)',
+              background: mins === m ? '#F97316' : 'var(--k-input)',
               color: mins === m ? '#fff' : 'var(--k-sub)', fontWeight: mins === m ? 700 : 400, fontSize: 13,
             }}>{m}m</button>
           ))}
@@ -114,6 +116,7 @@ export default function MerchantOrdersPage() {
   const [toast,     setToast]     = useState(null)
   const [syncError, setSyncError] = useState(false)
   const pollRef = useRef(null)
+  const { user } = useAuth()
 
   const load = useCallback(() => {
     api.get('/food/merchant/orders')
@@ -124,9 +127,19 @@ export default function MerchantOrdersPage() {
 
   useEffect(() => {
     load()
-    pollRef.current = setInterval(load, 15000)
-    return () => clearInterval(pollRef.current)
-  }, [load])
+    // WebSocket: order baru masuk → reload langsung tanpa tunggu polling
+    const channelName = `App.Models.User.${user?.id}`
+    const ch = echo.channel(channelName)
+    ch.listen('.food.order.created', () => load())
+    // WebSocket: update status order aktif (mis. customer batalkan)
+    ch.listen('.food.order.status', () => load())
+
+    pollRef.current = setInterval(load, 30000)
+    return () => {
+      clearInterval(pollRef.current)
+      echo.leave(channelName)
+    }
+  }, [load, user?.id])
 
   function showToast(type, msg) {
     setToast({ type, msg }); setTimeout(() => setToast(null), 3000)
@@ -172,7 +185,7 @@ export default function MerchantOrdersPage() {
             <button key={k} onClick={() => setTab(k)} style={{
               padding: '8px 20px', borderRadius: 20, border: 'none', cursor: 'pointer',
               fontWeight: tab === k ? 700 : 400, fontSize: 13,
-              background: tab === k ? '#FF7A45' : 'var(--k-input)',
+              background: tab === k ? '#F97316' : 'var(--k-input)',
               color: tab === k ? '#fff' : 'var(--k-sub)',
             }}>{l}</button>
           ))}
@@ -209,7 +222,7 @@ export default function MerchantOrdersPage() {
                     {order.notes && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--k-sub)', background: 'var(--k-input)', padding: '8px 12px', borderRadius: 8 }}>📝 {order.notes}</div>}
 
                     <div style={{ borderTop: '1px solid var(--k-border)', marginTop: 12, paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: 800, color: '#FF7A45' }}>{fmtRp(order.total_amount)}</span>
+                      <span style={{ fontWeight: 800, color: '#F97316' }}>{fmtRp(order.total_amount)}</span>
 
                       <div style={{ display: 'flex', gap: 8 }}>
                         {order.status === 'pending' && (

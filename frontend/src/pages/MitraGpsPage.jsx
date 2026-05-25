@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet'
+import { MapContainer, Marker, Circle, useMap } from 'react-leaflet'
+import SatelliteTiles from '../components/SatelliteTiles'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import useGps from '../hooks/useGps'
 import LocationSearch from '../components/LocationSearch'
 import api from '../services/api'
+import { isNative, requestGeolocationPermission } from '../utils/nativePlatform'
 
 // ── Fix ikon Leaflet ──────────────────────────────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl
@@ -246,9 +248,15 @@ export default function MitraGpsPage() {
     }
   }
 
-  const handleEnableGps = () => {
+  const handleEnableGps = async () => {
     setLocalError('')
-    if (!navigator.geolocation) {
+    if (isNative) {
+      const granted = await requestGeolocationPermission()
+      if (!granted) {
+        setLocalError('Izin lokasi ditolak. Buka Pengaturan → Izin Aplikasi → Lokasi.')
+        return
+      }
+    } else if (!navigator.geolocation) {
       setLocalError('Browser tidak mendukung GPS. Coba gunakan Chrome atau Firefox terbaru.')
       return
     }
@@ -354,10 +362,7 @@ export default function MitraGpsPage() {
           style={{ height: '100%', width: '100%', minHeight: 300 }}
           zoomControl={true}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <SatelliteTiles />
 
           {mapPosition && (
             <>
@@ -777,7 +782,7 @@ export default function MitraGpsPage() {
                     <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(0,0,0,0.15)', borderRadius: 10 }}>
                       <p style={{ fontSize: 11, color: 'var(--k-muted)', marginBottom: 2 }}>Rute</p>
                       <p style={{ fontSize: 12, color: 'var(--k-text)' }}>
-                        {jastipSession.origin_address ?? `${jastipSession.origin_lat}, ${jastipSession.origin_lng}`} → {jastipSession.dest_address ?? `${jastipSession.destination_lat}, ${jastipSession.destination_lng}`}
+                        {jastipSession.origin_address ?? `${jastipSession.origin_lat}, ${jastipSession.origin_lng}`} → {jastipSession.destination_address ?? `${jastipSession.destination_lat}, ${jastipSession.destination_lng}`}
                       </p>
                     </div>
                   </div>

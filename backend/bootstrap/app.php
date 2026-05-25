@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckMaintenanceMode;
 use App\Http\Middleware\EnsureUserActive;
 use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
@@ -16,11 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'role'   => RoleMiddleware::class,
-            'active' => EnsureUserActive::class,
+            'role'        => RoleMiddleware::class,
+            'active'      => EnsureUserActive::class,
+            'maintenance' => CheckMaintenanceMode::class,
         ]);
-
-        $middleware->statefulApi();
+        $middleware->appendToGroup('api', CheckMaintenanceMode::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

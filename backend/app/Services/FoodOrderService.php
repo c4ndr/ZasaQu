@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Events\FoodOrderCreatedForMerchant;
+use App\Events\FoodOrderStatusUpdated;
+use App\Events\NewFoodOrderAvailable;
 use App\Models\AdminSetting;
 use App\Models\FoodMerchant;
 use App\Models\FoodOrder;
@@ -126,7 +129,7 @@ class FoodOrderService
                 }
             }
 
-            // Notifikasi ke merchant
+            // Notifikasi ke merchant (in-app + push)
             $this->notifService->send(
                 $merchant->user,
                 'food_new_order',
@@ -134,6 +137,9 @@ class FoodOrderService
                 "Ada order baru #{$order->order_number} dari {$customer->name}.",
                 ['food_order_id' => $order->id, 'order_number' => $order->order_number]
             );
+
+            // Broadcast real-time ke merchant (WebSocket)
+            broadcast(new FoodOrderCreatedForMerchant($order->load('merchant')))->toOthers();
 
             return $order;
         });
@@ -146,11 +152,14 @@ class FoodOrderService
         $this->assertStatus($order, 'pending');
 
         return DB::transaction(function () use ($order, $prepMinutes) {
+            $prev = $order->status;
             $order->update([
                 'status'                  => 'merchant_accepted',
                 'merchant_accepted_at'    => now(),
                 'estimated_prep_minutes'  => $prepMinutes,
             ]);
+
+            broadcast(new FoodOrderStatusUpdated($order->fresh(), $prev))->toOthers();
 
             $this->notifService->send(
                 $order->customer,
@@ -169,6 +178,7 @@ class FoodOrderService
         $this->assertStatus($order, 'pending');
 
         return DB::transaction(function () use ($order, $reason) {
+            $prev = $order->status;
             $order->update([
                 'status'           => 'rejected',
                 'rejected_at'      => now(),
@@ -177,6 +187,8 @@ class FoodOrderService
 
             $this->restoreStock($order);
             $this->refundCustomer($order);
+
+            broadcast(new FoodOrderStatusUpdated($order->fresh(), $prev))->toOthers();
 
             $this->notifService->send(
                 $order->customer,
@@ -194,7 +206,10 @@ class FoodOrderService
     {
         $this->assertStatus($order, 'merchant_accepted');
 
+        $prev = $order->status;
         $order->update(['status' => 'preparing', 'preparing_at' => now()]);
+
+        broadcast(new FoodOrderStatusUpdated($order->fresh(), $prev))->toOthers();
 
         $this->notifService->send(
             $order->customer, 'food_preparing',
@@ -210,7 +225,10 @@ class FoodOrderService
     {
         $this->assertStatus($order, 'preparing');
 
+        $prev = $order->status;
         $order->update(['status' => 'ready_for_pickup', 'ready_at' => now()]);
+
+        broadcast(new FoodOrderStatusUpdated($order->fresh(), $prev))->toOthers();
 
         $this->notifService->send(
             $order->customer, 'food_ready',
@@ -247,12 +265,15 @@ class FoodOrderService
                 throw new \Exception('Selesaikan order aktif terlebih dahulu.');
             }
 
+            $prev = $locked->status;
             $locked->update([
                 'mitra_id'          => $mitra->id,
                 'status'            => 'mitra_on_pickup',
                 'mitra_assigned_at' => now(),
                 'mitra_on_pickup_at'=> now(),
             ]);
+
+            broadcast(new FoodOrderStatusUpdated($locked->fresh(), $prev))->toOthers();
 
             $this->notifService->send(
                 $locked->customer, 'food_mitra_assigned',
@@ -273,33 +294,40 @@ class FoodOrderService
             'on_delivery'     => 'delivered',
         ];
 
-        if (!isset($allowed[$order->status]) || $allowed[$order->status] !== $newStatus) {
-            throw new \Exception("Transisi status dari {$order->status} ke {$newStatus} tidak valid.");
-        }
+        return DB::transaction(function () use ($order, $newStatus, $allowed) {
+            $locked = FoodOrder::lockForUpdate()->findOrFail($order->id);
 
-        $timestamps = [
-            'picked_up'   => ['picked_up_at'   => now()],
-            'on_delivery' => ['on_delivery_at'  => now()],
-            'delivered'   => ['delivered_at'    => now()],
-        ];
+            if (!isset($allowed[$locked->status]) || $allowed[$locked->status] !== $newStatus) {
+                throw new \Exception("Transisi status dari {$locked->status} ke {$newStatus} tidak valid.");
+            }
 
-        $order->update(array_merge(['status' => $newStatus], $timestamps[$newStatus] ?? []));
+            $timestamps = [
+                'picked_up'   => ['picked_up_at'   => now()],
+                'on_delivery' => ['on_delivery_at'  => now()],
+                'delivered'   => ['delivered_at'    => now()],
+            ];
 
-        $notifs = [
-            'picked_up'   => ['food_picked_up',  'Pesanan Diambil', "Mitra sudah mengambil pesanan #{$order->order_number} dari merchant."],
-            'on_delivery' => ['food_on_delivery', 'Pesanan Dalam Perjalanan', "Pesanan #{$order->order_number} sedang diantar ke lokasimu."],
-            'delivered'   => ['food_delivered',   'Pesanan Tiba!', "Pesanan #{$order->order_number} sudah diantar. Konfirmasi terima dalam 2 jam."],
-        ];
+            $prevStatus = $locked->status;
+            $locked->update(array_merge(['status' => $newStatus], $timestamps[$newStatus] ?? []));
 
-        if (isset($notifs[$newStatus])) {
-            [$type, $title, $body] = $notifs[$newStatus];
-            $this->notifService->send(
-                $order->customer, $type, $title, $body,
-                ['food_order_id' => $order->id, 'order_number' => $order->order_number]
-            );
-        }
+            broadcast(new FoodOrderStatusUpdated($locked->fresh(), $prevStatus))->toOthers();
 
-        return $order->fresh();
+            $notifs = [
+                'picked_up'   => ['food_picked_up',  'Pesanan Diambil', "Mitra sudah mengambil pesanan #{$locked->order_number} dari merchant."],
+                'on_delivery' => ['food_on_delivery', 'Pesanan Dalam Perjalanan', "Pesanan #{$locked->order_number} sedang diantar ke lokasimu."],
+                'delivered'   => ['food_delivered',   'Pesanan Tiba!', "Pesanan #{$locked->order_number} sudah diantar. Konfirmasi terima dalam 2 jam."],
+            ];
+
+            if (isset($notifs[$newStatus])) {
+                [$type, $title, $body] = $notifs[$newStatus];
+                $this->notifService->send(
+                    $locked->customer, $type, $title, $body,
+                    ['food_order_id' => $locked->id, 'order_number' => $locked->order_number]
+                );
+            }
+
+            return $locked->fresh();
+        });
     }
 
     public function customerConfirm(FoodOrder $order): FoodOrder
@@ -312,9 +340,42 @@ class FoodOrderService
             if ($locked->status !== 'delivered') {
                 throw new \Exception("Status order sudah berubah: {$locked->status}.");
             }
+            $prev = $locked->status;
             $locked->update(['status' => 'completed', 'completed_at' => now()]);
             $this->settleWallet($locked);
+            broadcast(new FoodOrderStatusUpdated($locked->fresh(), $prev))->toOthers();
             return $locked;
+        });
+    }
+
+    public function adminForceCancel(FoodOrder $order, string $reason): FoodOrder
+    {
+        return DB::transaction(function () use ($order, $reason) {
+            $prev = $order->status;
+            $order->update([
+                'status'              => 'cancelled',
+                'cancelled_at'        => now(),
+                'cancelled_by'        => 'admin',
+                'cancellation_reason' => $reason,
+            ]);
+
+            $this->restoreStock($order);
+            $this->refundCustomer($order);
+
+            broadcast(new FoodOrderStatusUpdated($order->fresh(), $prev))->toOthers();
+
+            foreach ([$order->customer, $order->merchant?->user, $order->mitra] as $recipient) {
+                if ($recipient) {
+                    $this->notifService->send(
+                        $recipient, 'food_cancelled',
+                        'Order Dibatalkan Admin',
+                        "Order #{$order->order_number} dibatalkan oleh admin: {$reason}",
+                        ['food_order_id' => $order->id, 'order_number' => $order->order_number]
+                    );
+                }
+            }
+
+            return $order;
         });
     }
 
@@ -325,6 +386,7 @@ class FoodOrderService
         }
 
         return DB::transaction(function () use ($order) {
+            $prev = $order->status;
             $order->update([
                 'status'              => 'cancelled',
                 'cancelled_at'        => now(),
@@ -334,6 +396,8 @@ class FoodOrderService
 
             $this->restoreStock($order);
             $this->refundCustomer($order);
+
+            broadcast(new FoodOrderStatusUpdated($order->fresh(), $prev))->toOthers();
 
             $this->notifService->send(
                 $order->merchant->user, 'food_cancelled',
@@ -499,11 +563,17 @@ class FoodOrderService
             );
         }
 
-        // Notifikasi selesai
+        // Notifikasi selesai + permintaan rating
         $this->notifService->send(
             $order->customer, 'food_completed',
             'Pesanan Selesai!',
             "Pesanan #{$order->order_number} selesai. Bagaimana pengalamanmu?",
+            ['food_order_id' => $order->id, 'order_number' => $order->order_number, 'action' => 'rate']
+        );
+        $this->notifService->send(
+            $order->customer, 'food_rating_request',
+            'Beri Ulasan Pesanan',
+            "Bantu merchant dan mitra dengan memberikan ulasan untuk pesanan #{$order->order_number}.",
             ['food_order_id' => $order->id, 'order_number' => $order->order_number, 'action' => 'rate']
         );
 
@@ -530,19 +600,10 @@ class FoodOrderService
             return;
         }
 
-        // Kembalikan locked balance — lockForUpdate mencegah race condition concurrent refund
+        // Lepas lock saja — balance tidak pernah didebit saat order dibuat,
+        // jadi tidak perlu credit() kembali. Sama dengan pola ZasaGo cancelOrder.
         $wallet = Wallet::lockForUpdate()->where('user_id', $order->customer_id)->firstOrFail();
         $wallet->decrement('locked_balance', min($order->total_amount, (float) $wallet->locked_balance));
-
-        // Credit balik ke wallet
-        $this->walletService->credit(
-            $order->customer,
-            $order->total_amount,
-            'refund',
-            "Refund order #{$order->order_number}",
-            $order,
-            'zasafood'
-        );
 
         $order->update(['payment_status' => 'refunded']);
     }
@@ -553,7 +614,10 @@ class FoodOrderService
         $mLat     = $order->merchant->lat;
         $mLng     = $order->merchant->lng;
 
-        // Cari semua mitra online yang punya data GPS di Redis
+        // Broadcast WebSocket ke semua mitra channel — frontend filter berdasarkan GPS
+        broadcast(new NewFoodOrderAvailable($order))->toOthers();
+
+        // Cari semua mitra online yang punya data GPS di Redis → kirim in-app + push notif
         $onlineMitras = MitraDetail::where('is_online', true)
             ->with('user')
             ->get();

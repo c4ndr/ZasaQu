@@ -27,4 +27,7 @@ api.interceptors.response.use(
   }
 )
 
+const BASE_URL = import.meta.env.VITE_API_URL || ''
+export const storageUrl = (path) => path ? `${BASE_URL}/storage/${path}` : null
+
 export default api

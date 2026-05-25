@@ -2,31 +2,34 @@ import { useState } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
+import useAppInfo from '../hooks/useAppInfo'
 
 const NAV_ITEMS = [
-  { to: '/admin',                 emoji: '📊', label: 'Dashboard',   exact: true },
-  { to: '/admin/orders',          emoji: '📦', label: 'Order ZasaGo' },
-  { to: '/admin/food/merchants',  emoji: '🍜', label: 'Merchant Food' },
-  { to: '/admin/food/orders',     emoji: '🛵', label: 'Order Food' },
-  { to: '/admin/topup',           emoji: '💰', label: 'Top Up' },
-  { to: '/admin/withdraw',        emoji: '💸', label: 'Withdraw' },
-  { to: '/admin/users',           emoji: '👥', label: 'Pengguna' },
+  { to: '/admin',                emoji: '📊', label: 'Dashboard',     exact: true },
+  { to: '/admin/orders',         emoji: '📦', label: 'Order ZasaGo' },
+  { to: '/admin/food/merchants', emoji: '🍜', label: 'Merchant Food' },
+  { to: '/admin/food/orders',    emoji: '🛵', label: 'Order Food' },
+  { to: '/admin/topup',          emoji: '💰', label: 'Top Up' },
+  { to: '/admin/withdraw',       emoji: '💸', label: 'Withdraw' },
+  { to: '/admin/users',          emoji: '👥', label: 'Pengguna' },
   { to: '/admin/mitra/verify',   emoji: '✅', label: 'Verif Mitra' },
-  { to: '/admin/settings',        emoji: '⚙️', label: 'Pengaturan' },
-  { to: '/admin/audit-logs',      emoji: '📋', label: 'Log Audit' },
+  { to: '/admin/promos',         emoji: '📢', label: 'Promo & Iklan' },
+  { to: '/admin/settings',       emoji: '⚙️', label: 'Pengaturan' },
+  { to: '/admin/audit-logs',     emoji: '📋', label: 'Log Audit' },
 ]
 
 const PAGE_TITLE = {
-  '/admin':                   'Dashboard',
-  '/admin/orders':            'Manajemen Order ZasaGo',
-  '/admin/food/merchants':    'Merchant ZasaFood',
-  '/admin/food/orders':       'Order ZasaFood',
-  '/admin/topup':             'Top Up',
-  '/admin/withdraw':          'Withdraw',
-  '/admin/users':             'Pengguna',
-  '/admin/mitra/verify':     'Verifikasi Mitra Baru',
-  '/admin/settings':          'Pengaturan',
-  '/admin/audit-logs':        'Log Audit',
+  '/admin':                 'Dashboard',
+  '/admin/orders':          'Manajemen Order ZasaGo',
+  '/admin/food/merchants':  'Merchant ZasaFood',
+  '/admin/food/orders':     'Order ZasaFood',
+  '/admin/topup':           'Top Up',
+  '/admin/withdraw':        'Withdraw',
+  '/admin/users':           'Pengguna',
+  '/admin/mitra/verify':    'Verifikasi Mitra Baru',
+  '/admin/promos':          'Promo & Iklan',
+  '/admin/settings':        'Pengaturan',
+  '/admin/audit-logs':      'Log Audit',
 }
 
 const IconMenu = () => (
@@ -60,6 +63,7 @@ export default function AdminLayout({ children }) {
   const navigate         = useNavigate()
   const location         = useLocation()
   const [open, setOpen]  = useState(false)
+  const { app_name, app_logo_url } = useAppInfo()
 
   const handleLogout = async () => {
     try { await api.post('/auth/logout') } finally { logout(); navigate('/login') }
@@ -157,10 +161,9 @@ export default function AdminLayout({ children }) {
       <header style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)', padding: '0 24px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Kiri: logo + judul halaman */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 28, height: 28, background: 'var(--k-accent)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 14, color: '#0C0C16' }}>Z</div>
-            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--k-accent)' }}>ZasaQu</span>
-          </div>
+          <img src={app_logo_url || '/logo-zasaqu.png'} alt={app_name}
+            onError={e => { e.currentTarget.src = '/logo-zasaqu.png' }}
+            style={{ height: 26, display: 'block' }} />
           <span style={{ color: 'var(--k-border)', fontSize: 18 }}>|</span>
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--k-text)' }}>{pageTitle}</span>
         </div>

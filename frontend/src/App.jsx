@@ -1,7 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { useTheme } from './hooks/useTheme'
 import { unlockAudio } from './hooks/useNewOrderNotif'
+import { isNative, initPushNotifications } from './utils/nativePlatform'
+import { App as CapApp } from '@capacitor/app'
+import useAppInfo from './hooks/useAppInfo'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -34,8 +38,10 @@ import FoodCartPage from './pages/zasafood/FoodCartPage'
 import FoodOrdersPage from './pages/zasafood/FoodOrdersPage'
 import FoodTrackingPage from './pages/zasafood/FoodTrackingPage'
 import MitraFoodOrdersPage from './pages/zasafood/MitraFoodOrdersPage'
+import FoodJastipSessionsPage from './pages/zasafood/FoodJastipSessionsPage'
 import AdminFoodOrdersPage from './pages/admin/AdminFoodOrdersPage'
 import AdminMitraVerificationPage from './pages/admin/AdminMitraVerificationPage'
+import AdminPromosPage from './pages/admin/AdminPromosPage'
 import MitraOnboardingPage from './pages/MitraOnboardingPage'
 import MerchantDashboardPage from './pages/merchant/MerchantDashboardPage'
 import MerchantMenuPage from './pages/merchant/MerchantMenuPage'
@@ -82,14 +88,48 @@ function MitraRoute({ children }) {
   return children
 }
 
+function ThemeInitializer() {
+  useTheme()
+  return null
+}
+
+function MaintenanceScreen() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--k-bg)', padding: 32, textAlign: 'center' }}>
+      <div style={{ fontSize: 64, marginBottom: 16 }}>🔧</div>
+      <div style={{ fontWeight: 800, fontSize: 20, color: 'var(--k-text)', marginBottom: 8 }}>Sedang Pemeliharaan</div>
+      <div style={{ fontSize: 14, color: 'var(--k-sub)', maxWidth: 280, lineHeight: 1.6 }}>
+        Aplikasi sedang dalam proses pemeliharaan. Silakan coba beberapa saat lagi.
+      </div>
+    </div>
+  )
+}
+
 function AppRoutes() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { maintenance_mode } = useAppInfo()
 
   useEffect(() => {
     const handler = () => navigate('/login', { replace: true })
     window.addEventListener('zasaqu:unauthorized', handler)
     return () => window.removeEventListener('zasaqu:unauthorized', handler)
   }, [navigate])
+
+  useEffect(() => {
+    if (!isNative) return
+    const sub = CapApp.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        window.history.back()
+      } else {
+        CapApp.exitApp()
+      }
+    })
+    return () => { sub.then(s => s.remove()) }
+  }, [])
+
+  // Admin bypass maintenance; user belum login tetap bisa ke /login
+  if (maintenance_mode && user && user.role !== 'admin') return <MaintenanceScreen />
 
   return (
     <>
@@ -124,6 +164,7 @@ function AppRoutes() {
       <Route path="/food/cart" element={<PrivateRoute><FoodCartPage /></PrivateRoute>} />
       <Route path="/food/orders" element={<PrivateRoute><FoodOrdersPage /></PrivateRoute>} />
       <Route path="/food/orders/:id" element={<PrivateRoute><FoodTrackingPage /></PrivateRoute>} />
+      <Route path="/food/jastip/sessions" element={<PrivateRoute><FoodJastipSessionsPage /></PrivateRoute>} />
       <Route path="/mitra/food/orders" element={<MitraRoute><MitraFoodOrdersPage /></MitraRoute>} />
       <Route path="/mitra/onboarding" element={<PrivateRoute><MitraOnboardingPage /></PrivateRoute>} />
       <Route path="/admin/mitra/verify" element={<AdminRoute><AdminMitraVerificationPage /></AdminRoute>} />
@@ -135,6 +176,7 @@ function AppRoutes() {
       <Route path="/admin/topup" element={<AdminRoute><AdminTopUpPage /></AdminRoute>} />
       <Route path="/admin/withdraw" element={<AdminRoute><AdminWithdrawPage /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+      <Route path="/admin/promos" element={<AdminRoute><AdminPromosPage /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
       <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogPage /></AdminRoute>} />
 
@@ -150,14 +192,27 @@ function AppRoutes() {
 
 export default function App() {
   useEffect(() => {
-    // Unlock AudioContext saat pertama kali user interaksi
     const unlock = () => { unlockAudio() }
     window.addEventListener('touchstart', unlock, { once: true })
     window.addEventListener('click',      unlock, { once: true })
+
+    // Init Capacitor native features (hanya di APK Android/iOS)
+    if (isNative) {
+      initPushNotifications({
+        onForeground: (notif) => {
+          // Notif masuk saat app terbuka — bunyi sudah ditangani Capacitor
+          console.log('Push foreground:', notif.title)
+        },
+        onTap: (notif) => {
+          // User tap notif dari luar app — navigasi ditangani di NotificationsPage
+        },
+      }).catch(() => {})
+    }
   }, [])
 
   return (
     <BrowserRouter>
+      <ThemeInitializer />
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>

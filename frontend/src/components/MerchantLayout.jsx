@@ -35,9 +35,10 @@ export default function MerchantLayout({ children, title }) {
           background: 'none', border: 'none', cursor: 'pointer',
           padding: '18px 20px', textAlign: 'left', color: 'var(--k-text)',
           fontSize: 18, display: 'flex', alignItems: 'center', gap: 12,
+          overflow: 'hidden',
         }}>
           <span style={{ fontSize: 22, flexShrink: 0 }}>🍜</span>
-          {open && <span style={{ fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap' }}>ZasaFood</span>}
+          {open && <img src="/logo-zasaqu.png" alt="ZasaQu" style={{ height: 20, display: 'block', flexShrink: 0 }} />}
         </button>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, padding: '4px 8px' }}>
@@ -45,8 +46,8 @@ export default function MerchantLayout({ children, title }) {
             <NavLink key={item.to} to={item.to} end={item.exact} style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '10px 12px', borderRadius: 10, textDecoration: 'none',
-              color: isActive ? '#FF7A45' : 'var(--k-sub)',
-              background: isActive ? 'rgba(255,122,69,0.1)' : 'transparent',
+              color: isActive ? '#F97316' : 'var(--k-sub)',
+              background: isActive ? 'rgba(249,115,22,0.1)' : 'transparent',
               fontWeight: isActive ? 700 : 400, fontSize: 13, whiteSpace: 'nowrap',
               transition: 'all .15s',
             })}>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MerchantLayout from '../../components/MerchantLayout'
-import api from '../../services/api'
+import api, { storageUrl } from '../../services/api'
 
 function fmtRp(v)   { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 function fmtTime(d) { return new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) }
@@ -20,12 +20,19 @@ const STATUS_META = {
 export default function MerchantDashboardPage() {
   const navigate = useNavigate()
   const [merchant, setMerchant] = useState(null)
+  const [stats,    setStats]    = useState(null)
   const [loading,  setLoading]  = useState(true)
   const [toast,    setToast]    = useState(null)
 
   useEffect(() => {
-    api.get('/food/merchant/profile')
-      .then(r => setMerchant(r.data.data))
+    Promise.all([
+      api.get('/food/merchant/profile'),
+      api.get('/food/merchant/statistics'),
+    ])
+      .then(([profileRes, statsRes]) => {
+        setMerchant(profileRes.data.data)
+        setStats(statsRes.data.data)
+      })
       .catch(() => setToast({ type: 'error', msg: 'Gagal memuat data toko.' }))
       .finally(() => setLoading(false))
   }, [])
@@ -84,7 +91,7 @@ export default function MerchantDashboardPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32,
           }}>
             {merchant?.logo_path
-              ? <img src={`/storage/${merchant.logo_path}`} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ? <img src={storageUrl(merchant.logo_path)} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : '🏪'
             }
           </div>
@@ -128,6 +135,22 @@ export default function MerchantDashboardPage() {
             <div style={{ color: 'var(--k-sub)' }}>
               Toko Anda sedang dalam review. Sambil menunggu, Anda bisa mengisi menu terlebih dahulu.
             </div>
+          </div>
+        )}
+
+        {/* Statistik */}
+        {stats && (
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {statCard('📦', 'Order Hari Ini',  stats.orders_today,  '#63B3ED')}
+            {statCard('💰', 'Omzet Hari Ini',  fmtRp(stats.revenue_today), '#00C896')}
+            {statCard('⏳', 'Menunggu',         stats.pending_orders, '#F6AD55')}
+            {statCard('⭐', 'Rating',            stats.average_rating > 0 ? `${stats.average_rating}/5` : '—', '#F6AD55')}
+          </div>
+        )}
+        {stats && (
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {statCard('🛎️', 'Total Order',      stats.total_orders)}
+            {statCard('💵', 'Total Omzet',       fmtRp(stats.total_revenue), '#00C896')}
           </div>
         )}
 

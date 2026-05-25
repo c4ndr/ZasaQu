@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\Mitra;
 
+use App\Events\FoodMitraLocationUpdated;
 use App\Events\GpsSessionClosed;
 use App\Events\MitraLocationUpdated;
+use App\Models\FoodJastipSession;
 use App\Models\FoodOrder;
 use App\Models\JastipSession;
 use App\Models\MitraDetail;
@@ -85,7 +87,7 @@ class GpsController extends Controller
             ->pluck('id');
 
         foreach ($activeFoodOrders as $foodOrderId) {
-            broadcast(new MitraLocationUpdated("food_{$foodOrderId}", $mitra->id, $lat, $lng, $ts))->toOthers();
+            broadcast(new FoodMitraLocationUpdated($foodOrderId, $mitra->id, $lat, $lng, $ts))->toOthers();
         }
 
         return response()->json(['ok' => true]);
@@ -119,6 +121,19 @@ class GpsController extends Controller
             }
         }
 
+        // Tutup FoodJastipSession ZasaFood yang aktif
+        $foodSession = FoodJastipSession::where('mitra_id', $mitra->id)
+            ->where('status', 'active')
+            ->first();
+
+        if ($foodSession) {
+            $foodSession->update([
+                'status'        => 'closed',
+                'closed_reason' => 'gps_lost',
+                'closed_at'     => now(),
+            ]);
+        }
+
         // Notifikasi ke customer semua order ZasaGo aktif yang sedang berjalan
         $activeOrders = Order::where('mitra_id', $mitra->id)
             ->whereIn('status', ['accepted', 'on_pickup', 'picked_up', 'on_delivery'])
@@ -133,6 +148,24 @@ class GpsController extends Controller
                     'Sinyal GPS Mitra Terputus',
                     "Sinyal GPS mitra pada order #{$activeOrder->order_number} hilang. Pelacakan real-time tidak tersedia sementara.",
                     ['order_id' => $activeOrder->id, 'order_number' => $activeOrder->order_number]
+                );
+            }
+        }
+
+        // Notifikasi ke customer semua order ZasaFood aktif yang sedang berjalan
+        $activeFoodOrdersWithCustomer = FoodOrder::where('mitra_id', $mitra->id)
+            ->whereIn('status', ['mitra_on_pickup', 'picked_up', 'on_delivery'])
+            ->with('customer')
+            ->get();
+
+        foreach ($activeFoodOrdersWithCustomer as $foodOrder) {
+            if ($foodOrder->customer) {
+                $this->notifService->send(
+                    $foodOrder->customer,
+                    'mitra_gps_lost',
+                    'Sinyal GPS Mitra Terputus',
+                    "Sinyal GPS mitra pada pesanan #{$foodOrder->order_number} hilang. Pelacakan real-time tidak tersedia sementara.",
+                    ['food_order_id' => $foodOrder->id, 'order_number' => $foodOrder->order_number]
                 );
             }
         }

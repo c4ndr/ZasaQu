@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\JastipSession;
 use App\Services\CorridorService;
 use App\Services\JastipService;
@@ -26,7 +27,7 @@ class JastipController extends Controller
             'destination_lat'=>['nullable','numeric'],
             'destination_lng'=>['nullable','numeric'],
             'route_polyline'=>['nullable','array'],
-            'corridor_width'=>['nullable','integer','min:100','max:2000'],
+            'corridor_width'=>['nullable','integer','min:100','max:' . (int) (AdminSetting::where('key','corridor_max_meters')->value('value') ?? 2000)],
         ]);
 
         // Pastikan GPS aktif di Redis sebelum membuka sesi

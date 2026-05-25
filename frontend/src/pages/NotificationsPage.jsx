@@ -2,12 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import api from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const TYPE_ICON = {
   order_accepted:      '✅',
+  order_on_pickup:     '🛵',
   order_picked_up:     '📦',
   order_delivered:     '🏠',
   order_completed:     '💰',
+  order_cancelled:     '❌',
   rating_request:      '⭐',
   jastip_accepted:     '⚡',
   new_order:           '🔔',
@@ -21,20 +24,24 @@ const TYPE_ICON = {
   food_on_delivery:    '🚀',
   food_delivered:      '🎊',
   food_completed:      '⭐',
-  food_cancelled:      '❌',
-  food_timeout:        '⏰',
-  mitra_gps_lost:      '📡',
+  food_cancelled:             '❌',
+  food_timeout:               '⏰',
+  food_rating_request:        '⭐',
+  food_jastip_session_closed: '🔴',
+  mitra_gps_lost:             '📡',
 }
 
 const TYPE_COLOR = {
   order_accepted:      '#00C896',
+  order_on_pickup:     '#63B3ED',
   order_picked_up:     '#63B3ED',
   order_delivered:     '#00C896',
   order_completed:     '#00C896',
+  order_cancelled:     '#A0A0BC',
   rating_request:      '#F6AD55',
   jastip_accepted:     '#00C896',
   new_order:           '#B794F4',
-  food_new_order:      '#FF7A45',
+  food_new_order:      '#F97316',
   food_accepted:       '#00C896',
   food_rejected:       '#F56565',
   food_preparing:      '#9F7AEA',
@@ -44,9 +51,11 @@ const TYPE_COLOR = {
   food_on_delivery:    '#63B3ED',
   food_delivered:      '#00C896',
   food_completed:      '#00C896',
-  food_cancelled:      '#A0A0BC',
-  food_timeout:        '#F56565',
-  mitra_gps_lost:      '#F6AD55',
+  food_cancelled:             '#A0A0BC',
+  food_timeout:               '#F56565',
+  food_rating_request:        '#F6AD55',
+  food_jastip_session_closed: '#F56565',
+  mitra_gps_lost:             '#F6AD55',
 }
 
 function formatTime(dateStr) {
@@ -60,7 +69,10 @@ function formatTime(dateStr) {
 }
 
 export default function NotificationsPage() {
-  const navigate = useNavigate()
+  const navigate   = useNavigate()
+  const { user }   = useAuth()
+  const isMitra    = user?.role === 'mitra_motor' || user?.role === 'mitra_mobil'
+  const isMerchant = user?.role === 'merchant'
   const [notifs,   setNotifs]   = useState([])
   const [loading,  setLoading]  = useState(true)
   const [marking,  setMarking]  = useState(false)
@@ -83,17 +95,30 @@ export default function NotificationsPage() {
     }
   }
 
+  const getNavTarget = (notif) => {
+    // Notifikasi yang hanya dikirim ke mitra ZasaGo
+    if (notif.type === 'new_order' || notif.type === 'order_cancelled') {
+      return '/mitra/orders'
+    }
+    // Notifikasi order baru makanan: merchant ke halaman order, mitra ke halaman mitra food
+    if (notif.type === 'food_new_order') {
+      if (isMerchant) return '/merchant/orders'
+      if (isMitra)    return '/mitra/food/orders'
+    }
+    // Navigasi berbasis data
+    if (notif.data?.food_order_id) return `/food/orders/${notif.data.food_order_id}`
+    if (notif.data?.order_id)      return `/orders/${notif.data.order_id}/tracking`
+    if (notif.data?.order_number)  return '/orders'
+    return null
+  }
+
   const markOneRead = async (notif) => {
     if (!notif.read_at) {
       await api.post('/notifications/read', { id: notif.id }).catch(() => {})
       setNotifs(prev => prev.map(n => n.id === notif.id ? { ...n, read_at: new Date().toISOString() } : n))
     }
-    // Navigasi ke halaman yang sesuai
-    if (notif.data?.food_order_id) {
-      navigate(`/food/orders/${notif.data.food_order_id}`)
-    } else if (notif.data?.order_number) {
-      navigate('/orders')
-    }
+    const target = getNavTarget(notif)
+    if (target) navigate(target)
   }
 
   const unreadCount = notifs.filter(n => !n.read_at).length
