@@ -10,6 +10,7 @@ const ROLES = [
   { value: 'mitra_mobil',  emoji: '🚗', label: 'Mitra Mobil',    desc: 'Antar barang dengan mobil' },
   { value: 'merchant',     emoji: '🏪', label: 'Merchant',       desc: 'Buka toko makanan & minuman' },
   { value: 'home_provider',emoji: '🏠', label: 'Home Provider',  desc: 'Buka layanan laundry & jasa rumah' },
+  { value: 'seller',      emoji: '🛒', label: 'Seller Mart',   desc: 'Jual produk lokal di ZasaMart' },
 ]
 
 const HOME_CATEGORIES = [
@@ -36,6 +37,8 @@ export default function RegisterPage() {
     shop_name: '', shop_category: '', shop_address: '', shop_phone: '',
     provider_name: '', provider_category: '', provider_address: '', provider_phone: '',
     provider_lat: '', provider_lng: '',
+    seller_name: '', seller_address: '', seller_phone: '',
+    seller_lat: '', seller_lng: '',
   })
   const [error,           setError]           = useState('')
   const [loading,         setLoading]         = useState(false)
@@ -48,6 +51,7 @@ export default function RegisterPage() {
   const isMitra        = form.role === 'mitra_motor' || form.role === 'mitra_mobil'
   const isMerchant     = form.role === 'merchant'
   const isHomeProvider = form.role === 'home_provider'
+  const isSeller       = form.role === 'seller'
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -432,6 +436,41 @@ export default function RegisterPage() {
                   fontSize: 12, color: '#6366F1', lineHeight: 1.5,
                 }}>
                   🏠 Usaha Anda akan aktif setelah diverifikasi admin. Sambil menunggu, Anda sudah bisa mengatur layanan dan harga.
+                </div>
+              </div>
+            )}
+
+            {isSeller && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ height: 1, background: 'var(--k-border)' }} />
+                <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--k-text)' }}>🛒 Info Toko ZasaMart</p>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--k-muted)', display: 'block', marginBottom: 4 }}>Nama Toko *</label>
+                  <input name="seller_name" value={form.seller_name} onChange={handleChange} required={isSeller}
+                    placeholder="Nama toko Anda di ZasaMart"
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--k-muted)', display: 'block', marginBottom: 4 }}>Alamat Toko *</label>
+                  <input name="seller_address" value={form.seller_address} onChange={handleChange} required={isSeller}
+                    placeholder="Alamat lengkap toko"
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--k-muted)', display: 'block', marginBottom: 4 }}>No. HP Toko</label>
+                  <input name="seller_phone" value={form.seller_phone} onChange={handleChange}
+                    placeholder="Nomor HP yang bisa dihubungi"
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--k-muted)', display: 'block', marginBottom: 6 }}>Lokasi Toko (untuk ongkir)</label>
+                  <MerchantLocationPicker
+                    lat={form.seller_lat || null} lng={form.seller_lng || null}
+                    onPick={({ lat, lng, address }) => setForm(f => ({ ...f, seller_lat: lat, seller_lng: lng, seller_address: address || f.seller_address }))}
+                  />
+                </div>
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)', fontSize: 12, color: '#8B5CF6', lineHeight: 1.5 }}>
+                  🛒 Toko Anda akan aktif setelah diverifikasi admin. Anda sudah bisa menambahkan produk sejak pertama kali masuk.
                 </div>
               </div>
             )}

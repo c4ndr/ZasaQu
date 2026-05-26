@@ -10,6 +10,8 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Models\Rating;
 use App\Models\HomeProvider;
 use App\Models\HomeOrder;
+use App\Models\MartSeller;
+use App\Models\MartOrder;
 
 class User extends Authenticatable
 {
@@ -98,6 +100,16 @@ class User extends Authenticatable
         return $this->hasMany(HomeOrder::class, 'customer_id');
     }
 
+    public function martSeller()
+    {
+        return $this->hasOne(MartSeller::class);
+    }
+
+    public function martOrders()
+    {
+        return $this->hasMany(MartOrder::class, 'customer_id');
+    }
+
     public function isMitra(): bool
     {
         return in_array($this->role, ['mitra_motor', 'mitra_mobil']);
@@ -116,6 +128,11 @@ class User extends Authenticatable
     public function isHomeProvider(): bool
     {
         return $this->role === 'home_provider';
+    }
+
+    public function isSeller(): bool
+    {
+        return $this->role === 'seller';
     }
 
     public function isActive(): bool

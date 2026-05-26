@@ -57,6 +57,18 @@ import MerchantDashboardPage from './pages/merchant/MerchantDashboardPage'
 import MerchantMenuPage from './pages/merchant/MerchantMenuPage'
 import MerchantSettingsPage from './pages/merchant/MerchantSettingsPage'
 import MerchantOrdersPage from './pages/merchant/MerchantOrdersPage'
+import ZasaMartPage from './pages/zasamart/ZasaMartPage'
+import MartProductPage from './pages/zasamart/MartProductPage'
+import MartCartPage from './pages/zasamart/MartCartPage'
+import MartCheckoutPage from './pages/zasamart/MartCheckoutPage'
+import MartOrdersPage from './pages/zasamart/MartOrdersPage'
+import MartOrderDetailPage from './pages/zasamart/MartOrderDetailPage'
+import SellerDashboardPage from './pages/seller/SellerDashboardPage'
+import SellerOrdersPage from './pages/seller/SellerOrdersPage'
+import SellerProductsPage from './pages/seller/SellerProductsPage'
+import SellerSettingsPage from './pages/seller/SellerSettingsPage'
+import AdminMartSellersPage from './pages/admin/AdminMartSellersPage'
+import AdminMartOrdersPage from './pages/admin/AdminMartOrdersPage'
 
 function PrivateRoute({ children }) {
   const { user } = useAuth()
@@ -89,11 +101,19 @@ function HomeProviderRoute({ children }) {
   return children
 }
 
+function SellerRoute({ children }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== 'seller') return <Navigate to="/dashboard" replace />
+  return children
+}
+
 function DashboardRedirect() {
   const { user } = useAuth()
   if (user?.role === 'merchant')                          return <Navigate to="/merchant" replace />
   if (user?.role === 'admin')                             return <Navigate to="/admin" replace />
   if (user?.role === 'home_provider')                     return <Navigate to="/home/provider" replace />
+  if (user?.role === 'seller')                            return <Navigate to="/seller" replace />
   if (user?.role?.startsWith('mitra') && user?.status === 'pending_review') return <Navigate to="/mitra/onboarding" replace />
   return <DashboardPage />
 }
@@ -209,6 +229,24 @@ function AppRoutes() {
       <Route path="/admin/promos" element={<AdminRoute><AdminPromosPage /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
       <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogPage /></AdminRoute>} />
+
+      {/* ZasaMart — Customer */}
+      <Route path="/mart" element={<PrivateRoute><ZasaMartPage /></PrivateRoute>} />
+      <Route path="/mart/products/:id" element={<PrivateRoute><MartProductPage /></PrivateRoute>} />
+      <Route path="/mart/cart" element={<PrivateRoute><MartCartPage /></PrivateRoute>} />
+      <Route path="/mart/checkout" element={<PrivateRoute><MartCheckoutPage /></PrivateRoute>} />
+      <Route path="/mart/orders" element={<PrivateRoute><MartOrdersPage /></PrivateRoute>} />
+      <Route path="/mart/orders/:id" element={<PrivateRoute><MartOrderDetailPage /></PrivateRoute>} />
+
+      {/* ZasaMart — Seller */}
+      <Route path="/seller" element={<SellerRoute><SellerDashboardPage /></SellerRoute>} />
+      <Route path="/seller/orders" element={<SellerRoute><SellerOrdersPage /></SellerRoute>} />
+      <Route path="/seller/products" element={<SellerRoute><SellerProductsPage /></SellerRoute>} />
+      <Route path="/seller/settings" element={<SellerRoute><SellerSettingsPage /></SellerRoute>} />
+
+      {/* Admin ZasaMart */}
+      <Route path="/admin/mart/sellers" element={<AdminRoute><AdminMartSellersPage /></AdminRoute>} />
+      <Route path="/admin/mart/orders" element={<AdminRoute><AdminMartOrdersPage /></AdminRoute>} />
 
       {/* Merchant Panel */}
       <Route path="/merchant" element={<MerchantRoute><MerchantDashboardPage /></MerchantRoute>} />

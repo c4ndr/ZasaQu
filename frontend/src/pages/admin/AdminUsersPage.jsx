@@ -15,6 +15,7 @@ const ROLE_META = {
   mitra_mobil:   { label: 'Mitra Mobil',    color: '#F6AD55', bg: 'rgba(246,173,85,0.12)'   },
   merchant:      { label: 'Merchant',       color: '#F97316', bg: 'rgba(249,115,22,0.12)'   },
   home_provider: { label: 'Home Provider',  color: '#6366F1', bg: 'rgba(99,102,241,0.12)'   },
+  seller:        { label: 'Seller Mart',    color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)'   },
   admin:         { label: 'Admin',          color: '#F56565', bg: 'rgba(245,101,101,0.12)'  },
 }
 const STATUS_META = {
@@ -147,6 +148,7 @@ function UserDetailDrawer({ userId, onClose, onStatusChange }) {
                 ...(user.mitra_detail?.vehicle_plate ? [{ label: 'Plat', value: user.mitra_detail.vehicle_plate, mono: true }] : []),
                 ...(user.role === 'merchant'      ? [{ label: 'Toko',     value: user.food_merchant?.name || '—' }] : []),
                 ...(user.role === 'home_provider' ? [{ label: 'Usaha',    value: user.home_provider?.name || '—' }] : []),
+                ...(user.role === 'seller'        ? [{ label: 'Toko Mart',value: user.mart_seller?.name   || '—' }] : []),
               ].map((row, i) => (
                 <div key={row.label} style={{ padding: '11px 16px', display: 'flex', justifyContent: 'space-between', gap: 10, borderTop: i === 0 ? 'none' : '1px solid var(--k-border)' }}>
                   <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>{row.label}</p>

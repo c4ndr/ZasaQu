@@ -552,17 +552,16 @@ export default function DashboardPage() {
 
               {/* ZasaMart */}
               <ServiceCard
-                to={null}
+                to="/mart"
                 emoji="🛒"
                 bgDecor="🏪"
                 title="ZasaMart"
-                desc="Belanja & grocery"
-                badge="SEGERA"
-                badgeColor="var(--k-muted)"
-                badgeBg="var(--k-input)"
-                gradient="linear-gradient(145deg, #F0FFF4 0%, #F7FFF9 100%)"
-                borderColor="rgba(16,185,129,0.12)"
-                active={false}
+                desc="Produk UMKM lokal"
+                badge="BARU"
+                badgeColor="#8B5CF6"
+                badgeBg="rgba(139,92,246,0.12)"
+                gradient="linear-gradient(145deg, #F5F3FF 0%, #FAF8FF 100%)"
+                borderColor="rgba(139,92,246,0.18)"
               />
 
               {/* ZasaRide */}

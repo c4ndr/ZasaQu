@@ -19,7 +19,7 @@ class UserController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $users = User::with(['wallet', 'mitraDetail', 'foodMerchant', 'homeProvider'])
+        $users = User::with(['wallet', 'mitraDetail', 'foodMerchant', 'homeProvider', 'martSeller'])
             ->where('role', '!=', 'admin')
             ->when($request->role, fn($q) => $q->where('role', $request->role))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
@@ -34,7 +34,7 @@ class UserController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $user = User::with(['wallet', 'mitraDetail', 'foodMerchant', 'homeProvider'])->findOrFail($id);
+        $user = User::with(['wallet', 'mitraDetail', 'foodMerchant', 'homeProvider', 'martSeller'])->findOrFail($id);
 
         $orders = \App\Models\Order::where(function($q) use ($user) {
                 $q->where('customer_id', $user->id)->orWhere('mitra_id', $user->id);

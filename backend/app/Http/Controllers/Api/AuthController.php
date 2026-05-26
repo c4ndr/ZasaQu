@@ -21,7 +21,7 @@ class AuthController extends Controller
             'name'          => ['required', 'string', 'max:100'],
             'email'         => ['required', 'email', 'unique:users,email'],
             'password'      => ['required', 'confirmed', Password::min(8)],
-            'role'          => ['sometimes', 'in:pelanggan,mitra_motor,mitra_mobil,merchant,home_provider'],
+            'role'          => ['sometimes', 'in:pelanggan,mitra_motor,mitra_mobil,merchant,home_provider,seller'],
             'vehicle_plate' => ['nullable', 'required_if:role,mitra_motor', 'required_if:role,mitra_mobil', 'string', 'max:20'],
             'vehicle_brand' => ['nullable', 'sometimes', 'string', 'max:50'],
             'vehicle_year'  => ['nullable', 'sometimes', 'integer', 'min:2000', 'max:' . date('Y')],
@@ -39,6 +39,12 @@ class AuthController extends Controller
             'provider_phone'    => ['nullable', 'string', 'max:20'],
             'provider_lat'      => ['nullable', 'numeric', 'between:-90,90'],
             'provider_lng'      => ['nullable', 'numeric', 'between:-180,180'],
+            // Seller fields
+            'seller_name'    => ['required_if:role,seller', 'nullable', 'string', 'max:100'],
+            'seller_address' => ['required_if:role,seller', 'nullable', 'string', 'max:255'],
+            'seller_phone'   => ['nullable', 'string', 'max:20'],
+            'seller_lat'     => ['nullable', 'numeric', 'between:-90,90'],
+            'seller_lng'     => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $user = $this->authService->registerEmail($data);

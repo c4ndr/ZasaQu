@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\FoodMerchant;
 use App\Models\HomeProvider;
+use App\Models\MartSeller;
 use App\Models\MitraDetail;
 use App\Models\User;
 use App\Models\Wallet;
@@ -40,6 +41,10 @@ class AuthService
             $this->createHomeProvider($user, $data);
         }
 
+        if ($role === 'seller') {
+            $this->createSeller($user, $data);
+        }
+
         return $user;
     }
 
@@ -69,6 +74,10 @@ class AuthService
 
         if ($role === 'home_provider') {
             $this->createHomeProvider($user, $data);
+        }
+
+        if ($role === 'seller') {
+            $this->createSeller($user, $data);
         }
 
         return $user;
@@ -116,6 +125,22 @@ class AuthService
             'phone'    => $data['provider_phone'] ?? null,
             'status'   => 'pending',
             'is_open'  => false,
+        ]);
+    }
+
+    private function createSeller(User $user, array $data): void
+    {
+        $name = $data['seller_name'];
+        MartSeller::create([
+            'user_id' => $user->id,
+            'name'    => $name,
+            'slug'    => Str::slug($name) . '-' . Str::random(6),
+            'address' => $data['seller_address'] ?? '',
+            'lat'     => $data['seller_lat'] ?? null,
+            'lng'     => $data['seller_lng'] ?? null,
+            'phone'   => $data['seller_phone'] ?? null,
+            'status'  => 'pending',
+            'is_open' => false,
         ]);
     }
 
