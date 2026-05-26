@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Mart;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\MartCart;
 use App\Models\MartCategory;
 use App\Models\MartOrder;
@@ -10,6 +11,8 @@ use App\Models\MartOrderItem;
 use App\Models\MartProduct;
 use App\Models\MartReview;
 use App\Models\MartSeller;
+use App\Models\Wallet;
+use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -144,8 +147,11 @@ class CustomerController extends Controller
         }
 
         $order = DB::transaction(function () use ($user, $seller, $data, $cartItems) {
-            $subtotal = $cartItems->sum(fn($i) => $i->product->price * $i->quantity);
-            $total    = $subtotal + $data['shipping_fee'];
+            $subtotal    = $cartItems->sum(fn($i) => $i->product->price * $i->quantity);
+            $total       = $subtotal + $data['shipping_fee'];
+            $commRate    = (float) AdminSetting::valueOf('mart_commission_percent', 5);
+            $commission  = (int) round($total * $commRate / 100);
+            $sellerIncome= $total - $commission;
 
             $order = MartOrder::create([
                 'order_number'           => MartOrder::generateNumber(),
@@ -165,6 +171,9 @@ class CustomerController extends Controller
                 'subtotal'               => $subtotal,
                 'shipping_fee'           => $data['shipping_fee'],
                 'total'                  => $total,
+                'commission_rate'        => $commRate,
+                'platform_commission'    => $commission,
+                'seller_income'          => $sellerIncome,
             ]);
 
             foreach ($cartItems as $item) {
@@ -238,6 +247,18 @@ class CustomerController extends Controller
         $order->update(['status' => 'completed', 'completed_at' => now()]);
 
         $order->items->each(fn($item) => $item->product->increment('total_sold', $item->quantity));
+
+        // Kredit income ke wallet seller
+        $sellerUser = $order->seller?->user;
+        if ($sellerUser && $order->seller_income > 0) {
+            app(WalletService::class)->credit(
+                $sellerUser,
+                $order->seller_income,
+                'order_income',
+                "Pendapatan order ZasaMart #{$order->order_number}",
+                $order
+            );
+        }
 
         return response()->json(['message' => 'Pesanan dikonfirmasi selesai.']);
     }

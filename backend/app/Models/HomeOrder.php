@@ -11,6 +11,7 @@ class HomeOrder extends Model
         'pickup_address', 'pickup_lat', 'pickup_lng',
         'delivery_address', 'delivery_lat', 'delivery_lng',
         'notes', 'total_price',
+        'commission_rate', 'platform_commission', 'provider_income',
         'scheduled_pickup_at', 'ready_at', 'completed_at', 'cancel_reason',
     ];
 

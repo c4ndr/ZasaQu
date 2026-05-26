@@ -20,6 +20,8 @@ const GROUPS = [
   { label: '💰 Komisi & Diskon',      keys: ['commission_master_percent', 'commission_jastip_percent', 'discount_master_percent'] },
   { label: '⚡ JastipQu',             keys: ['corridor_default_meters', 'corridor_max_meters', 'max_jastip_motor', 'max_jastip_mobil'] },
   { label: '🍜 ZasaFood',             keys: ['food_commission_percent', 'food_commission_delivery_percent', 'food_auto_confirm_minutes', 'food_merchant_timeout_minutes', 'food_mitra_assign_radius_km'] },
+  { label: '🛒 ZasaMart',             keys: ['mart_commission_percent'] },
+  { label: '🏠 ZasaHome',             keys: ['home_commission_percent'] },
   { label: '⚙️ Umum ZasaGo',          keys: ['wallet_minimum_mitra', 'auto_confirm_minutes', 'cod_confirm_timeout_minutes', 'insurance_max_value'] },
   { label: '📸 Penyimpanan Foto',     keys: ['photos_expire_days'] },
 ]

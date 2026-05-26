@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\HomeOrder;
 use App\Models\HomeProvider;
 use App\Models\HomeService;
+use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -189,6 +190,20 @@ class ProviderController extends Controller
         if ($next === 'completed')  $updates['completed_at']  = now();
 
         $order->update($updates);
+
+        // Kredit income ke wallet provider saat order completed
+        if ($next === 'completed' && $order->provider_income > 0) {
+            $providerUser = $order->provider?->user;
+            if ($providerUser) {
+                app(WalletService::class)->credit(
+                    $providerUser,
+                    $order->provider_income,
+                    'order_income',
+                    "Pendapatan order ZasaHome #{$order->order_number}",
+                    $order
+                );
+            }
+        }
 
         return response()->json([
             'message' => 'Status pesanan diperbarui.',

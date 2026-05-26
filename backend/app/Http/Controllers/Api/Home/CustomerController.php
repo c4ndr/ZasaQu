@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\Home;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\HomeOrder;
 use App\Models\HomeOrderItem;
 use App\Models\HomeProvider;
 use App\Models\HomeService;
+use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -99,6 +101,9 @@ class CustomerController extends Controller
             'notes'               => $data['notes'] ?? null,
             'total_price'         => $totalPrice,
             'scheduled_pickup_at' => $data['scheduled_pickup_at'] ?? null,
+            'commission_rate'     => $commRate = (float) AdminSetting::valueOf('home_commission_percent', 10),
+            'platform_commission' => $commission = (int) round($totalPrice * $commRate / 100),
+            'provider_income'     => $totalPrice - $commission,
         ]);
 
         foreach ($orderItems as $item) {
