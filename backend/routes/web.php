@@ -2,9 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// SPA fallback — semua route non-API dilayani React
+Route::get('/{any}', function () {
+    return response(file_get_contents(public_path('index.html')), 200)
+        ->header('Content-Type', 'text/html');
+})->where('any', '^(?!api|storage|ca-cert).*$');
 
 // Download sertifikat CA mkcert ke HP agar GPS bisa digunakan
 Route::get('/ca-cert', function () {

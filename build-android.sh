@@ -9,18 +9,10 @@ cd "$(dirname "$0")/frontend"
 
 MODE=${1:-debug}
 
-echo "▶ Menyiapkan environment Android..."
-cp .env .env.bak 2>/dev/null || true
-cp .env.android .env
-
-cleanup() {
-  echo "▶ Mengembalikan .env..."
-  mv .env.bak .env 2>/dev/null || rm -f .env
-}
-trap cleanup EXIT
-
-echo "▶ Build web (Vite)..."
-npm run build
+echo "▶ Build web (Vite, mode=android)..."
+# --mode android: Vite loads .env + .env.android (bukan .env.production)
+# sehingga VITE_API_URL dari .env.android dipakai, bukan dari .env.production
+npm run build -- --mode android
 
 echo "▶ Sync ke Android (Capacitor)..."
 npx cap sync android
@@ -48,9 +40,11 @@ else
   echo "✅ APK debug siap: $(dirname "$0")/zasaqu-debug.apk"
 
   # Install ke perangkat/emulator jika ADB tersedia
-  if command -v adb &>/dev/null && adb devices | grep -q "device$"; then
+  ADB="${ANDROID_HOME:-$HOME/Android/Sdk}/platform-tools/adb"
+  [ ! -f "$ADB" ] && ADB="adb"
+  if "$ADB" devices 2>/dev/null | grep -q "device$"; then
     echo "▶ Install ke perangkat via ADB..."
-    adb install -r "../zasaqu-debug.apk"
+    "$ADB" install -r "../zasaqu-debug.apk"
     echo "✅ Berhasil diinstall di perangkat."
   fi
 fi
