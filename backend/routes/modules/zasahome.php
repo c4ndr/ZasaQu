@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Home\CustomerController;
 use App\Http\Controllers\Api\Home\ProviderController;
+use App\Http\Controllers\Api\Admin\HomeController as AdminHomeController;
 use Illuminate\Support\Facades\Route;
 
 // ── Customer routes ──────────────────────────────────────────────────────────
@@ -36,4 +37,17 @@ Route::prefix('home/provider')->middleware(['auth:sanctum'])->group(function () 
     // Orders
     Route::get('orders',                              [ProviderController::class, 'orders']);
     Route::patch('orders/{order}/status',             [ProviderController::class, 'updateOrderStatus']);
+});
+
+// ── Admin Home routes ────────────────────────────────────────────────────────
+Route::prefix('admin/home')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+
+    Route::get('providers',                    [AdminHomeController::class, 'indexProviders']);
+    Route::post('providers',                   [AdminHomeController::class, 'createProvider']);
+    Route::get('providers/{id}',               [AdminHomeController::class, 'showProvider']);
+    Route::post('providers/{id}/approve',      [AdminHomeController::class, 'approveProvider']);
+    Route::post('providers/{id}/suspend',      [AdminHomeController::class, 'suspendProvider']);
+
+    Route::get('orders',                       [AdminHomeController::class, 'indexOrders']);
+    Route::post('orders/{id}/force-cancel',    [AdminHomeController::class, 'forceCancelOrder']);
 });
