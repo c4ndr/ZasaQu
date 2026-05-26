@@ -71,10 +71,20 @@ class OtpController extends Controller
             'phone'         => ['required', 'string', 'regex:/^08[0-9]{8,11}$/', 'unique:users,phone'],
             'otp'           => ['required', 'string', 'size:6'],
             'password'      => ['required', 'confirmed', Password::min(8)],
-            'role'          => ['sometimes', 'in:pelanggan,mitra_motor,mitra_mobil'],
-            'vehicle_plate' => ['required_if:role,mitra_motor', 'required_if:role,mitra_mobil', 'string', 'max:20'],
-            'vehicle_brand' => ['sometimes', 'string', 'max:50'],
-            'vehicle_year'  => ['sometimes', 'integer', 'min:2000', 'max:' . date('Y')],
+            'role'              => ['sometimes', 'in:pelanggan,mitra_motor,mitra_mobil,merchant,home_provider'],
+            'vehicle_plate'     => ['required_if:role,mitra_motor', 'required_if:role,mitra_mobil', 'string', 'max:20'],
+            'vehicle_brand'     => ['sometimes', 'string', 'max:50'],
+            'vehicle_year'      => ['sometimes', 'integer', 'min:2000', 'max:' . date('Y')],
+            // Merchant
+            'shop_name'         => ['required_if:role,merchant', 'nullable', 'string', 'max:100'],
+            'shop_category'     => ['required_if:role,merchant', 'nullable', 'in:makanan_berat,minuman,snack,lainnya'],
+            'shop_address'      => ['required_if:role,merchant', 'nullable', 'string', 'max:255'],
+            'shop_phone'        => ['nullable', 'string', 'max:20'],
+            // Home provider
+            'provider_name'     => ['required_if:role,home_provider', 'nullable', 'string', 'max:100'],
+            'provider_category' => ['required_if:role,home_provider', 'nullable', 'in:laundry,pijat,cleaning,tukang,lainnya'],
+            'provider_address'  => ['required_if:role,home_provider', 'nullable', 'string', 'max:255'],
+            'provider_phone'    => ['nullable', 'string', 'max:20'],
         ]);
 
         $valid = $this->otpService->verify($data['phone'], $data['otp'], 'register');

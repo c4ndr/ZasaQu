@@ -93,7 +93,7 @@ const MITRA_ITEMS = (name) => [
 
 export default function BottomNav() {
   const { user } = useAuth()
-  if (!user || user.role === 'admin' || user.role === 'merchant') return null
+  if (!user || user.role === 'admin' || user.role === 'merchant' || user.role === 'home_provider') return null
 
   const items = user.role?.startsWith('mitra') ? MITRA_ITEMS(user.name) : PELANGGAN_ITEMS(user.name)
   const centerIdx = 2

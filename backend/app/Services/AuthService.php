@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\FoodMerchant;
+use App\Models\HomeProvider;
 use App\Models\MitraDetail;
 use App\Models\User;
 use App\Models\Wallet;
@@ -35,6 +36,10 @@ class AuthService
             $this->createMerchant($user, $data);
         }
 
+        if ($role === 'home_provider') {
+            $this->createHomeProvider($user, $data);
+        }
+
         return $user;
     }
 
@@ -60,6 +65,10 @@ class AuthService
 
         if ($role === 'merchant') {
             $this->createMerchant($user, $data);
+        }
+
+        if ($role === 'home_provider') {
+            $this->createHomeProvider($user, $data);
         }
 
         return $user;
@@ -90,6 +99,23 @@ class AuthService
             'avg_prep_time_minutes'=> 20,
             'status'               => 'pending',
             'is_open'              => false,
+        ]);
+    }
+
+    private function createHomeProvider(User $user, array $data): void
+    {
+        $name = $data['provider_name'];
+        HomeProvider::create([
+            'user_id'  => $user->id,
+            'name'     => $name,
+            'slug'     => Str::slug($name) . '-' . Str::random(6),
+            'category' => $data['provider_category'] ?? 'laundry',
+            'address'  => $data['provider_address'] ?? '',
+            'lat'      => $data['provider_lat'] ?? null,
+            'lng'      => $data['provider_lng'] ?? null,
+            'phone'    => $data['provider_phone'] ?? null,
+            'status'   => 'pending',
+            'is_open'  => false,
         ]);
     }
 

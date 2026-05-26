@@ -82,10 +82,18 @@ function MerchantRoute({ children }) {
   return children
 }
 
+function HomeProviderRoute({ children }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== 'home_provider') return <Navigate to="/dashboard" replace />
+  return children
+}
+
 function DashboardRedirect() {
   const { user } = useAuth()
   if (user?.role === 'merchant')                          return <Navigate to="/merchant" replace />
   if (user?.role === 'admin')                             return <Navigate to="/admin" replace />
+  if (user?.role === 'home_provider')                     return <Navigate to="/home/provider" replace />
   if (user?.role?.startsWith('mitra') && user?.status === 'pending_review') return <Navigate to="/mitra/onboarding" replace />
   return <DashboardPage />
 }
@@ -174,9 +182,9 @@ function AppRoutes() {
       <Route path="/home/checkout" element={<PrivateRoute><HomeCheckoutPage /></PrivateRoute>} />
       <Route path="/home/orders" element={<PrivateRoute><HomeMyOrdersPage /></PrivateRoute>} />
       <Route path="/home/orders/:id" element={<PrivateRoute><HomeOrderDetailPage /></PrivateRoute>} />
-      <Route path="/home/provider" element={<PrivateRoute><HomeProviderDashboardPage /></PrivateRoute>} />
-      <Route path="/home/provider/services" element={<PrivateRoute><HomeProviderServicesPage /></PrivateRoute>} />
-      <Route path="/home/provider/settings" element={<PrivateRoute><HomeProviderSettingsPage /></PrivateRoute>} />
+      <Route path="/home/provider" element={<HomeProviderRoute><HomeProviderDashboardPage /></HomeProviderRoute>} />
+      <Route path="/home/provider/services" element={<HomeProviderRoute><HomeProviderServicesPage /></HomeProviderRoute>} />
+      <Route path="/home/provider/settings" element={<HomeProviderRoute><HomeProviderSettingsPage /></HomeProviderRoute>} />
 
       {/* ZasaFood */}
       <Route path="/food" element={<PrivateRoute><FoodPage /></PrivateRoute>} />

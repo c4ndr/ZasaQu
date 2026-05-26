@@ -5,10 +5,19 @@ import api from '../services/api'
 import MerchantLocationPicker from '../components/MerchantLocationPicker'
 
 const ROLES = [
-  { value: 'pelanggan',   emoji: '🛍️', label: 'Pelanggan',   desc: 'Pesan layanan pengiriman & makanan' },
-  { value: 'mitra_motor', emoji: '🏍️', label: 'Mitra Motor', desc: 'Antar barang dengan motor' },
-  { value: 'mitra_mobil', emoji: '🚗', label: 'Mitra Mobil', desc: 'Antar barang dengan mobil' },
-  { value: 'merchant',    emoji: '🏪', label: 'Merchant',    desc: 'Buka toko makanan & minuman' },
+  { value: 'pelanggan',    emoji: '🛍️', label: 'Pelanggan',      desc: 'Pesan layanan pengiriman & makanan' },
+  { value: 'mitra_motor',  emoji: '🏍️', label: 'Mitra Motor',    desc: 'Antar barang dengan motor' },
+  { value: 'mitra_mobil',  emoji: '🚗', label: 'Mitra Mobil',    desc: 'Antar barang dengan mobil' },
+  { value: 'merchant',     emoji: '🏪', label: 'Merchant',       desc: 'Buka toko makanan & minuman' },
+  { value: 'home_provider',emoji: '🏠', label: 'Home Provider',  desc: 'Buka layanan laundry & jasa rumah' },
+]
+
+const HOME_CATEGORIES = [
+  { value: 'laundry',  label: 'Laundry' },
+  { value: 'pijat',    label: 'Pijat & Relaksasi' },
+  { value: 'cleaning', label: 'Cleaning Service' },
+  { value: 'tukang',   label: 'Tukang & Perbaikan' },
+  { value: 'lainnya',  label: 'Lainnya' },
 ]
 
 const SHOP_CATEGORIES = [
@@ -25,6 +34,8 @@ export default function RegisterPage() {
     name: '', email: '', phone: '', password: '', password_confirmation: '',
     otp: '', role: 'pelanggan', vehicle_plate: '', vehicle_brand: '', vehicle_year: '',
     shop_name: '', shop_category: '', shop_address: '', shop_phone: '',
+    provider_name: '', provider_category: '', provider_address: '', provider_phone: '',
+    provider_lat: '', provider_lng: '',
   })
   const [error,           setError]           = useState('')
   const [loading,         setLoading]         = useState(false)
@@ -34,8 +45,9 @@ export default function RegisterPage() {
 
   const { login } = useAuth()
   const navigate   = useNavigate()
-  const isMitra    = form.role === 'mitra_motor' || form.role === 'mitra_mobil'
-  const isMerchant = form.role === 'merchant'
+  const isMitra        = form.role === 'mitra_motor' || form.role === 'mitra_mobil'
+  const isMerchant     = form.role === 'merchant'
+  const isHomeProvider = form.role === 'home_provider'
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -360,6 +372,66 @@ export default function RegisterPage() {
                   fontSize: 12, color: 'var(--k-warn)', lineHeight: 1.5,
                 }}>
                   ⚠️ Toko Anda akan aktif setelah disetujui oleh admin. Sambil menunggu, Anda sudah bisa mengisi menu.
+                </div>
+              </div>
+            )}
+
+            {/* Data home provider */}
+            {isHomeProvider && (
+              <div className="fade-in" style={{
+                display: 'flex', flexDirection: 'column', gap: 14,
+                padding: '16px 18px', borderRadius: 16,
+                background: 'var(--k-card)', border: '1px solid var(--k-border)',
+              }}>
+                <p style={{ color: 'var(--k-sub)', fontSize: 12, fontWeight: 700,
+                  letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Informasi Layanan
+                </p>
+                <div>
+                  <label className="label">Nama Usaha *</label>
+                  <input className="input-field" type="text" name="provider_name"
+                    value={form.provider_name || ''} onChange={handleChange} required={isHomeProvider}
+                    placeholder="Contoh: Laundry Bersih Jaya" />
+                </div>
+                <div>
+                  <label className="label">Kategori *</label>
+                  <select className="input-field" name="provider_category"
+                    value={form.provider_category || ''} onChange={handleChange} required={isHomeProvider}
+                    style={{ background: 'var(--k-input)', color: 'var(--k-text)' }}>
+                    <option value="">-- Pilih kategori --</option>
+                    {HOME_CATEGORIES.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Alamat *</label>
+                  <input className="input-field" type="text" name="provider_address"
+                    value={form.provider_address || ''} onChange={handleChange} required={isHomeProvider}
+                    placeholder="Jl. Contoh No. 1, Kota" />
+                </div>
+                <div>
+                  <label className="label">Nomor HP Usaha</label>
+                  <input className="input-field" type="tel" name="provider_phone"
+                    value={form.provider_phone || ''} onChange={handleChange}
+                    placeholder="08xxxxxxxxxx (opsional)" />
+                </div>
+                <div>
+                  <label className="label">Pin Lokasi di Map</label>
+                  <MerchantLocationPicker
+                    lat={form.provider_lat} lng={form.provider_lng}
+                    onPick={({ lat, lng, address }) => setForm(f => ({
+                      ...f, provider_lat: lat, provider_lng: lng,
+                      provider_address: f.provider_address || address,
+                    }))}
+                  />
+                </div>
+                <div style={{
+                  padding: '10px 14px', borderRadius: 10,
+                  background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
+                  fontSize: 12, color: '#6366F1', lineHeight: 1.5,
+                }}>
+                  🏠 Usaha Anda akan aktif setelah diverifikasi admin. Sambil menunggu, Anda sudah bisa mengatur layanan dan harga.
                 </div>
               </div>
             )}

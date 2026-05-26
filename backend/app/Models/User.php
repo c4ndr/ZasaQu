@@ -113,6 +113,11 @@ class User extends Authenticatable
         return $this->role === 'merchant';
     }
 
+    public function isHomeProvider(): bool
+    {
+        return $this->role === 'home_provider';
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';

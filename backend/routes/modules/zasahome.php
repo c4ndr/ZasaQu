@@ -20,7 +20,7 @@ Route::prefix('home')->middleware('auth:sanctum')->group(function () {
 });
 
 // ── Provider routes ──────────────────────────────────────────────────────────
-Route::prefix('home/provider')->middleware(['auth:sanctum'])->group(function () {
+Route::prefix('home/provider')->middleware(['auth:sanctum', 'role:home_provider,admin'])->group(function () {
 
     Route::get('profile',                            [ProviderController::class, 'profile']);
     Route::patch('profile',                          [ProviderController::class, 'updateProfile']);
