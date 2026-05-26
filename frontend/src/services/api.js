@@ -28,6 +28,12 @@ api.interceptors.response.use(
 )
 
 const BASE_URL = import.meta.env.VITE_API_URL || ''
-export const storageUrl = (path) => path ? `${BASE_URL}/storage/${path}` : null
+
+// v: cache-buster opsional (misal updated_at atau timestamp)
+export const storageUrl = (path, v) => {
+  if (!path) return null
+  const url = `${BASE_URL}/storage/${path}`
+  return v ? `${url}?v=${typeof v === 'string' ? new Date(v).getTime() : v}` : url
+}
 
 export default api

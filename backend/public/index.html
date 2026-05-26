@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZasaQu</title>
+    <!-- Terapkan tema sebelum React render untuk mencegah flash -->
+    <script>
+      (function() {
+        var t = localStorage.getItem('zasaqu-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { background: var(--k-bg, #F4F6F9); color: var(--k-text, #1A1A2E); }
+      #root { min-height: 100vh; }
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      input, textarea, select { font-family: inherit; }
+      ::-webkit-scrollbar { width: 3px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: var(--k-border2, #D0D3DD); border-radius: 3px; }
+    </style>
+    <script type="module" crossorigin src="./assets/index-Bdm9To1s.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/dist-CcMZhOl1.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-CXaQzZVT.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

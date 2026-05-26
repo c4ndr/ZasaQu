@@ -4,9 +4,17 @@ import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 
 const ROLES = [
-  { value: 'pelanggan',   emoji: '🛍️', label: 'Pelanggan',   desc: 'Pesan layanan pengiriman' },
+  { value: 'pelanggan',   emoji: '🛍️', label: 'Pelanggan',   desc: 'Pesan layanan pengiriman & makanan' },
   { value: 'mitra_motor', emoji: '🏍️', label: 'Mitra Motor', desc: 'Antar barang dengan motor' },
   { value: 'mitra_mobil', emoji: '🚗', label: 'Mitra Mobil', desc: 'Antar barang dengan mobil' },
+  { value: 'merchant',    emoji: '🏪', label: 'Merchant',    desc: 'Buka toko makanan & minuman' },
+]
+
+const SHOP_CATEGORIES = [
+  { value: 'makanan_berat', label: 'Makanan Berat' },
+  { value: 'minuman',       label: 'Minuman' },
+  { value: 'snack',         label: 'Snack' },
+  { value: 'lainnya',       label: 'Lainnya' },
 ]
 
 export default function RegisterPage() {
@@ -15,6 +23,7 @@ export default function RegisterPage() {
   const [form, setForm]       = useState({
     name: '', email: '', phone: '', password: '', password_confirmation: '',
     otp: '', role: 'pelanggan', vehicle_plate: '', vehicle_brand: '', vehicle_year: '',
+    shop_name: '', shop_category: '', shop_address: '', shop_phone: '',
   })
   const [error,           setError]           = useState('')
   const [loading,         setLoading]         = useState(false)
@@ -23,8 +32,9 @@ export default function RegisterPage() {
   const [showPassConfirm, setShowPassConfirm] = useState(false)
 
   const { login } = useAuth()
-  const navigate  = useNavigate()
-  const isMitra   = form.role === 'mitra_motor' || form.role === 'mitra_mobil'
+  const navigate   = useNavigate()
+  const isMitra    = form.role === 'mitra_motor' || form.role === 'mitra_mobil'
+  const isMerchant = form.role === 'merchant'
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -289,6 +299,56 @@ export default function RegisterPage() {
                       value={form.vehicle_year} onChange={handleChange}
                       placeholder="2022" min="2000" max={new Date().getFullYear()} />
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Data toko merchant */}
+            {isMerchant && (
+              <div className="fade-in" style={{
+                display: 'flex', flexDirection: 'column', gap: 14,
+                padding: '16px 18px', borderRadius: 16,
+                background: 'var(--k-card)', border: '1px solid var(--k-border)',
+              }}>
+                <p style={{ color: 'var(--k-sub)', fontSize: 12, fontWeight: 700,
+                  letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Informasi Toko
+                </p>
+                <div>
+                  <label className="label">Nama Toko *</label>
+                  <input className="input-field" type="text" name="shop_name"
+                    value={form.shop_name || ''} onChange={handleChange} required={isMerchant}
+                    placeholder="Contoh: Warung Bu Sari" />
+                </div>
+                <div>
+                  <label className="label">Kategori *</label>
+                  <select className="input-field" name="shop_category"
+                    value={form.shop_category || ''} onChange={handleChange} required={isMerchant}
+                    style={{ background: 'var(--k-input)', color: 'var(--k-text)' }}>
+                    <option value="">-- Pilih kategori --</option>
+                    {SHOP_CATEGORIES.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Alamat Toko *</label>
+                  <input className="input-field" type="text" name="shop_address"
+                    value={form.shop_address || ''} onChange={handleChange} required={isMerchant}
+                    placeholder="Jl. Contoh No. 1, Kota" />
+                </div>
+                <div>
+                  <label className="label">Nomor HP Toko</label>
+                  <input className="input-field" type="tel" name="shop_phone"
+                    value={form.shop_phone || ''} onChange={handleChange}
+                    placeholder="08xxxxxxxxxx (opsional)" />
+                </div>
+                <div style={{
+                  padding: '10px 14px', borderRadius: 10,
+                  background: 'rgba(246,173,85,0.1)', border: '1px solid rgba(246,173,85,0.25)',
+                  fontSize: 12, color: 'var(--k-warn)', lineHeight: 1.5,
+                }}>
+                  ⚠️ Toko Anda akan aktif setelah disetujui oleh admin. Sambil menunggu, Anda sudah bisa mengisi menu.
                 </div>
               </div>
             )}

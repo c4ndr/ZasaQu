@@ -21,10 +21,15 @@ class AuthController extends Controller
             'name'          => ['required', 'string', 'max:100'],
             'email'         => ['required', 'email', 'unique:users,email'],
             'password'      => ['required', 'confirmed', Password::min(8)],
-            'role'          => ['sometimes', 'in:pelanggan,mitra_motor,mitra_mobil'],
+            'role'          => ['sometimes', 'in:pelanggan,mitra_motor,mitra_mobil,merchant'],
             'vehicle_plate' => ['nullable', 'required_if:role,mitra_motor', 'required_if:role,mitra_mobil', 'string', 'max:20'],
             'vehicle_brand' => ['nullable', 'sometimes', 'string', 'max:50'],
             'vehicle_year'  => ['nullable', 'sometimes', 'integer', 'min:2000', 'max:' . date('Y')],
+            // Merchant fields
+            'shop_name'     => ['required_if:role,merchant', 'nullable', 'string', 'max:100'],
+            'shop_category' => ['required_if:role,merchant', 'nullable', 'in:makanan_berat,minuman,snack,lainnya'],
+            'shop_address'  => ['required_if:role,merchant', 'nullable', 'string', 'max:255'],
+            'shop_phone'    => ['nullable', 'string', 'max:20'],
         ]);
 
         $user = $this->authService->registerEmail($data);

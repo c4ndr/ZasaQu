@@ -10,11 +10,13 @@ function statusColor(s) {
 }
 
 export default function MerchantSettingsPage() {
-  const [merchant, setMerchant] = useState(null)
-  const [loading,  setLoading]  = useState(true)
-  const [saving,   setSaving]   = useState(false)
-  const [toast,    setToast]    = useState(null)
-  const [form,     setForm]     = useState({})
+  const [merchant,   setMerchant]   = useState(null)
+  const [loading,    setLoading]    = useState(true)
+  const [saving,     setSaving]     = useState(false)
+  const [toast,      setToast]      = useState(null)
+  const [form,       setForm]       = useState({})
+  const [previews,   setPreviews]   = useState({})   // objectURL preview lokal
+  const [uploading,  setUploading]  = useState({})
 
   useEffect(() => {
     api.get('/food/merchant/profile')
@@ -79,16 +81,26 @@ export default function MerchantSettingsPage() {
       return
     }
 
+    // Tampilkan preview lokal langsung (bypass cache)
+    const localUrl = URL.createObjectURL(file)
+    setPreviews(p => ({ ...p, [type]: localUrl }))
+    setUploading(u => ({ ...u, [type]: true }))
+
     const fd = new FormData()
     fd.append('image', file)
     try {
       const res = await api.post(`/food/merchant/upload-${type}`, fd)
-      setMerchant(m => ({ ...m, [`${type}_path`]: res.data[`${type}_path`] }))
+      // Simpan path baru + timestamp cache-buster
+      setMerchant(m => ({ ...m, [`${type}_path`]: res.data[`${type}_path`], [`${type}_ts`]: Date.now() }))
       showToast('success', res.data.message)
     } catch (err) {
+      // Batalkan preview lokal jika upload gagal
+      setPreviews(p => ({ ...p, [type]: null }))
       showToast('error', err.response?.data?.message || 'Gagal upload.')
+    } finally {
+      setUploading(u => ({ ...u, [type]: false }))
+      e.target.value = ''
     }
-    e.target.value = ''
   }
 
   function showToast(type, msg) {
@@ -145,26 +157,41 @@ export default function MerchantSettingsPage() {
         <div style={{ padding: '20px', borderRadius: 14, background: 'var(--k-card)', border: '1.5px solid var(--k-border)' }}>
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Foto Toko</div>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-            {['logo', 'banner'].map(type => (
-              <label key={type} style={{ cursor: 'pointer', textAlign: 'center' }}>
-                <div style={{
-                  width: type === 'logo' ? 80 : 160, height: 80, borderRadius: type === 'logo' ? '50%' : 10,
-                  background: 'var(--k-input)', border: '2px dashed var(--k-border)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  overflow: 'hidden', marginBottom: 6,
-                }}>
-                  {merchant?.[`${type}_path`]
-                    ? <img src={storageUrl(merchant[`${type}_path`])} alt={type} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span style={{ fontSize: 24 }}>{type === 'logo' ? '🏪' : '🖼️'}</span>
-                  }
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>
-                  {type === 'logo' ? 'Logo' : 'Banner'} (klik ganti)
-                </div>
-                <input type="file" accept="image/*" style={{ display: 'none' }}
-                  onChange={e => handleUpload(e, type)} />
-              </label>
-            ))}
+            {['logo', 'banner'].map(type => {
+              const path    = merchant?.[`${type}_path`]
+              const ts      = merchant?.[`${type}_ts`] || ''
+              // Preview lokal (objectURL) diutamakan, fallback ke storageUrl + cache-buster
+              const imgSrc  = previews[type] || (path ? storageUrl(path) + `?t=${ts}` : null)
+              const isUpl   = uploading[type]
+              return (
+                <label key={type} style={{ cursor: isUpl ? 'wait' : 'pointer', textAlign: 'center' }}>
+                  <div style={{
+                    width: type === 'logo' ? 88 : 176, height: 88,
+                    borderRadius: type === 'logo' ? '50%' : 12,
+                    background: 'var(--k-input)', border: `2px dashed ${isUpl ? '#F97316' : 'var(--k-border)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    overflow: 'hidden', marginBottom: 6, position: 'relative',
+                    transition: 'border-color 0.2s',
+                  }}>
+                    {imgSrc
+                      ? <img src={imgSrc} alt={type} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span style={{ fontSize: 28 }}>{type === 'logo' ? '🏪' : '🖼️'}</span>
+                    }
+                    {isUpl && (
+                      <div style={{
+                        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+                      }}>⏳</div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: isUpl ? '#F97316' : 'var(--k-sub)', fontWeight: isUpl ? 700 : 400 }}>
+                    {isUpl ? 'Mengupload...' : `${type === 'logo' ? 'Logo' : 'Banner'} (klik ganti)`}
+                  </div>
+                  <input type="file" accept="image/*" style={{ display: 'none' }} disabled={isUpl}
+                    onChange={e => handleUpload(e, type)} />
+                </label>
+              )
+            })}
           </div>
         </div>
 

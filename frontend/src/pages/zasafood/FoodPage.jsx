@@ -174,7 +174,7 @@ export default function FoodPage() {
                   overflow: 'hidden', position: 'relative',
                 }}>
                   {m.banner_path
-                    ? <img src={storageUrl(m.banner_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <img src={storageUrl(m.banner_path, m.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <span style={{ fontSize: 48 }}>🍜</span>
                   }
                   <span style={{
@@ -202,7 +202,7 @@ export default function FoodPage() {
                     fontSize: 24, marginTop: -28, border: '3px solid var(--k-card)',
                   }}>
                     {m.logo_path
-                      ? <img src={storageUrl(m.logo_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <img src={storageUrl(m.logo_path, m.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : '🏪'
                     }
                   </div>

@@ -78,7 +78,7 @@ export default function FoodMerchantPage() {
       <div style={{ position: 'relative' }}>
         <div style={{ height: 160, background: 'var(--k-input)', overflow: 'hidden' }}>
           {merchant?.banner_path
-            ? <img src={storageUrl(merchant.banner_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img src={storageUrl(merchant.banner_path, merchant.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>🍜</div>
           }
         </div>
@@ -97,7 +97,7 @@ export default function FoodMerchantPage() {
             background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
             marginTop: -32, border: '3px solid var(--k-card)',
           }}>
-            {merchant?.logo_path ? <img src={storageUrl(merchant.logo_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
+            {merchant?.logo_path ? <img src={storageUrl(merchant.logo_path, merchant.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
           </div>
           <div style={{ flex: 1, marginTop: 4 }}>
             <div style={{ fontWeight: 800, fontSize: 17 }}>{merchant?.name}</div>
