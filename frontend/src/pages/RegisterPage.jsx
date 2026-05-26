@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
+import MerchantLocationPicker from '../components/MerchantLocationPicker'
 
 const ROLES = [
   { value: 'pelanggan',   emoji: '🛍️', label: 'Pelanggan',   desc: 'Pesan layanan pengiriman & makanan' },
@@ -342,6 +343,16 @@ export default function RegisterPage() {
                   <input className="input-field" type="tel" name="shop_phone"
                     value={form.shop_phone || ''} onChange={handleChange}
                     placeholder="08xxxxxxxxxx (opsional)" />
+                </div>
+                <div>
+                  <label className="label">Pin Lokasi Toko</label>
+                  <MerchantLocationPicker
+                    lat={form.shop_lat} lng={form.shop_lng}
+                    onPick={({ lat, lng, address }) => setForm(f => ({
+                      ...f, shop_lat: lat, shop_lng: lng,
+                      shop_address: f.shop_address || address,
+                    }))}
+                  />
                 </div>
                 <div style={{
                   padding: '10px 14px', borderRadius: 10,

@@ -30,6 +30,8 @@ class AuthController extends Controller
             'shop_category' => ['required_if:role,merchant', 'nullable', 'in:makanan_berat,minuman,snack,lainnya'],
             'shop_address'  => ['required_if:role,merchant', 'nullable', 'string', 'max:255'],
             'shop_phone'    => ['nullable', 'string', 'max:20'],
+            'shop_lat'      => ['nullable', 'numeric', 'between:-90,90'],
+            'shop_lng'      => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $user = $this->authService->registerEmail($data);

@@ -84,6 +84,8 @@ class AuthService
             'slug'                 => Str::slug($name) . '-' . Str::random(6),
             'category'             => $data['shop_category'] ?? 'lainnya',
             'address'              => $data['shop_address'] ?? '',
+            'lat'                  => $data['shop_lat'] ?? null,
+            'lng'                  => $data['shop_lng'] ?? null,
             'phone'                => $data['shop_phone'] ?? null,
             'avg_prep_time_minutes'=> 20,
             'status'               => 'pending',

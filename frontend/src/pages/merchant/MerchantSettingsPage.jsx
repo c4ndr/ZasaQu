@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import MerchantLayout from '../../components/MerchantLayout'
 import api, { storageUrl } from '../../services/api'
+import MerchantLocationPicker from '../../components/MerchantLocationPicker'
 
 function fmtStatus(s) {
   return { pending: 'Menunggu Persetujuan', active: 'Aktif', suspended: 'Disuspend' }[s] ?? s
@@ -28,6 +29,8 @@ export default function MerchantSettingsPage() {
           description:           m.description || '',
           category:              m.category || 'lainnya',
           address:               m.address || '',
+          lat:                   m.lat ? String(m.lat) : '',
+          lng:                   m.lng ? String(m.lng) : '',
           phone:                 m.phone || '',
           open_time:             m.open_time?.slice(0, 5) || '',
           close_time:            m.close_time?.slice(0, 5) || '',
@@ -220,6 +223,16 @@ export default function MerchantSettingsPage() {
                 <option key={v} value={v}>{l}</option>
               )}
             </select>
+          </div>
+
+          <div>
+            <label style={label}>Lokasi Toko di Map</label>
+            <MerchantLocationPicker
+              lat={form.lat} lng={form.lng}
+              onPick={({ lat, lng, address }) => setForm(f => ({
+                ...f, lat, lng, address: f.address || address,
+              }))}
+            />
           </div>
 
           <div>
