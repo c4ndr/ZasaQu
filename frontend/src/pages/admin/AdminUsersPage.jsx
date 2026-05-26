@@ -10,9 +10,12 @@ const initial = (n) => (n || '?')[0].toUpperCase()
 const hue     = (n) => [...(n || 'U')].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
 
 const ROLE_META = {
-  pelanggan:   { label: 'Pelanggan',   color: '#63B3ED', bg: 'rgba(99,179,237,0.12)'  },
-  mitra_motor: { label: 'Mitra Motor', color: '#00C896', bg: 'rgba(0,200,150,0.12)'   },
-  mitra_mobil: { label: 'Mitra Mobil', color: '#F6AD55', bg: 'rgba(246,173,85,0.12)'  },
+  pelanggan:     { label: 'Pelanggan',      color: '#63B3ED', bg: 'rgba(99,179,237,0.12)'   },
+  mitra_motor:   { label: 'Mitra Motor',    color: '#00C896', bg: 'rgba(0,200,150,0.12)'    },
+  mitra_mobil:   { label: 'Mitra Mobil',    color: '#F6AD55', bg: 'rgba(246,173,85,0.12)'   },
+  merchant:      { label: 'Merchant',       color: '#F97316', bg: 'rgba(249,115,22,0.12)'   },
+  home_provider: { label: 'Home Provider',  color: '#6366F1', bg: 'rgba(99,102,241,0.12)'   },
+  admin:         { label: 'Admin',          color: '#F56565', bg: 'rgba(245,101,101,0.12)'  },
 }
 const STATUS_META = {
   active:    { label: 'Aktif',      color: '#00C896', bg: 'rgba(0,200,150,0.12)'   },
@@ -142,6 +145,8 @@ function UserDetailDrawer({ userId, onClose, onStatusChange }) {
                 { label: 'Bergabung', value: fmtDate(user.created_at) },
                 { label: 'Pelanggaran', value: user.violation_count > 0 ? `${user.violation_count}×` : '—', danger: user.violation_count > 0 },
                 ...(user.mitra_detail?.vehicle_plate ? [{ label: 'Plat', value: user.mitra_detail.vehicle_plate, mono: true }] : []),
+                ...(user.role === 'merchant'      ? [{ label: 'Toko',     value: user.food_merchant?.name || '—' }] : []),
+                ...(user.role === 'home_provider' ? [{ label: 'Usaha',    value: user.home_provider?.name || '—' }] : []),
               ].map((row, i) => (
                 <div key={row.label} style={{ padding: '11px 16px', display: 'flex', justifyContent: 'space-between', gap: 10, borderTop: i === 0 ? 'none' : '1px solid var(--k-border)' }}>
                   <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>{row.label}</p>
@@ -345,6 +350,8 @@ export default function AdminUsersPage() {
           <option value="pelanggan">Pelanggan</option>
           <option value="mitra_motor">Mitra Motor</option>
           <option value="mitra_mobil">Mitra Mobil</option>
+          <option value="merchant">Merchant</option>
+          <option value="home_provider">Home Provider</option>
         </select>
         <select className="input-field" style={{ padding: '10px 14px', fontSize: 13 }}
           value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
