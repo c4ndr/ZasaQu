@@ -32,6 +32,14 @@ import ProfilePage from './pages/ProfilePage'
 import NotificationsPage from './pages/NotificationsPage'
 import MitraOrderAlert from './components/MitraOrderAlert'
 import AdminFoodMerchantsPage from './pages/admin/AdminFoodMerchantsPage'
+import ZasaHomePage from './pages/zasahome/ZasaHomePage'
+import HomeProviderPage from './pages/zasahome/HomeProviderPage'
+import HomeCheckoutPage from './pages/zasahome/HomeCheckoutPage'
+import HomeMyOrdersPage from './pages/zasahome/HomeMyOrdersPage'
+import HomeOrderDetailPage from './pages/zasahome/HomeOrderDetailPage'
+import HomeProviderDashboardPage from './pages/home_provider/HomeProviderDashboardPage'
+import HomeProviderServicesPage from './pages/home_provider/HomeProviderServicesPage'
+import HomeProviderSettingsPage from './pages/home_provider/HomeProviderSettingsPage'
 import FoodPage from './pages/zasafood/FoodPage'
 import FoodMerchantPage from './pages/zasafood/FoodMerchantPage'
 import FoodCartPage from './pages/zasafood/FoodCartPage'
@@ -157,6 +165,16 @@ function AppRoutes() {
       <Route path="/mitra/jastip" element={<PrivateRoute><MitraJastipPage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
       <Route path="/notifications" element={<PrivateRoute><NotificationsPage /></PrivateRoute>} />
+
+      {/* ZasaHome */}
+      <Route path="/home" element={<PrivateRoute><ZasaHomePage /></PrivateRoute>} />
+      <Route path="/home/providers/:id" element={<PrivateRoute><HomeProviderPage /></PrivateRoute>} />
+      <Route path="/home/checkout" element={<PrivateRoute><HomeCheckoutPage /></PrivateRoute>} />
+      <Route path="/home/orders" element={<PrivateRoute><HomeMyOrdersPage /></PrivateRoute>} />
+      <Route path="/home/orders/:id" element={<PrivateRoute><HomeOrderDetailPage /></PrivateRoute>} />
+      <Route path="/home/provider" element={<PrivateRoute><HomeProviderDashboardPage /></PrivateRoute>} />
+      <Route path="/home/provider/services" element={<PrivateRoute><HomeProviderServicesPage /></PrivateRoute>} />
+      <Route path="/home/provider/settings" element={<PrivateRoute><HomeProviderSettingsPage /></PrivateRoute>} />
 
       {/* ZasaFood */}
       <Route path="/food" element={<PrivateRoute><FoodPage /></PrivateRoute>} />

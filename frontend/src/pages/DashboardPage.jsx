@@ -536,6 +536,20 @@ export default function DashboardPage() {
                 borderColor="rgba(249,115,22,0.18)"
               />
 
+              {/* ZasaHome */}
+              <ServiceCard
+                to="/home"
+                emoji="🏠"
+                bgDecor="🧺"
+                title="ZasaHome"
+                desc="Laundry & jasa rumah"
+                badge="BARU"
+                badgeColor="#6366F1"
+                badgeBg="rgba(99,102,241,0.12)"
+                gradient="linear-gradient(145deg, #EEF2FF 0%, #F8F7FF 100%)"
+                borderColor="rgba(99,102,241,0.18)"
+              />
+
               {/* ZasaMart */}
               <ServiceCard
                 to={null}

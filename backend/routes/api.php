@@ -190,6 +190,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // ─── ZasaFood ──────────────────────────────────────────────────────────
     require __DIR__ . '/modules/zasafood.php';
 
+    // ─── ZasaHome ──────────────────────────────────────────────────────────
+    require __DIR__ . '/modules/zasahome.php';
+
     // ─── Admin ─────────────────────────────────────────────────────────────
     Route::prefix('admin')->middleware('role:admin')->group(function () {
 

@@ -8,6 +8,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Rating;
+use App\Models\HomeProvider;
+use App\Models\HomeOrder;
 
 class User extends Authenticatable
 {
@@ -84,6 +86,16 @@ class User extends Authenticatable
     public function foodOrders()
     {
         return $this->hasMany(FoodOrder::class, 'customer_id');
+    }
+
+    public function homeProvider()
+    {
+        return $this->hasOne(HomeProvider::class);
+    }
+
+    public function homeOrders()
+    {
+        return $this->hasMany(HomeOrder::class, 'customer_id');
     }
 
     public function isMitra(): bool
