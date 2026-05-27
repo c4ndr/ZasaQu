@@ -67,6 +67,7 @@ export default function MartCheckoutPage() {
         delivery_phone: phone || undefined, notes: notes || undefined,
         shipping_fee: shippingFee,
       })
+      window.dispatchEvent(new CustomEvent('mart-cart-updated'))
       navigate(`/mart/orders/${r.data.id}`, { replace: true })
     } catch (e) { setErr(e.response?.data?.message || 'Gagal membuat pesanan.') }
     finally { setPlacing(false) }
