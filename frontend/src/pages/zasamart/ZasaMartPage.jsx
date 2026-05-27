@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
+import useMartCartCount from '../../hooks/useMartCartCount'
 
 const fmtRp = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 
@@ -81,6 +82,7 @@ function ProductCard({ product, onClick }) {
 
 export default function ZasaMartPage() {
   const navigate = useNavigate()
+  const { count: cartCount } = useMartCartCount()
   const [categories, setCategories] = useState([])
   const [products, setProducts]     = useState([])
   const [activecat, setActiveCat]   = useState('')
@@ -116,11 +118,20 @@ export default function ZasaMartPage() {
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%)', padding: '20px 20px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <button onClick={() => navigate(-1)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 36, height: 36, color: '#fff', cursor: 'pointer', fontSize: 18 }}>←</button>
-          <div>
+          <button onClick={() => navigate(-1)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 36, height: 36, color: '#fff', cursor: 'pointer', fontSize: 18, flexShrink: 0 }}>←</button>
+          <div style={{ flex: 1 }}>
             <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 600 }}>Belanja produk lokal</p>
             <p style={{ color: '#fff', fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px' }}>ZasaMart 🛒</p>
           </div>
+          {/* Tombol keranjang */}
+          <button onClick={() => navigate('/mart/cart')} style={{ position: 'relative', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 40, height: 40, color: '#fff', cursor: 'pointer', fontSize: 20, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            🛒
+            {cartCount > 0 && (
+              <span style={{ position: 'absolute', top: -4, right: -4, background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 900, minWidth: 17, height: 17, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #4F46E5', padding: '0 3px', lineHeight: 1 }}>
+                {cartCount > 99 ? '99+' : cartCount}
+              </span>
+            )}
+          </button>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ flex: 1, background: 'rgba(255,255,255,0.15)', borderRadius: 12, display: 'flex', alignItems: 'center', padding: '0 12px', gap: 8 }}>
