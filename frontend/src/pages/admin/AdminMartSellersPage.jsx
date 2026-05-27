@@ -25,6 +25,8 @@ export default function AdminMartSellersPage() {
   const [createForm, setCreateForm] = useState(EMPTY_CREATE)
   const [creating, setCreating]     = useState(false)
   const [acting, setActing]         = useState(false)
+  const [suspendReason, setSuspendReason] = useState('')
+  const [suspendId, setSuspendId]   = useState(null)
 
   const load = () => {
     setLoading(true)
@@ -45,9 +47,15 @@ export default function AdminMartSellersPage() {
     try { await api.post(`/admin/mart/sellers/${id}/approve`); load(); if (selected === id) { const r = await api.get(`/admin/mart/sellers/${id}`); setDetail(r.data) } } finally { setActing(false) }
   }
 
-  const suspend = async (id) => {
+  const suspend = async () => {
+    if (!suspendId) return
     setActing(true)
-    try { await api.post(`/admin/mart/sellers/${id}/suspend`); load(); if (selected === id) { const r = await api.get(`/admin/mart/sellers/${id}`); setDetail(r.data) } } finally { setActing(false) }
+    try {
+      await api.post(`/admin/mart/sellers/${suspendId}/suspend`, { reason: suspendReason || undefined })
+      setSuspendId(null); setSuspendReason('')
+      load()
+      if (selected === suspendId) { const r = await api.get(`/admin/mart/sellers/${suspendId}`); setDetail(r.data) }
+    } finally { setActing(false) }
   }
 
   const create = async () => {
@@ -118,6 +126,26 @@ export default function AdminMartSellersPage() {
                           ))}
                         </div>
 
+                        {/* Produk toko */}
+                        {detail.all_products?.length > 0 && (
+                          <div style={{ marginBottom: 12 }}>
+                            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', marginBottom: 6 }}>Produk ({detail.all_products.length})</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {detail.all_products.slice(0, 5).map(p => (
+                                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '4px 8px', borderRadius: 6, background: 'var(--k-card2)' }}>
+                                  <span style={{ color: 'var(--k-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                    {p.is_active ? '🟢' : '🔴'} {p.name}
+                                  </span>
+                                  <span style={{ color: 'var(--k-accent)', fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>{fmtRp(p.price)}</span>
+                                </div>
+                              ))}
+                              {detail.all_products.length > 5 && (
+                                <p style={{ fontSize: 10, color: 'var(--k-muted)', textAlign: 'center' }}>+{detail.all_products.length - 5} produk lainnya</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: 8 }}>
                           {s.status === 'pending' && (
@@ -127,7 +155,7 @@ export default function AdminMartSellersPage() {
                             </button>
                           )}
                           {s.status === 'active' && (
-                            <button onClick={e => { e.stopPropagation(); suspend(s.id) }} disabled={acting}
+                            <button onClick={e => { e.stopPropagation(); setSuspendId(s.id) }} disabled={acting}
                               style={{ flex: 1, padding: '9px', borderRadius: 8, border: 'none', background: '#EF4444', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
                               🚫 Suspend
                             </button>
@@ -148,6 +176,25 @@ export default function AdminMartSellersPage() {
           )}
         </div>
       </div>
+
+      {/* Suspend reason modal */}
+      {suspendId && (
+        <>
+          <div onClick={() => { setSuspendId(null); setSuspendReason('') }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9000 }} />
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 'min(420px, 94vw)', background: 'var(--k-surface)', borderRadius: 20, padding: '24px', zIndex: 9001 }}>
+            <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--k-text)', marginBottom: 4 }}>🚫 Suspend Toko</p>
+            <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 14 }}>Masukkan alasan suspend (opsional):</p>
+            <input value={suspendReason} onChange={e => setSuspendReason(e.target.value)} placeholder="Contoh: Melanggar ketentuan layanan..."
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-text)', fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 14 }} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { setSuspendId(null); setSuspendReason('') }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--k-text)' }}>Batal</button>
+              <button onClick={suspend} disabled={acting} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: '#EF4444', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: acting ? 0.7 : 1 }}>
+                {acting ? 'Memproses...' : 'Suspend'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Create modal */}
       {showCreate && (

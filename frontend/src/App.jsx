@@ -69,6 +69,7 @@ import SellerProductsPage from './pages/seller/SellerProductsPage'
 import SellerSettingsPage from './pages/seller/SellerSettingsPage'
 import SellerWalletPage from './pages/seller/SellerWalletPage'
 import AdminMartSellersPage from './pages/admin/AdminMartSellersPage'
+import AdminMartProductsPage from './pages/admin/AdminMartProductsPage'
 import AdminMartOrdersPage from './pages/admin/AdminMartOrdersPage'
 
 function PrivateRoute({ children }) {
@@ -248,6 +249,7 @@ function AppRoutes() {
 
       {/* Admin ZasaMart */}
       <Route path="/admin/mart/sellers" element={<AdminRoute><AdminMartSellersPage /></AdminRoute>} />
+      <Route path="/admin/mart/products" element={<AdminRoute><AdminMartProductsPage /></AdminRoute>} />
       <Route path="/admin/mart/orders" element={<AdminRoute><AdminMartOrdersPage /></AdminRoute>} />
 
       {/* Merchant Panel */}

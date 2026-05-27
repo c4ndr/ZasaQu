@@ -48,7 +48,7 @@ export default function AdminMartOrdersPage() {
     <AdminLayout>
       <div style={{ padding: '0 0 80px' }}>
         <div style={{ display: 'flex', overflowX: 'auto', background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)', scrollbarWidth: 'none' }}>
-          {[{ v: '', l: 'Semua' }, { v: 'pending', l: 'Menunggu' }, { v: 'confirmed', l: 'Dikonfirmasi' }, { v: 'packed', l: 'Dikemas' }, { v: 'on_delivery', l: 'Dikirim' }, { v: 'completed', l: 'Selesai' }, { v: 'cancelled', l: 'Batal' }].map(t => (
+          {[{ v: '', l: 'Semua' }, { v: 'pending', l: 'Menunggu' }, { v: 'confirmed', l: 'Dikonfirmasi' }, { v: 'packed', l: 'Dikemas' }, { v: 'picking_up', l: 'Dijemput' }, { v: 'on_delivery', l: 'Dikirim' }, { v: 'completed', l: 'Selesai' }, { v: 'cancelled', l: 'Batal' }].map(t => (
             <button key={t.v} onClick={() => setTab(t.v)}
               style={{ padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: tab === t.v ? 700 : 500, color: tab === t.v ? 'var(--k-accent)' : 'var(--k-muted)', borderBottom: tab === t.v ? '2px solid var(--k-accent)' : '2px solid transparent', whiteSpace: 'nowrap' }}>
               {t.l}
@@ -97,9 +97,20 @@ export default function AdminMartOrdersPage() {
                           </div>
                         ))}
 
-                        <div style={{ background: 'var(--k-card2)', borderRadius: 8, padding: '8px 10px', fontSize: 11, color: 'var(--k-sub)', marginBottom: 10 }}>
+                        <div style={{ background: 'var(--k-card2)', borderRadius: 8, padding: '8px 10px', fontSize: 11, color: 'var(--k-sub)', marginBottom: 8 }}>
                           <p>📍 {o.delivery_address}</p>
+                          {o.delivery_phone && <p style={{ marginTop: 3 }}>📞 {o.delivery_phone}</p>}
+                          {o.notes && <p style={{ marginTop: 3, fontStyle: 'italic' }}>💬 "{o.notes}"</p>}
                         </div>
+
+                        {/* Komisi breakdown */}
+                        {o.commission_rate > 0 && (
+                          <div style={{ background: 'var(--k-card2)', borderRadius: 8, padding: '8px 10px', fontSize: 11, color: 'var(--k-sub)', marginBottom: 8, display: 'flex', gap: 14 }}>
+                            <span>Subtotal: <b>{fmtRp(o.subtotal)}</b></span>
+                            <span>Komisi ({o.commission_rate}%): <b style={{ color: '#F59E0B' }}>-{fmtRp(o.platform_commission)}</b></span>
+                            <span>Income seller: <b style={{ color: '#22C55E' }}>{fmtRp(o.seller_income)}</b></span>
+                          </div>
+                        )}
 
                         {!['completed', 'cancelled'].includes(o.status) && (
                           <div>
