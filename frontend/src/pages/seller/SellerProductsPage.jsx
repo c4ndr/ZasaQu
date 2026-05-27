@@ -1,6 +1,38 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import MartSellerLayout from '../../components/MartSellerLayout'
 import api from '../../services/api'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { isNative } from '../../utils/nativePlatform'
+
+// Buka galeri native → resize → kembalikan { dataUrl, mime }
+async function pickImageNative() {
+  const photo = await Camera.getPhoto({
+    allowEditing: false,
+    resultType: CameraResultType.Uri,
+    source: CameraSource.Photos,
+  })
+  const resp = await fetch(photo.webPath)
+  const buf  = await resp.arrayBuffer()
+  const b    = new Uint8Array(buf, 0, 4)
+  const isPng = b[0] === 0x89 && b[1] === 0x50
+  const mime  = isPng ? 'image/png' : 'image/jpeg'
+  const blob  = new Blob([buf], { type: mime })
+  const objUrl = URL.createObjectURL(blob)
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl)
+      const ratio  = Math.min(1000 / img.width, 1000 / img.height, 1)
+      const canvas = document.createElement('canvas')
+      canvas.width  = Math.round(img.width  * ratio)
+      canvas.height = Math.round(img.height * ratio)
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve({ dataUrl: canvas.toDataURL(mime, 0.85), mime })
+    }
+    img.onerror = reject
+    img.src = objUrl
+  })
+}
 
 const fmtRp = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
@@ -17,6 +49,7 @@ export default function SellerProductsPage() {
   const [saving, setSaving]   = useState(false)
   const [uploadingImg, setUploadingImg] = useState(false)
   const [catError, setCatError] = useState(false)
+  const imgRef = useRef()
 
   const load = () => {
     setLoading(true)
@@ -58,16 +91,28 @@ export default function SellerProductsPage() {
     load()
   }
 
-  const uploadImage = async (e) => {
+  // Native Android: Capacitor Camera → base64 JSON (FormData tidak reliable di WebView)
+  const pickAndUploadNative = async () => {
+    if (uploadingImg) return
+    setUploadingImg(true)
+    try {
+      const { dataUrl, mime } = await pickImageNative()
+      const r = await api.post(`/mart/seller/products/${modal}/images-base64`, { data: dataUrl, mime })
+      setForm(f => ({ ...f, images: r.data.images }))
+      load()
+    } catch (e) {
+      if (!String(e).toLowerCase().includes('cancel')) alert('Gagal pilih foto: ' + (e?.message || e))
+    } finally { setUploadingImg(false) }
+  }
+
+  // Web fallback: file input biasa
+  const uploadImageWeb = async (e) => {
     const file = e.target.files[0]; if (!file) return
-    // Reset input agar file yang sama bisa dipilih lagi
     e.target.value = ''
     setUploadingImg(true)
     const fd = new FormData(); fd.append('image', file)
     try {
-      // JANGAN set Content-Type manual — axios otomatis tambah boundary yang benar
       const r = await api.post(`/mart/seller/products/${modal}/images`, fd)
-      // Pakai response dari endpoint upload langsung (sudah ada images terbaru)
       setForm(f => ({ ...f, images: r.data.images }))
       load()
     } finally { setUploadingImg(false) }
@@ -154,14 +199,24 @@ export default function SellerProductsPage() {
                       </div>
                     ))}
                     {(form.images?.length ?? 0) < 5 && (
-                      // Pakai <label htmlFor> bukan button+ref.click() — lebih reliable di Android WebView
-                      <label htmlFor="prod-img-input"
-                        style={{ width: 60, height: 60, borderRadius: 8, border: '2px dashed var(--k-border)', background: 'none', cursor: uploadingImg ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: 'var(--k-muted)', opacity: uploadingImg ? 0.5 : 1 }}>
-                        {uploadingImg ? '⏳' : '+'}
-                      </label>
+                      isNative ? (
+                        // Native Android: tombol biasa → Camera.getPhoto()
+                        <button onClick={pickAndUploadNative} disabled={uploadingImg}
+                          style={{ width: 60, height: 60, borderRadius: 8, border: '2px dashed var(--k-border)', background: 'none', cursor: uploadingImg ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: 'var(--k-muted)', opacity: uploadingImg ? 0.5 : 1 }}>
+                          {uploadingImg ? '⏳' : '+'}
+                        </button>
+                      ) : (
+                        // Web: label + hidden input
+                        <>
+                          <label htmlFor="prod-img-input"
+                            style={{ width: 60, height: 60, borderRadius: 8, border: '2px dashed var(--k-border)', background: 'none', cursor: uploadingImg ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: 'var(--k-muted)', opacity: uploadingImg ? 0.5 : 1 }}>
+                            {uploadingImg ? '⏳' : '+'}
+                          </label>
+                          <input id="prod-img-input" ref={imgRef} type="file" accept="image/*"
+                            onChange={uploadImageWeb} disabled={uploadingImg} style={{ display: 'none' }} />
+                        </>
+                      )
                     )}
-                    <input id="prod-img-input" type="file" accept="image/*" onChange={uploadImage}
-                      disabled={uploadingImg} style={{ display: 'none' }} />
                   </div>
                 </div>
               )}

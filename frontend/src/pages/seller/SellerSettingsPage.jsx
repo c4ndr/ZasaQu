@@ -2,6 +2,33 @@ import { useState, useEffect, useRef, Component } from 'react'
 import MartSellerLayout from '../../components/MartSellerLayout'
 import MerchantLocationPicker from '../../components/MerchantLocationPicker'
 import api from '../../services/api'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { isNative } from '../../utils/nativePlatform'
+
+async function pickImageNative() {
+  const photo = await Camera.getPhoto({ allowEditing: false, resultType: CameraResultType.Uri, source: CameraSource.Photos })
+  const resp = await fetch(photo.webPath)
+  const buf  = await resp.arrayBuffer()
+  const b    = new Uint8Array(buf, 0, 4)
+  const isPng = b[0] === 0x89 && b[1] === 0x50
+  const mime  = isPng ? 'image/png' : 'image/jpeg'
+  const blob  = new Blob([buf], { type: mime })
+  const objUrl = URL.createObjectURL(blob)
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl)
+      const ratio  = Math.min(1200 / img.width, 1200 / img.height, 1)
+      const canvas = document.createElement('canvas')
+      canvas.width  = Math.round(img.width  * ratio)
+      canvas.height = Math.round(img.height * ratio)
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve({ dataUrl: canvas.toDataURL(mime, 0.85), mime })
+    }
+    img.onerror = reject
+    img.src = objUrl
+  })
+}
 
 // Error boundary — mencegah crash Leaflet/map merusak seluruh halaman
 class MapBoundary extends Component {
@@ -75,6 +102,7 @@ export default function SellerSettingsPage() {
   }
 
   const uploadImg = async (file, type, setUpl, setPreview) => {
+    // Web fallback: terima File object, upload FormData
     const maxBytes = type === 'logo' ? 5 * 1024 * 1024 : 10 * 1024 * 1024
     if (!file.type.startsWith('image/')) { showToast('error', 'File harus berupa gambar.'); return }
     if (file.size > maxBytes) { showToast('error', `Maks ${type === 'logo' ? '5' : '10'}MB.`); return }
@@ -87,6 +115,20 @@ export default function SellerSettingsPage() {
       showToast('success', `${type === 'logo' ? 'Logo' : 'Banner'} berhasil diupload.`)
     } catch (err) {
       showToast('error', err.response?.data?.message || 'Gagal upload.')
+    } finally { setUpl(false) }
+  }
+
+  const pickAndUploadNative = async (type, setUpl, setPreview) => {
+    // Native Android: Capacitor Camera → base64 JSON
+    setUpl(true)
+    try {
+      const { dataUrl, mime } = await pickImageNative()
+      const res = await api.post(`/mart/seller/upload-${type}-base64`, { data: dataUrl, mime })
+      setProfile(p => ({ ...p, [`${type}_path`]: res.data.path }))
+      setPreview(dataUrl)
+      showToast('success', `${type === 'logo' ? 'Logo' : 'Banner'} berhasil diupload.`)
+    } catch (e) {
+      if (!String(e).toLowerCase().includes('cancel')) showToast('error', 'Gagal upload foto.')
     } finally { setUpl(false) }
   }
 
@@ -149,42 +191,46 @@ export default function SellerSettingsPage() {
           )}
         </div>
 
-        {/* Banner — pakai <label htmlFor> bukan div onClick+ref.click() agar bisa diklik di Android WebView */}
+        {/* Banner */}
         <div style={{ borderRadius: 14, overflow: 'hidden', background: 'var(--k-card)', border: '1px solid var(--k-border)' }}>
-          <label htmlFor="seller-banner-input" style={{ display: 'block', cursor: uplBanner ? 'not-allowed' : 'pointer' }}>
-            <div style={{ position: 'relative', height: 120, background: '#1a1a2e' }}>
-              {bannerSrc
-                ? <img src={bannerSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--k-muted)' }}>
-                    <span style={{ fontSize: 28 }}>🖼️</span>
-                    <p style={{ fontSize: 12, marginTop: 4 }}>Tap untuk upload Banner</p>
-                  </div>
-              }
-              <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: '4px 10px', color: '#fff', fontSize: 11, fontWeight: 700 }}>
-                {uplBanner ? '⏳ Uploading...' : '📷 Ubah Banner'}
-              </div>
+          <div
+            onClick={() => !uplBanner && (isNative ? pickAndUploadNative('banner', setUplBanner, setPrevBanner) : bannerRef.current?.click())}
+            style={{ position: 'relative', height: 120, background: '#1a1a2e', cursor: uplBanner ? 'not-allowed' : 'pointer' }}
+          >
+            {bannerSrc
+              ? <img src={bannerSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--k-muted)' }}>
+                  <span style={{ fontSize: 28 }}>🖼️</span>
+                  <p style={{ fontSize: 12, marginTop: 4 }}>Tap untuk upload Banner</p>
+                </div>
+            }
+            <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: '4px 10px', color: '#fff', fontSize: 11, fontWeight: 700 }}>
+              {uplBanner ? '⏳ Uploading...' : '📷 Ubah Banner'}
             </div>
-          </label>
-          <input id="seller-banner-input" ref={bannerRef} type="file" accept="image/*"
-            disabled={uplBanner} style={{ display: 'none' }}
-            onChange={e => { if (e.target.files[0]) { uploadImg(e.target.files[0], 'banner', setUplBanner, setPrevBanner); e.target.value = '' } }} />
+          </div>
+          {!isNative && (
+            <input ref={bannerRef} type="file" accept="image/*" style={{ display: 'none' }}
+              onChange={e => { if (e.target.files[0]) { uploadImg(e.target.files[0], 'banner', setUplBanner, setPrevBanner); e.target.value = '' } }} />
+          )}
 
           {/* Logo overlapping banner */}
           <div style={{ padding: '0 16px 16px', marginTop: -32, display: 'flex', alignItems: 'flex-end', gap: 12 }}>
-            <label htmlFor="seller-logo-input" style={{ cursor: uplLogo ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-              <div style={{ width: 72, height: 72, borderRadius: 16, overflow: 'hidden', border: '3px solid var(--k-surface)', background: 'var(--k-input)' }}>
-                {logoSrc
-                  ? <img src={logoSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 28 }}>🏪</div>
-                }
-              </div>
-            </label>
+            <div
+              onClick={() => !uplLogo && (isNative ? pickAndUploadNative('logo', setUplLogo, setPrevLogo) : logoRef.current?.click())}
+              style={{ width: 72, height: 72, borderRadius: 16, overflow: 'hidden', border: '3px solid var(--k-surface)', background: 'var(--k-input)', cursor: uplLogo ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+            >
+              {logoSrc
+                ? <img src={logoSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 28 }}>🏪</div>
+              }
+            </div>
             <p style={{ fontSize: 12, color: 'var(--k-muted)', paddingBottom: 4 }}>
               {uplLogo ? '⏳ Uploading logo...' : 'Tap logo untuk ubah • Maks 5MB'}
             </p>
-            <input id="seller-logo-input" ref={logoRef} type="file" accept="image/*"
-              disabled={uplLogo} style={{ display: 'none' }}
-              onChange={e => { if (e.target.files[0]) { uploadImg(e.target.files[0], 'logo', setUplLogo, setPrevLogo); e.target.value = '' } }} />
+            {!isNative && (
+              <input ref={logoRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => { if (e.target.files[0]) { uploadImg(e.target.files[0], 'logo', setUplLogo, setPrevLogo); e.target.value = '' } }} />
+            )}
           </div>
         </div>
 

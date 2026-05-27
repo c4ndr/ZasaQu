@@ -67,6 +67,28 @@ class SellerController extends Controller
         return response()->json(['path' => $path]);
     }
 
+    // Upload logo/banner via base64 JSON (untuk Capacitor Android WebView — FormData tidak reliable)
+    public function uploadImageBase64(Request $request, string $type): JsonResponse
+    {
+        $data   = $request->validate([
+            'data' => ['required', 'string'],
+            'mime' => ['required', 'string', 'in:image/jpeg,image/png,image/webp,image/gif'],
+        ]);
+        $seller = $this->seller($request);
+        $field  = $type === 'logo' ? 'logo_path' : 'banner_path';
+
+        if ($seller->$field) Storage::disk('public')->delete($seller->$field);
+
+        $binary   = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['data']));
+        $ext      = match($data['mime']) { 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', default => 'jpg' };
+        $filename = "mart_sellers/{$seller->id}/" . Str::random(20) . ".{$ext}";
+
+        Storage::disk('public')->put($filename, $binary);
+        $seller->update([$field => $filename]);
+
+        return response()->json(['path' => $filename]);
+    }
+
     // ── Products ──────────────────────────────────────────────────────────────
 
     public function products(Request $request): JsonResponse
@@ -127,6 +149,29 @@ class SellerController extends Controller
         $images = $product->images ?? [];
         if (count($images) >= 5) array_shift($images);
         $images[] = $path;
+        $product->update(['images' => $images]);
+
+        return response()->json(['images' => $product->images]);
+    }
+
+    // Upload foto produk via base64 JSON (untuk Capacitor Android WebView)
+    public function uploadProductImageBase64(Request $request, int $id): JsonResponse
+    {
+        $data    = $request->validate([
+            'data' => ['required', 'string'],
+            'mime' => ['required', 'string', 'in:image/jpeg,image/png,image/webp,image/gif'],
+        ]);
+        $product = $this->seller($request)->allProducts()->findOrFail($id);
+
+        $binary   = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['data']));
+        $ext      = match($data['mime']) { 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', default => 'jpg' };
+        $filename = "mart_products/{$product->id}/" . Str::random(20) . ".{$ext}";
+
+        Storage::disk('public')->put($filename, $binary);
+
+        $images = $product->images ?? [];
+        if (count($images) >= 5) array_shift($images);
+        $images[] = $filename;
         $product->update(['images' => $images]);
 
         return response()->json(['images' => $product->images]);

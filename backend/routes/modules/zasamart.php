@@ -32,14 +32,17 @@ Route::prefix('mart/seller')->middleware(['auth:sanctum', 'role:seller,admin'])-
     Route::get('profile',                      [SellerController::class, 'profile']);
     Route::patch('profile',                    [SellerController::class, 'updateProfile']);
     Route::post('toggle-open',                 [SellerController::class, 'toggleOpen']);
-    Route::post('upload-logo',   fn($r) => app(SellerController::class)->uploadImage($r, 'logo'));
-    Route::post('upload-banner', fn($r) => app(SellerController::class)->uploadImage($r, 'banner'));
+    Route::post('upload-logo',          fn($r) => app(SellerController::class)->uploadImage($r, 'logo'));
+    Route::post('upload-banner',        fn($r) => app(SellerController::class)->uploadImage($r, 'banner'));
+    Route::post('upload-logo-base64',   fn($r) => app(SellerController::class)->uploadImageBase64($r, 'logo'));
+    Route::post('upload-banner-base64', fn($r) => app(SellerController::class)->uploadImageBase64($r, 'banner'));
 
-    Route::get('products',                     [SellerController::class, 'products']);
-    Route::post('products',                    [SellerController::class, 'storeProduct']);
-    Route::patch('products/{id}',              [SellerController::class, 'updateProduct']);
-    Route::post('products/{id}/images',        [SellerController::class, 'uploadProductImage']);
-    Route::delete('products/{id}/images',      [SellerController::class, 'deleteProductImage']);
+    Route::get('products',                          [SellerController::class, 'products']);
+    Route::post('products',                         [SellerController::class, 'storeProduct']);
+    Route::patch('products/{id}',                   [SellerController::class, 'updateProduct']);
+    Route::post('products/{id}/images',             [SellerController::class, 'uploadProductImage']);
+    Route::post('products/{id}/images-base64',      [SellerController::class, 'uploadProductImageBase64']);
+    Route::delete('products/{id}/images',           [SellerController::class, 'deleteProductImage']);
     Route::delete('products/{id}',             [SellerController::class, 'deleteProduct']);
 
     Route::get('orders',                       [SellerController::class, 'orders']);
