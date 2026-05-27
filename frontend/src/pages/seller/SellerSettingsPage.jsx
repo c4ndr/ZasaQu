@@ -67,7 +67,7 @@ export default function SellerSettingsPage() {
     const fd = new FormData(); fd.append('image', file)
     try {
       const res = await api.post(`/mart/seller/upload-${type}`, fd)
-      setProfile(p => ({ ...p, [`${type}_path`]: res.data[`${type}_path`] }))
+      setProfile(p => ({ ...p, [`${type}_path`]: res.data.path }))
       setPreview(URL.createObjectURL(file))
       showToast('success', `${type === 'logo' ? 'Logo' : 'Banner'} berhasil diupload.`)
     } catch (err) {

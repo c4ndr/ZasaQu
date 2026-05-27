@@ -7,13 +7,15 @@ const fmtRp = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 
 export default function SellerDashboardPage() {
   const navigate = useNavigate()
-  const [profile, setProfile] = useState(null)
-  const [orders, setOrders]   = useState([])
+  const [profile,  setProfile]  = useState(null)
+  const [orders,   setOrders]   = useState([])
+  const [wallet,   setWallet]   = useState(null)
   const [toggling, setToggling] = useState(false)
 
   useEffect(() => {
     api.get('/mart/seller/profile').then(r => setProfile(r.data))
     api.get('/mart/seller/orders', { params: { status: 'pending', page: 1 } }).then(r => setOrders(r.data.data?.slice(0, 5) ?? []))
+    api.get('/wallet/summary').then(r => setWallet(r.data)).catch(() => {})
   }, [])
 
   const toggleOpen = async () => {
@@ -47,11 +49,23 @@ export default function SellerDashboardPage() {
           )}
         </div>
 
+        {/* Wallet mini-card */}
+        <div onClick={() => navigate('/seller/wallet')}
+          style={{ background: 'linear-gradient(135deg,#1E1B4B,#312E81)', borderRadius: 16, padding: '16px 20px', marginBottom: 14, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>💰 Saldo Dompet</p>
+            <p style={{ color: '#fff', fontSize: 22, fontWeight: 900, letterSpacing: '-0.5px' }}>
+              {wallet ? fmtRp(wallet.available ?? wallet.balance) : '—'}
+            </p>
+          </div>
+          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 20 }}>›</span>
+        </div>
+
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginBottom: 16 }}>
           {[
-            { label: 'Total Produk', value: profile?.all_products_count ?? '—', icon: '🛍️', color: '#6366F1' },
-            { label: 'Pesanan Baru', value: orders.length ?? '—', icon: '📦', color: '#F59E0B' },
+            { label: 'Total Produk', value: profile?.all_products?.length ?? '—', icon: '🛍️', color: '#6366F1' },
+            { label: 'Pesanan Baru', value: orders.length, icon: '📦', color: '#F59E0B' },
             { label: 'Rating', value: profile?.average_rating ? profile.average_rating.toFixed(1) + ' ⭐' : '—', icon: '⭐', color: '#F59E0B' },
             { label: 'Ulasan', value: profile?.total_ratings ?? '—', icon: '💬', color: '#8B5CF6' },
           ].map(s => (

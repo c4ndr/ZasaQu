@@ -67,6 +67,7 @@ import SellerDashboardPage from './pages/seller/SellerDashboardPage'
 import SellerOrdersPage from './pages/seller/SellerOrdersPage'
 import SellerProductsPage from './pages/seller/SellerProductsPage'
 import SellerSettingsPage from './pages/seller/SellerSettingsPage'
+import SellerWalletPage from './pages/seller/SellerWalletPage'
 import AdminMartSellersPage from './pages/admin/AdminMartSellersPage'
 import AdminMartOrdersPage from './pages/admin/AdminMartOrdersPage'
 
@@ -243,6 +244,7 @@ function AppRoutes() {
       <Route path="/seller/orders" element={<SellerRoute><SellerOrdersPage /></SellerRoute>} />
       <Route path="/seller/products" element={<SellerRoute><SellerProductsPage /></SellerRoute>} />
       <Route path="/seller/settings" element={<SellerRoute><SellerSettingsPage /></SellerRoute>} />
+      <Route path="/seller/wallet" element={<SellerRoute><SellerWalletPage /></SellerRoute>} />
 
       {/* Admin ZasaMart */}
       <Route path="/admin/mart/sellers" element={<AdminRoute><AdminMartSellersPage /></AdminRoute>} />

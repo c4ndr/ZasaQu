@@ -2,10 +2,11 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const NAV = [
-  { to: '/seller',           emoji: '📊', label: 'Dashboard',  exact: true },
-  { to: '/seller/orders',    emoji: '📦', label: 'Pesanan'  },
-  { to: '/seller/products',  emoji: '🛍️', label: 'Produk'   },
-  { to: '/seller/settings',  emoji: '⚙️', label: 'Pengaturan' },
+  { to: '/seller',          emoji: '📊', label: 'Dashboard', exact: true },
+  { to: '/seller/orders',   emoji: '📦', label: 'Pesanan'  },
+  { to: '/seller/products', emoji: '🛍️', label: 'Produk'   },
+  { to: '/seller/wallet',   emoji: '💰', label: 'Dompet'   },
+  { to: '/seller/settings', emoji: '⚙️', label: 'Setelan'  },
 ]
 
 export default function MartSellerLayout({ children, title }) {
