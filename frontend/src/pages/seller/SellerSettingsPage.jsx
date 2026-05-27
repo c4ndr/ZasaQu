@@ -6,28 +6,30 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { isNative } from '../../utils/nativePlatform'
 
 async function pickImageNative() {
-  const photo = await Camera.getPhoto({ allowEditing: false, resultType: CameraResultType.Uri, source: CameraSource.Photos })
-  const resp = await fetch(photo.webPath)
-  const buf  = await resp.arrayBuffer()
-  const b    = new Uint8Array(buf, 0, 4)
-  const isPng = b[0] === 0x89 && b[1] === 0x50
-  const mime  = isPng ? 'image/png' : 'image/jpeg'
-  const blob  = new Blob([buf], { type: mime })
-  const objUrl = URL.createObjectURL(blob)
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      URL.revokeObjectURL(objUrl)
-      const ratio  = Math.min(1200 / img.width, 1200 / img.height, 1)
-      const canvas = document.createElement('canvas')
-      canvas.width  = Math.round(img.width  * ratio)
-      canvas.height = Math.round(img.height * ratio)
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
-      resolve({ dataUrl: canvas.toDataURL(mime, 0.85), mime })
+  // Minta permission dulu (Android 13+: READ_MEDIA_IMAGES)
+  try {
+    const perms = await Camera.requestPermissions({ permissions: ['photos'] })
+    if (perms.photos !== 'granted' && perms.photos !== 'limited') {
+      throw new Error('Izin akses foto ditolak. Buka Pengaturan → Izin Aplikasi untuk mengaktifkan.')
     }
-    img.onerror = reject
-    img.src = objUrl
+  } catch (e) {
+    if (e.message?.includes('Izin')) throw e
+  }
+
+  // DataUrl langsung — skip fetch(webPath), lebih reliable di WebView
+  const photo = await Camera.getPhoto({
+    allowEditing: false,
+    resultType: CameraResultType.DataUrl,
+    source: CameraSource.Photos,
+    quality: 80,
+    width: 1200,
+    height: 1200,
   })
+
+  if (!photo.dataUrl) throw new Error('Foto tidak berhasil dipilih (dataUrl null)')
+  const dataUrl = photo.dataUrl
+  const mime = dataUrl.match(/^data:(image\/\w+);/)?.[1] || 'image/jpeg'
+  return { dataUrl, mime }
 }
 
 // Error boundary — mencegah crash Leaflet/map merusak seluruh halaman
@@ -128,7 +130,8 @@ export default function SellerSettingsPage() {
       setPreview(dataUrl)
       showToast('success', `${type === 'logo' ? 'Logo' : 'Banner'} berhasil diupload.`)
     } catch (e) {
-      if (!String(e).toLowerCase().includes('cancel')) showToast('error', 'Gagal upload foto.')
+      const msg = String(e?.message || e || 'unknown')
+      if (!msg.toLowerCase().includes('cancel')) showToast('error', 'Gagal upload foto: ' + msg)
     } finally { setUpl(false) }
   }
 
