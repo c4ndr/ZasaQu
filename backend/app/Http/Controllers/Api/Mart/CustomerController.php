@@ -146,6 +146,12 @@ class CustomerController extends Controller
             abort_if($item->product->stock < $item->quantity, 422, "Stok '{$item->product->name}' tidak cukup.");
         }
 
+        // ── Cek saldo wallet sebelum membuka transaksi DB ─────────────────────
+        $totalEstimate = $cartItems->sum(fn($i) => $i->product->price * $i->quantity) + $data['shipping_fee'];
+        $userWallet    = Wallet::where('user_id', $user->id)->first();
+        abort_if(!$userWallet || $userWallet->availableBalance() < $totalEstimate, 422,
+            'Saldo tidak cukup. Silakan top up terlebih dahulu.');
+
         $order = DB::transaction(function () use ($user, $seller, $data, $cartItems) {
             $subtotal    = $cartItems->sum(fn($i) => $i->product->price * $i->quantity);
             $total       = $subtotal + $data['shipping_fee'];
@@ -193,6 +199,16 @@ class CustomerController extends Controller
 
             MartCart::where('user_id', $user->id)->where('seller_id', $seller->id)->delete();
 
+            // ── Debit wallet customer ─────────────────────────────────────
+            app(WalletService::class)->debit(
+                $user,
+                $total,
+                'mart_payment',
+                "Pembayaran ZasaMart #{$order->order_number}",
+                $order,
+                'zasamart'
+            );
+
             return $order;
         });
 
@@ -227,13 +243,27 @@ class CustomerController extends Controller
         $order = MartOrder::where('customer_id', $request->user()->id)->findOrFail($id);
         abort_if(!$order->canCancel(), 422, 'Pesanan tidak dapat dibatalkan pada status ini.');
 
-        $order->items->each(fn($item) => $item->product->increment('stock', $item->quantity));
+        DB::transaction(function () use ($order, $data, $request) {
+            $order->items->each(fn($item) => $item->product->increment('stock', $item->quantity));
 
-        $order->update([
-            'status'       => 'cancelled',
-            'cancel_reason'=> $data['reason'] ?? 'Dibatalkan oleh pembeli',
-            'cancelled_at' => now(),
-        ]);
+            $order->update([
+                'status'       => 'cancelled',
+                'cancel_reason'=> $data['reason'] ?? 'Dibatalkan oleh pembeli',
+                'cancelled_at' => now(),
+            ]);
+
+            // ── Refund ke wallet customer ─────────────────────────────────
+            if ($order->total > 0) {
+                app(WalletService::class)->credit(
+                    $request->user(),
+                    $order->total,
+                    'mart_refund',
+                    "Refund ZasaMart #{$order->order_number}",
+                    $order,
+                    'zasamart'
+                );
+            }
+        });
 
         return response()->json(['message' => 'Pesanan berhasil dibatalkan.']);
     }

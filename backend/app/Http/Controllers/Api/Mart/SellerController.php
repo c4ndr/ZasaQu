@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\MartOrder;
 use App\Models\MartProduct;
 use App\Models\MartSeller;
+use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -15,16 +17,16 @@ class SellerController extends Controller
 {
     private function seller(Request $request): MartSeller
     {
-        return $request->user()->martSeller;
+        $seller = $request->user()->martSeller;
+        abort_if(!$seller, 404, 'Profil toko tidak ditemukan.');
+        return $seller;
     }
 
     // ── Store profile ─────────────────────────────────────────────────────────
 
     public function profile(Request $request): JsonResponse
     {
-        $seller = $this->seller($request);
-        if (!$seller) return response()->json(['message' => 'Profil toko tidak ditemukan.'], 404);
-        return response()->json($seller->load('allProducts.category'));
+        return response()->json($this->seller($request)->load('allProducts.category'));
     }
 
     public function updateProfile(Request $request): JsonResponse
@@ -198,12 +200,27 @@ class SellerController extends Controller
             ->whereIn('status', ['pending', 'confirmed'])
             ->findOrFail($id);
 
-        $order->items->each(fn($item) => $item->product->increment('stock', $item->quantity));
-        $order->update([
-            'status'       => 'cancelled',
-            'cancel_reason'=> $data['reason'],
-            'cancelled_at' => now(),
-        ]);
+        DB::transaction(function () use ($order, $data) {
+            $order->items->each(fn($item) => $item->product->increment('stock', $item->quantity));
+            $order->update([
+                'status'       => 'cancelled',
+                'cancel_reason'=> $data['reason'],
+                'cancelled_at' => now(),
+            ]);
+
+            // ── Refund ke wallet customer ─────────────────────────────────
+            $customer = $order->customer;
+            if ($customer && $order->total > 0) {
+                app(WalletService::class)->credit(
+                    $customer,
+                    $order->total,
+                    'mart_refund',
+                    "Refund ZasaMart #{$order->order_number} (Dibatalkan penjual)",
+                    $order,
+                    'zasamart'
+                );
+            }
+        });
 
         return response()->json(['message' => 'Pesanan dibatalkan.']);
     }
