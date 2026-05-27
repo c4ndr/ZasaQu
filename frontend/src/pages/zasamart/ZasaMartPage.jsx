@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import useMartCartCount from '../../hooks/useMartCartCount'
 
-const fmtRp = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
+const fmtRp  = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
+const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
 function StarRow({ rating, small }) {
   const sz = small ? 11 : 12
@@ -44,7 +45,7 @@ function ProductCard({ product, onClick }) {
     }}>
       <div style={{ position: 'relative', paddingBottom: '100%', background: '#f3f4f6' }}>
         {img
-          ? <img src={`${import.meta.env.VITE_STORAGE_URL}/${img}`} alt={product.name}
+          ? <img src={`${STORAGE}/${img}`} alt={product.name}
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>🛍️</div>
         }

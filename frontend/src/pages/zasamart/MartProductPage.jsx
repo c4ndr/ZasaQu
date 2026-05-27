@@ -5,6 +5,7 @@ import useMartCartCount from '../../hooks/useMartCartCount'
 
 const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+const STORAGE  = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
 export default function MartProductPage() {
   const { id }       = useParams()
@@ -61,7 +62,7 @@ export default function MartProductPage() {
       <div style={{ position: 'relative', background: '#f3f4f6' }}>
         <div style={{ paddingBottom: '80%', position: 'relative' }}>
           {images.length > 0
-            ? <img src={`${import.meta.env.VITE_STORAGE_URL}/${images[imgIdx]}`} alt={product.name}
+            ? <img src={`${STORAGE}/${images[imgIdx]}`} alt={product.name}
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
             : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>🛍️</div>
           }
@@ -74,7 +75,7 @@ export default function MartProductPage() {
         {images.length > 1 && (
           <div style={{ display: 'flex', gap: 8, padding: '10px 16px', overflowX: 'auto' }}>
             {images.map((img, i) => (
-              <img key={i} src={`${import.meta.env.VITE_STORAGE_URL}/${img}`} alt="" onClick={() => setImgIdx(i)}
+              <img key={i} src={`${STORAGE}/${img}`} alt="" onClick={() => setImgIdx(i)}
                 style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', cursor: 'pointer', border: imgIdx === i ? '2px solid #6366F1' : '2px solid transparent', flexShrink: 0 }} />
             ))}
           </div>
@@ -102,7 +103,7 @@ export default function MartProductPage() {
         <div onClick={() => navigate(`/mart/sellers/${product.seller?.id}`)}
           style={{ background: 'var(--k-card)', borderRadius: 12, padding: '12px 14px', border: '1px solid var(--k-border)', cursor: 'pointer', display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14 }}>
           {product.seller?.logo_path
-            ? <img src={`${import.meta.env.VITE_STORAGE_URL}/${product.seller.logo_path}`} alt=""
+            ? <img src={`${STORAGE}/${product.seller.logo_path}`} alt=""
                 style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
             : <div style={{ width: 40, height: 40, borderRadius: 10, background: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🏪</div>
           }

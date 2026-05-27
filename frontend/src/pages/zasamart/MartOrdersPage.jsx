@@ -4,7 +4,7 @@ import api from '../../services/api'
 
 const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-const STORAGE = import.meta.env.VITE_STORAGE_URL
+const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
 const STATUS_TABS = [
   { value: '', label: 'Semua' },

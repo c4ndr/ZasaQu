@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../../services/api'
 
 const fmtRp = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
-const STORAGE = import.meta.env.VITE_STORAGE_URL
+const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
 const haversine = (lat1, lng1, lat2, lng2) => {
   const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180

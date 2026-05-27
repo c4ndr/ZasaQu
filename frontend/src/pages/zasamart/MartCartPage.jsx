@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 
 const fmtRp = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
-const STORAGE = import.meta.env.VITE_STORAGE_URL
+const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
 export default function MartCartPage() {
   const navigate = useNavigate()

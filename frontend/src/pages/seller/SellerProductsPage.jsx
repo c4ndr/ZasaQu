@@ -3,7 +3,7 @@ import MartSellerLayout from '../../components/MartSellerLayout'
 import api from '../../services/api'
 
 const fmtRp = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
-const STORAGE = import.meta.env.VITE_STORAGE_URL
+const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
 const EMPTY = { name: '', category_id: '', description: '', price: '', compare_price: '', stock: '', weight: '', is_active: true }
 
@@ -58,13 +58,15 @@ export default function SellerProductsPage() {
 
   const uploadImage = async (e) => {
     const file = e.target.files[0]; if (!file) return
+    // Reset input agar file yang sama bisa dipilih lagi
+    e.target.value = ''
     setUploadingImg(true)
     const fd = new FormData(); fd.append('image', file)
     try {
-      await api.post(`/mart/seller/products/${modal}/images`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-      const r = await api.get('/mart/seller/products')
-      const updated = r.data.data?.find(p => p.id === modal)
-      if (updated) setForm(f => ({ ...f, images: updated.images }))
+      // JANGAN set Content-Type manual — axios otomatis tambah boundary yang benar
+      const r = await api.post(`/mart/seller/products/${modal}/images`, fd)
+      // Pakai response dari endpoint upload langsung (sudah ada images terbaru)
+      setForm(f => ({ ...f, images: r.data.images }))
       load()
     } finally { setUploadingImg(false) }
   }

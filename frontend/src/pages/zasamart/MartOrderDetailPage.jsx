@@ -4,7 +4,7 @@ import api from '../../services/api'
 
 const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const fmtDate = (d) => new Date(d).toLocaleString('id-ID')
-const STORAGE = import.meta.env.VITE_STORAGE_URL
+const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
 const STATUS_META = {
   pending:     { label: 'Menunggu Konfirmasi Penjual', color: '#F59E0B', icon: '⏳' },

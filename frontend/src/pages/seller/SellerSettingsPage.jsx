@@ -3,7 +3,7 @@ import MartSellerLayout from '../../components/MartSellerLayout'
 import MerchantLocationPicker from '../../components/MerchantLocationPicker'
 import api from '../../services/api'
 
-const STORAGE = import.meta.env.VITE_STORAGE_URL
+const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
 function fmtStatus(s) {
   return { pending: 'Menunggu Persetujuan', active: 'Aktif', suspended: 'Disuspend' }[s] ?? s
