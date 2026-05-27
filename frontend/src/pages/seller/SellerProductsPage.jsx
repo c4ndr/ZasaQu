@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import MartSellerLayout from '../../components/MartSellerLayout'
 import api from '../../services/api'
 
@@ -16,7 +16,7 @@ export default function SellerProductsPage() {
   const [form, setForm]       = useState(EMPTY)
   const [saving, setSaving]   = useState(false)
   const [uploadingImg, setUploadingImg] = useState(false)
-  const imgRef = useRef()
+  const [catError, setCatError] = useState(false)
 
   const load = () => {
     setLoading(true)
@@ -26,7 +26,9 @@ export default function SellerProductsPage() {
   }
 
   useEffect(() => {
-    api.get('/mart/categories').then(r => setCategories(r.data))
+    api.get('/mart/categories')
+      .then(r => { setCategories(Array.isArray(r.data) ? r.data : []); setCatError(false) })
+      .catch(() => setCatError(true))
   }, [])
 
   useEffect(() => { load() }, [search])
@@ -72,10 +74,8 @@ export default function SellerProductsPage() {
   }
 
   const deleteImage = async (path) => {
-    await api.delete(`/mart/seller/products/${modal}/images`, { data: { path } })
-    const r = await api.get('/mart/seller/products')
-    const updated = r.data.data?.find(p => p.id === modal)
-    if (updated) setForm(f => ({ ...f, images: updated.images }))
+    const r = await api.delete(`/mart/seller/products/${modal}/images`, { data: { path } })
+    setForm(f => ({ ...f, images: r.data.images ?? [] }))
     load()
   }
 
@@ -154,12 +154,14 @@ export default function SellerProductsPage() {
                       </div>
                     ))}
                     {(form.images?.length ?? 0) < 5 && (
-                      <button onClick={() => imgRef.current?.click()} disabled={uploadingImg}
-                        style={{ width: 60, height: 60, borderRadius: 8, border: '2px dashed var(--k-border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: 'var(--k-muted)' }}>
+                      // Pakai <label htmlFor> bukan button+ref.click() — lebih reliable di Android WebView
+                      <label htmlFor="prod-img-input"
+                        style={{ width: 60, height: 60, borderRadius: 8, border: '2px dashed var(--k-border)', background: 'none', cursor: uploadingImg ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: 'var(--k-muted)', opacity: uploadingImg ? 0.5 : 1 }}>
                         {uploadingImg ? '⏳' : '+'}
-                      </button>
+                      </label>
                     )}
-                    <input ref={imgRef} type="file" accept="image/*" onChange={uploadImage} style={{ display: 'none' }} />
+                    <input id="prod-img-input" type="file" accept="image/*" onChange={uploadImage}
+                      disabled={uploadingImg} style={{ display: 'none' }} />
                   </div>
                 </div>
               )}
@@ -179,10 +181,16 @@ export default function SellerProductsPage() {
               ))}
 
               <div style={{ marginBottom: 10 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--k-muted)', marginBottom: 4 }}>Kategori</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--k-muted)' }}>Kategori</p>
+                  {catError && (
+                    <button onClick={() => api.get('/mart/categories').then(r => { setCategories(Array.isArray(r.data) ? r.data : []); setCatError(false) }).catch(() => {})}
+                      style={{ fontSize: 10, color: '#F59E0B', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>⚠ Gagal muat · Tap retry</button>
+                  )}
+                </div>
                 <select value={form.category_id || ''} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-text)', fontSize: 13, outline: 'none' }}>
-                  <option value="">— Pilih Kategori —</option>
+                  <option value="">{catError ? '— Gagal memuat kategori —' : categories.length === 0 ? '⏳ Memuat...' : '— Pilih Kategori —'}</option>
                   {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
                 </select>
               </div>

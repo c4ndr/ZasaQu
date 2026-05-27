@@ -1,7 +1,21 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Component } from 'react'
 import MartSellerLayout from '../../components/MartSellerLayout'
 import MerchantLocationPicker from '../../components/MerchantLocationPicker'
 import api from '../../services/api'
+
+// Error boundary — mencegah crash Leaflet/map merusak seluruh halaman
+class MapBoundary extends Component {
+  state = { err: false }
+  static getDerivedStateFromError() { return { err: true } }
+  render() {
+    if (this.state.err) return (
+      <div style={{ padding: '14px 16px', borderRadius: 12, background: 'var(--k-card)', border: '1px solid var(--k-border)', color: 'var(--k-muted)', fontSize: 13 }}>
+        🗺️ Peta tidak tersedia. Lokasi bisa diatur melalui web browser.
+      </div>
+    )
+    return this.props.children
+  }
+}
 
 const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
@@ -22,6 +36,7 @@ export default function SellerSettingsPage() {
   const [uplBanner,setUplBanner]= useState(false)
   const [prevLogo, setPrevLogo] = useState(null)
   const [prevBanner,setPrevBanner]= useState(null)
+  // ref masih dipakai untuk reset value setelah upload
   const logoRef   = useRef()
   const bannerRef = useRef()
 
@@ -134,42 +149,42 @@ export default function SellerSettingsPage() {
           )}
         </div>
 
-        {/* Banner */}
+        {/* Banner — pakai <label htmlFor> bukan div onClick+ref.click() agar bisa diklik di Android WebView */}
         <div style={{ borderRadius: 14, overflow: 'hidden', background: 'var(--k-card)', border: '1px solid var(--k-border)' }}>
-          <div
-            style={{ position: 'relative', height: 120, background: '#1a1a2e', cursor: 'pointer' }}
-            onClick={() => !uplBanner && bannerRef.current?.click()}
-          >
-            {bannerSrc
-              ? <img src={bannerSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--k-muted)' }}>
-                  <span style={{ fontSize: 28 }}>🖼️</span>
-                  <p style={{ fontSize: 12, marginTop: 4 }}>Tap untuk upload Banner</p>
-                </div>
-            }
-            <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: '4px 10px', color: '#fff', fontSize: 11, fontWeight: 700 }}>
-              {uplBanner ? '⏳ Uploading...' : '📷 Ubah Banner'}
+          <label htmlFor="seller-banner-input" style={{ display: 'block', cursor: uplBanner ? 'not-allowed' : 'pointer' }}>
+            <div style={{ position: 'relative', height: 120, background: '#1a1a2e' }}>
+              {bannerSrc
+                ? <img src={bannerSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--k-muted)' }}>
+                    <span style={{ fontSize: 28 }}>🖼️</span>
+                    <p style={{ fontSize: 12, marginTop: 4 }}>Tap untuk upload Banner</p>
+                  </div>
+              }
+              <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: '4px 10px', color: '#fff', fontSize: 11, fontWeight: 700 }}>
+                {uplBanner ? '⏳ Uploading...' : '📷 Ubah Banner'}
+              </div>
             </div>
-            <input ref={bannerRef} type="file" accept="image/*" style={{ display: 'none' }}
-              onChange={e => e.target.files[0] && uploadImg(e.target.files[0], 'banner', setUplBanner, setPrevBanner)} />
-          </div>
+          </label>
+          <input id="seller-banner-input" ref={bannerRef} type="file" accept="image/*"
+            disabled={uplBanner} style={{ display: 'none' }}
+            onChange={e => { if (e.target.files[0]) { uploadImg(e.target.files[0], 'banner', setUplBanner, setPrevBanner); e.target.value = '' } }} />
 
           {/* Logo overlapping banner */}
           <div style={{ padding: '0 16px 16px', marginTop: -32, display: 'flex', alignItems: 'flex-end', gap: 12 }}>
-            <div
-              style={{ width: 72, height: 72, borderRadius: 16, overflow: 'hidden', border: '3px solid var(--k-surface)', background: 'var(--k-input)', cursor: 'pointer', flexShrink: 0 }}
-              onClick={() => !uplLogo && logoRef.current?.click()}
-            >
-              {logoSrc
-                ? <img src={logoSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 28 }}>🏪</div>
-              }
-            </div>
+            <label htmlFor="seller-logo-input" style={{ cursor: uplLogo ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+              <div style={{ width: 72, height: 72, borderRadius: 16, overflow: 'hidden', border: '3px solid var(--k-surface)', background: 'var(--k-input)' }}>
+                {logoSrc
+                  ? <img src={logoSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 28 }}>🏪</div>
+                }
+              </div>
+            </label>
             <p style={{ fontSize: 12, color: 'var(--k-muted)', paddingBottom: 4 }}>
               {uplLogo ? '⏳ Uploading logo...' : 'Tap logo untuk ubah • Maks 5MB'}
             </p>
-            <input ref={logoRef} type="file" accept="image/*" style={{ display: 'none' }}
-              onChange={e => e.target.files[0] && uploadImg(e.target.files[0], 'logo', setUplLogo, setPrevLogo)} />
+            <input id="seller-logo-input" ref={logoRef} type="file" accept="image/*"
+              disabled={uplLogo} style={{ display: 'none' }}
+              onChange={e => { if (e.target.files[0]) { uploadImg(e.target.files[0], 'logo', setUplLogo, setPrevLogo); e.target.value = '' } }} />
           </div>
         </div>
 
@@ -196,10 +211,12 @@ export default function SellerSettingsPage() {
 
           <div>
             <label style={lbl}>Lokasi Toko (untuk penghitungan ongkir)</label>
-            <MerchantLocationPicker
-              lat={form.lat} lng={form.lng}
-              onPick={({ lat, lng, address }) => setForm(f => ({ ...f, lat, lng, address: address || f.address }))}
-            />
+            <MapBoundary>
+              <MerchantLocationPicker
+                lat={form.lat} lng={form.lng}
+                onPick={({ lat, lng, address }) => setForm(f => ({ ...f, lat, lng, address: address || f.address }))}
+              />
+            </MapBoundary>
           </div>
 
           <button onClick={save} disabled={saving} style={{
