@@ -75,11 +75,33 @@ const IconFood = ({ filled }) => (
   </svg>
 )
 
+const IconMart = ({ filled }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    {filled
+      ? <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6zM3 6h18M16 10a4 4 0 01-8 0" fill="none" stroke="currentColor" strokeWidth={0}/>
+      : null
+    }
+    {filled ? (
+      <>
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6L18 2H6z" fill="currentColor" opacity=".85"/>
+        <path d="M3 6h18" stroke="#fff" strokeWidth={1.6} strokeLinecap="round"/>
+        <path d="M16 10a4 4 0 01-8 0" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" fill="none"/>
+      </>
+    ) : (
+      <>
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6L18 2H6z" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"/>
+        <path d="M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" fill="none"/>
+      </>
+    )}
+  </svg>
+)
+
 const PELANGGAN_ITEMS = (name) => [
   { to: '/dashboard', Icon: IconHome,   label: 'Beranda',  exact: true },
   { to: '/orders',    Icon: IconBox,    label: 'ZasaGo'  },
+  { to: '/mart',      Icon: IconMart,   label: 'ZasaMart', centerColor: 'linear-gradient(145deg, #7C3AED 0%, #4F46E5 100%)', centerShadow: 'rgba(124,58,237,0.50)' },
   { to: '/food',      Icon: IconFood,   label: 'ZasaFood' },
-  { to: '/wallet',    Icon: IconWallet, label: 'Dompet'  },
   { to: '/profile',   Icon: null,       label: 'Akun',    avatar: true },
 ]
 
@@ -107,8 +129,11 @@ export default function BottomNav() {
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-        {items.map(({ to, Icon, label, exact, avatar }, idx) => {
+        {items.map(({ to, Icon, label, exact, avatar, centerColor, centerShadow }, idx) => {
           const isCenter = idx === centerIdx
+          const cBg     = centerColor  || 'linear-gradient(145deg, #FB923C 0%, #F97316 100%)'
+          const cBgAct  = centerColor  || 'linear-gradient(145deg, #F97316 0%, #C2410C 100%)'
+          const cShadow = centerShadow || 'rgba(249,115,22,0.50)'
           return (
             <NavLink
               key={to}
@@ -125,13 +150,11 @@ export default function BottomNav() {
                 }}>
                   <div style={{
                     width: 54, height: 54, borderRadius: 18,
-                    background: isActive
-                      ? 'linear-gradient(145deg, #F97316 0%, #C2410C 100%)'
-                      : 'linear-gradient(145deg, #FB923C 0%, #F97316 100%)',
+                    background: isActive ? cBgAct : cBg,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     boxShadow: isActive
-                      ? '0 6px 22px rgba(249,115,22,0.55), 0 2px 6px rgba(0,0,0,0.12)'
-                      : '0 4px 16px rgba(249,115,22,0.38), 0 2px 6px rgba(0,0,0,0.10)',
+                      ? `0 6px 22px ${cShadow}, 0 2px 6px rgba(0,0,0,0.12)`
+                      : `0 4px 16px ${cShadow.replace('0.50', '0.38')}, 0 2px 6px rgba(0,0,0,0.10)`,
                     border: '3px solid var(--k-surface)',
                     transition: 'box-shadow 0.2s, background 0.2s',
                     color: '#fff',
