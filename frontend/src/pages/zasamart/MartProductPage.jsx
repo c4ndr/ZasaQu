@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../../services/api'
+import useMartCartCount from '../../hooks/useMartCartCount'
 
 const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -8,6 +9,7 @@ const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric',
 export default function MartProductPage() {
   const { id }       = useParams()
   const navigate     = useNavigate()
+  const { count: cartCount } = useMartCartCount()
   const [product, setProduct] = useState(null)
   const [imgIdx, setImgIdx]   = useState(0)
   const [qty, setQty]         = useState(1)
@@ -45,7 +47,14 @@ export default function MartProductPage() {
       <div style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--k-surface)' }}>
         <button onClick={() => navigate(-1)} style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 18, color: 'var(--k-text)' }}>←</button>
         <p style={{ fontWeight: 800, color: 'var(--k-text)', fontSize: 15, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Detail Produk</p>
-        <button onClick={() => navigate('/mart/cart')} style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 10, padding: '6px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#6366F1' }}>🛒 Keranjang</button>
+        <button onClick={() => navigate('/mart/cart')} style={{ position: 'relative', background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 10, padding: '6px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#6366F1' }}>
+          🛒 Keranjang
+          {cartCount > 0 && (
+            <span style={{ position: 'absolute', top: -6, right: -6, background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 900, minWidth: 17, height: 17, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--k-surface)', padding: '0 3px', lineHeight: 1 }}>
+              {cartCount > 99 ? '99+' : cartCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Images */}
