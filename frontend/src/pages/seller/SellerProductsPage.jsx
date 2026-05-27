@@ -4,28 +4,36 @@ import api from '../../services/api'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { isNative } from '../../utils/nativePlatform'
 
-// ── Native photo picker (Base64 — paling reliable di Capacitor WebView) ───────
+// ── Native photo picker ───────────────────────────────────────────────────────
+// Catatan: TIDAK pakai Camera.requestPermissions() karena di beberapa Android
+// ia memblok / hang sebelum galeri terbuka. Camera.getPhoto sudah minta izin sendiri.
 async function pickImageNative() {
-  try {
-    const perms = await Camera.requestPermissions({ permissions: ['photos'] })
-    if (perms.photos !== 'granted' && perms.photos !== 'limited') {
-      throw new Error('Izin foto ditolak. Buka Pengaturan → Izin Aplikasi.')
-    }
-  } catch (e) {
-    if (e.message?.includes('Izin')) throw e
-  }
   const photo = await Camera.getPhoto({
     allowEditing: false,
-    resultType: CameraResultType.Base64,
+    resultType: CameraResultType.DataUrl,   // DataUrl lebih reliable — tidak perlu fetch
     source: CameraSource.Photos,
-    quality: 80,
-    width: 1000,
-    height: 1000,
+    quality: 75,
+    width: 800,
+    height: 800,
   })
-  if (!photo.base64String) throw new Error('Tidak ada data foto')
-  const mime    = `image/${photo.format || 'jpeg'}`
-  const dataUrl = `data:${mime};base64,${photo.base64String}`
-  return { dataUrl, mime }
+
+  if (!photo.dataUrl) throw new Error('Tidak ada data foto dari galeri')
+
+  // Resize via canvas → jamin output kecil sebelum upload
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const max = 800
+      const r   = Math.min(max / img.width, max / img.height, 1)
+      const cv  = document.createElement('canvas')
+      cv.width  = Math.round(img.width  * r)
+      cv.height = Math.round(img.height * r)
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height)
+      resolve({ dataUrl: cv.toDataURL('image/jpeg', 0.75), mime: 'image/jpeg' })
+    }
+    img.onerror = () => reject(new Error('Gagal memproses foto'))
+    img.src = photo.dataUrl
+  })
 }
 
 const fmtRp   = v => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
@@ -112,15 +120,17 @@ export default function SellerProductsPage() {
   // ── Hapus produk ──────────────────────────────────────────────────────────
   const deleteProduct = async () => {
     if (!confirmDel) return
+    const { id, name } = confirmDel
+    setConfirmDel(null)
     try {
-      await api.delete(`/mart/seller/products/${confirmDel.id}`)
-      setConfirmDel(null)
-      if (modal === confirmDel.id) closeModal()
-      load()
-      showToast('success', `"${confirmDel.name}" dihapus.`)
+      await api.delete(`/mart/seller/products/${id}`)
+      // Hapus dari state lokal langsung — tidak menunggu reload
+      setProducts(prev => prev.filter(p => p.id !== id))
+      if (modal === id) closeModal()
+      showToast('success', `"${name}" berhasil dihapus.`)
     } catch (err) {
       showToast('error', err.response?.data?.message || 'Gagal menghapus produk.')
-      setConfirmDel(null)
+      load() // reload kalau gagal supaya state sync
     }
   }
 
@@ -143,8 +153,10 @@ export default function SellerProductsPage() {
       load()
       showToast('success', 'Foto berhasil ditambahkan.')
     } catch (e) {
-      const msg = String(e?.message || e || '')
-      if (!msg.toLowerCase().includes('cancel')) showToast('error', 'Gagal upload: ' + (msg || 'coba lagi'))
+      const msg = String(e?.message || e || 'unknown')
+      // Hanya skip error jika user memang sengaja cancel/tutup galeri
+      const isCanceled = /cancel(l?ed)?|no image picked|user denied/i.test(msg)
+      if (!isCanceled) showToast('error', 'Gagal upload foto:\n' + msg)
     } finally { setUploadingImg(false) }
   }
 

@@ -6,30 +6,33 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { isNative } from '../../utils/nativePlatform'
 
 async function pickImageNative() {
-  // Minta permission dulu (Android 13+: READ_MEDIA_IMAGES)
-  try {
-    const perms = await Camera.requestPermissions({ permissions: ['photos'] })
-    if (perms.photos !== 'granted' && perms.photos !== 'limited') {
-      throw new Error('Izin akses foto ditolak. Buka Pengaturan → Izin Aplikasi untuk mengaktifkan.')
-    }
-  } catch (e) {
-    if (e.message?.includes('Izin')) throw e
-  }
-
-  // DataUrl langsung — skip fetch(webPath), lebih reliable di WebView
+  // Tidak pakai requestPermissions — Camera.getPhoto sudah handle izin sendiri
   const photo = await Camera.getPhoto({
     allowEditing: false,
     resultType: CameraResultType.DataUrl,
     source: CameraSource.Photos,
-    quality: 80,
-    width: 1200,
-    height: 1200,
+    quality: 75,
+    width: 800,
+    height: 800,
   })
 
-  if (!photo.dataUrl) throw new Error('Foto tidak berhasil dipilih (dataUrl null)')
-  const dataUrl = photo.dataUrl
-  const mime = dataUrl.match(/^data:(image\/\w+);/)?.[1] || 'image/jpeg'
-  return { dataUrl, mime }
+  if (!photo.dataUrl) throw new Error('Tidak ada data foto dari galeri')
+
+  // Resize via canvas
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const max = 800
+      const r   = Math.min(max / img.width, max / img.height, 1)
+      const cv  = document.createElement('canvas')
+      cv.width  = Math.round(img.width  * r)
+      cv.height = Math.round(img.height * r)
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height)
+      resolve({ dataUrl: cv.toDataURL('image/jpeg', 0.75), mime: 'image/jpeg' })
+    }
+    img.onerror = () => reject(new Error('Gagal memproses foto'))
+    img.src = photo.dataUrl
+  })
 }
 
 // Error boundary — mencegah crash Leaflet/map merusak seluruh halaman
@@ -131,7 +134,8 @@ export default function SellerSettingsPage() {
       showToast('success', `${type === 'logo' ? 'Logo' : 'Banner'} berhasil diupload.`)
     } catch (e) {
       const msg = String(e?.message || e || 'unknown')
-      if (!msg.toLowerCase().includes('cancel')) showToast('error', 'Gagal upload foto: ' + msg)
+      const isCanceled = /cancel(l?ed)?|no image picked|user denied/i.test(msg)
+      if (!isCanceled) showToast('error', 'Gagal upload foto: ' + msg)
     } finally { setUpl(false) }
   }
 
