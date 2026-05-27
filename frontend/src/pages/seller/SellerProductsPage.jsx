@@ -39,11 +39,15 @@ export default function SellerProductsPage() {
     try {
       const payload = { ...form, price: Number(form.price), stock: Number(form.stock), weight: Number(form.weight), compare_price: form.compare_price ? Number(form.compare_price) : null, category_id: form.category_id || null }
       if (modal === 'add') {
-        await api.post('/mart/seller/products', payload)
+        const res = await api.post('/mart/seller/products', payload)
+        // Switch ke edit mode agar bisa langsung upload foto
+        setForm({ ...res.data, images: res.data.images ?? [] })
+        setModal(res.data.id)
       } else {
         await api.patch(`/mart/seller/products/${modal}`, payload)
+        setModal(null)
       }
-      setModal(null); load()
+      load()
     } finally { setSaving(false) }
   }
 
@@ -130,6 +134,12 @@ export default function SellerProductsPage() {
               <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--k-text)', marginBottom: 16 }}>
                 {modal === 'add' ? '➕ Tambah Produk' : '✏️ Edit Produk'}
               </p>
+
+              {modal === 'add' && (
+                <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', marginBottom: 14 }}>
+                  <p style={{ fontSize: 12, color: '#6366F1' }}>📸 Foto produk bisa ditambahkan setelah klik Simpan</p>
+                </div>
+              )}
 
               {modal !== 'add' && (
                 <div style={{ marginBottom: 14 }}>

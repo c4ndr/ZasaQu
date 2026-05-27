@@ -22,7 +22,9 @@ class SellerController extends Controller
 
     public function profile(Request $request): JsonResponse
     {
-        return response()->json($this->seller($request)->load('allProducts.category'));
+        $seller = $this->seller($request);
+        if (!$seller) return response()->json(['message' => 'Profil toko tidak ditemukan.'], 404);
+        return response()->json($seller->load('allProducts.category'));
     }
 
     public function updateProfile(Request $request): JsonResponse
