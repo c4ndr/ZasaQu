@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import useMartCartCount from '../hooks/useMartCartCount'
 
 function AvatarIcon({ name, isActive }) {
   const initial = (name ?? '?')[0].toUpperCase()
@@ -115,6 +116,8 @@ const MITRA_ITEMS = (name) => [
 
 export default function BottomNav() {
   const { user } = useAuth()
+  const { count: cartCount } = useMartCartCount()
+
   if (!user || user.role === 'admin' || user.role === 'merchant' || user.role === 'home_provider' || user.role === 'seller') return null
 
   const items = user.role?.startsWith('mitra') ? MITRA_ITEMS(user.name) : PELANGGAN_ITEMS(user.name)
@@ -130,10 +133,13 @@ export default function BottomNav() {
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-end' }}>
         {items.map(({ to, Icon, label, exact, avatar, centerColor, centerShadow }, idx) => {
-          const isCenter = idx === centerIdx
-          const cBg     = centerColor  || 'linear-gradient(145deg, #FB923C 0%, #F97316 100%)'
-          const cBgAct  = centerColor  || 'linear-gradient(145deg, #F97316 0%, #C2410C 100%)'
-          const cShadow = centerShadow || 'rgba(249,115,22,0.50)'
+          const isCenter  = idx === centerIdx
+          const cBg       = centerColor  || 'linear-gradient(145deg, #FB923C 0%, #F97316 100%)'
+          const cBgAct    = centerColor  || 'linear-gradient(145deg, #F97316 0%, #C2410C 100%)'
+          const cShadow   = centerShadow || 'rgba(249,115,22,0.50)'
+          // Badge: hanya ZasaMart (/mart) yang tampilkan jumlah cart
+          const badgeNum  = to === '/mart' && cartCount > 0 ? cartCount : 0
+          const badgeLabel = badgeNum > 99 ? '99+' : String(badgeNum)
           return (
             <NavLink
               key={to}
@@ -148,18 +154,31 @@ export default function BottomNav() {
                   paddingBottom: 8, gap: 5,
                   transform: 'translateY(-14px)',
                 }}>
-                  <div style={{
-                    width: 54, height: 54, borderRadius: 18,
-                    background: isActive ? cBgAct : cBg,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: isActive
-                      ? `0 6px 22px ${cShadow}, 0 2px 6px rgba(0,0,0,0.12)`
-                      : `0 4px 16px ${cShadow.replace('0.50', '0.38')}, 0 2px 6px rgba(0,0,0,0.10)`,
-                    border: '3px solid var(--k-surface)',
-                    transition: 'box-shadow 0.2s, background 0.2s',
-                    color: '#fff',
-                  }}>
-                    <Icon filled={true} />
+                  <div style={{ position: 'relative' }}>
+                    <div style={{
+                      width: 54, height: 54, borderRadius: 18,
+                      background: isActive ? cBgAct : cBg,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: isActive
+                        ? `0 6px 22px ${cShadow}, 0 2px 6px rgba(0,0,0,0.12)`
+                        : `0 4px 16px ${cShadow.replace('0.50', '0.38')}, 0 2px 6px rgba(0,0,0,0.10)`,
+                      border: '3px solid var(--k-surface)',
+                      transition: 'box-shadow 0.2s, background 0.2s',
+                      color: '#fff',
+                    }}>
+                      <Icon filled={true} />
+                    </div>
+                    {badgeNum > 0 && (
+                      <span style={{
+                        position: 'absolute', top: -5, right: -5,
+                        background: '#EF4444', color: '#fff',
+                        fontSize: 9, fontWeight: 900,
+                        minWidth: 17, height: 17, borderRadius: 9,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: '2px solid var(--k-surface)', padding: '0 3px',
+                        lineHeight: 1,
+                      }}>{badgeLabel}</span>
+                    )}
                   </div>
                   <span style={{
                     fontSize: 10, fontWeight: isActive ? 700 : 600,
@@ -175,6 +194,7 @@ export default function BottomNav() {
                   paddingTop: 10, paddingBottom: 10, gap: 3,
                 }}>
                   <span style={{
+                    position: 'relative',
                     color: isActive ? 'var(--k-primary)' : 'var(--k-muted)',
                     transition: 'color 0.18s',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -183,6 +203,17 @@ export default function BottomNav() {
                       ? <AvatarIcon name={user.name} isActive={isActive} />
                       : <Icon filled={isActive} />
                     }
+                    {badgeNum > 0 && (
+                      <span style={{
+                        position: 'absolute', top: -5, right: -5,
+                        background: '#EF4444', color: '#fff',
+                        fontSize: 9, fontWeight: 900,
+                        minWidth: 16, height: 16, borderRadius: 8,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: '1.5px solid var(--k-surface)', padding: '0 2px',
+                        lineHeight: 1,
+                      }}>{badgeLabel}</span>
+                    )}
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: isActive ? 700 : 500,

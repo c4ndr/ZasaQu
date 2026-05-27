@@ -23,6 +23,7 @@ export default function MartProductPage() {
     try {
       await api.post('/mart/cart', { product_id: product.id, quantity: qty })
       setMsg('✓ Ditambahkan ke keranjang')
+      window.dispatchEvent(new CustomEvent('mart-cart-updated'))
     } catch (e) { setMsg('⚠ ' + (e.response?.data?.message || 'Gagal')) }
     finally { setAdding(false) }
   }

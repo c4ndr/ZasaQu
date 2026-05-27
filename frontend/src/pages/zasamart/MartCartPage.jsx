@@ -21,11 +21,13 @@ export default function MartCartPage() {
     if (qty < 1) return removeItem(item.id)
     await api.post('/mart/cart', { product_id: item.product_id, quantity: qty })
     setItems(prev => prev.map(i => i.id === item.id ? { ...i, quantity: qty } : i))
+    window.dispatchEvent(new CustomEvent('mart-cart-updated'))
   }
 
   const removeItem = async (id) => {
     await api.delete(`/mart/cart/${id}`)
     setItems(prev => prev.filter(i => i.id !== id))
+    window.dispatchEvent(new CustomEvent('mart-cart-updated'))
   }
 
   // Group by seller
