@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MartProduct extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'seller_id', 'category_id', 'name', 'slug', 'description',
         'price', 'compare_price', 'stock', 'weight',

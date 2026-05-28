@@ -192,8 +192,8 @@ class SellerController extends Controller
     public function deleteProduct(int $id, Request $request): JsonResponse
     {
         $product = $this->seller($request)->allProducts()->findOrFail($id);
-        $product->update(['is_active' => false, 'stock' => 0]);
-        return response()->json(['message' => 'Produk dinonaktifkan.']);
+        $product->delete(); // SoftDeletes: set deleted_at, otomatis exclude dari semua query
+        return response()->json(['message' => 'Produk dihapus.']);
     }
 
     // ── Orders ────────────────────────────────────────────────────────────────
