@@ -63,6 +63,7 @@ import MartCartPage from './pages/zasamart/MartCartPage'
 import MartCheckoutPage from './pages/zasamart/MartCheckoutPage'
 import MartOrdersPage from './pages/zasamart/MartOrdersPage'
 import MartOrderDetailPage from './pages/zasamart/MartOrderDetailPage'
+import MartSellerPage from './pages/zasamart/MartSellerPage'
 import SellerDashboardPage from './pages/seller/SellerDashboardPage'
 import SellerOrdersPage from './pages/seller/SellerOrdersPage'
 import SellerProductsPage from './pages/seller/SellerProductsPage'
@@ -239,6 +240,7 @@ function AppRoutes() {
       <Route path="/mart/checkout" element={<PrivateRoute><MartCheckoutPage /></PrivateRoute>} />
       <Route path="/mart/orders" element={<PrivateRoute><MartOrdersPage /></PrivateRoute>} />
       <Route path="/mart/orders/:id" element={<PrivateRoute><MartOrderDetailPage /></PrivateRoute>} />
+      <Route path="/mart/sellers/:id" element={<PrivateRoute><MartSellerPage /></PrivateRoute>} />
 
       {/* ZasaMart — Seller */}
       <Route path="/seller" element={<SellerRoute><SellerDashboardPage /></SellerRoute>} />

@@ -141,18 +141,25 @@ export default function HomeProviderDashboardPage() {
 }
 
 function OrderCard({ order, onUpdateStatus }) {
-  const [expanded, setExpanded] = useState(false)
-  const [cancelling, setCancelling] = useState(false)
+  const [expanded,    setExpanded]    = useState(false)
+  const [cancelling,  setCancelling]  = useState(false)
+  const [showCancel,  setShowCancel]  = useState(false)
+  const [cancelReason,setCancelReason]= useState('')
   const si = STATUS_INFO[order.status] ?? { label: order.status, color: '#A0A0BC', next: [] }
 
   async function handleNext(nextStatus) {
-    let reason = null
-    if (nextStatus === 'cancelled') {
-      reason = prompt('Alasan pembatalan:') ?? 'Dibatalkan oleh provider'
-    }
+    if (nextStatus === 'cancelled') { setShowCancel(true); return }
     setCancelling(true)
-    await onUpdateStatus(order.id, nextStatus, reason)
+    await onUpdateStatus(order.id, nextStatus, null)
     setCancelling(false)
+  }
+
+  async function confirmCancel() {
+    setShowCancel(false)
+    setCancelling(true)
+    await onUpdateStatus(order.id, 'cancelled', cancelReason || 'Dibatalkan oleh provider')
+    setCancelling(false)
+    setCancelReason('')
   }
 
   return (

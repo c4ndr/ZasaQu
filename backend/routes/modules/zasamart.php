@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Mart\CustomerController;
 use App\Http\Controllers\Api\Mart\SellerController;
+use App\Http\Controllers\Api\Mart\MitraMartController;
 use App\Http\Controllers\Api\Admin\MartController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +51,14 @@ Route::prefix('mart/seller')->middleware(['auth:sanctum', 'role:seller,admin'])-
     Route::post('orders/{id}/confirm',         [SellerController::class, 'confirmOrder']);
     Route::post('orders/{id}/pack',            [SellerController::class, 'packOrder']);
     Route::post('orders/{id}/cancel',          [SellerController::class, 'cancelOrder']);
+});
+
+// ── Mitra Mart routes ─────────────────────────────────────────────────────────
+Route::prefix('mart/mitra')->middleware(['auth:sanctum', 'role:mitra_motor,mitra_mobil,admin'])->group(function () {
+    Route::get('orders/available',        [MitraMartController::class, 'available']);
+    Route::get('orders/my',               [MitraMartController::class, 'myOrders']);
+    Route::post('orders/{id}/accept',     [MitraMartController::class, 'accept']);
+    Route::patch('orders/{id}/status',    [MitraMartController::class, 'updateStatus']);
 });
 
 // ── Admin Mart routes ─────────────────────────────────────────────────────────

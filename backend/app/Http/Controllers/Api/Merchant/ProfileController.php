@@ -139,6 +139,50 @@ class ProfileController extends Controller
         return response()->json(['message' => 'Banner diperbarui.', 'banner_path' => $path]);
     }
 
+    public function uploadLogoBase64(Request $request): JsonResponse
+    {
+        $merchant = $request->user()->foodMerchant;
+        if (!$merchant) return response()->json(['message' => 'Merchant tidak ditemukan.'], 404);
+
+        $data = $request->validate([
+            'data' => ['required', 'string'],
+            'mime' => ['required', 'string', 'in:image/jpeg,image/png,image/webp,image/gif'],
+        ]);
+
+        $path = $this->saveBase64Image($data['data'], $data['mime'], "food-merchants/{$merchant->id}", 'logo');
+        $merchant->update(['logo_path' => $path]);
+
+        return response()->json(['message' => 'Logo diperbarui.', 'logo_path' => $path]);
+    }
+
+    public function uploadBannerBase64(Request $request): JsonResponse
+    {
+        $merchant = $request->user()->foodMerchant;
+        if (!$merchant) return response()->json(['message' => 'Merchant tidak ditemukan.'], 404);
+
+        $data = $request->validate([
+            'data' => ['required', 'string'],
+            'mime' => ['required', 'string', 'in:image/jpeg,image/png,image/webp,image/gif'],
+        ]);
+
+        $path = $this->saveBase64Image($data['data'], $data['mime'], "food-merchants/{$merchant->id}", 'banner');
+        $merchant->update(['banner_path' => $path]);
+
+        return response()->json(['message' => 'Banner diperbarui.', 'banner_path' => $path]);
+    }
+
+    private function saveBase64Image(string $base64, string $mime, string $dir, string $name): string
+    {
+        $binary   = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $base64));
+        $ext      = match($mime) { 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', default => 'jpg' };
+        $filename = "{$name}.{$ext}";
+        $path     = "{$dir}/{$filename}";
+
+        \Illuminate\Support\Facades\Storage::disk('public')->put($path, $binary);
+
+        return $path;
+    }
+
     private function saveImage(\Illuminate\Http\UploadedFile $file, string $dir, string $name): string
     {
         $storageDir = storage_path("app/public/{$dir}");

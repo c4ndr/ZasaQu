@@ -84,6 +84,33 @@ class ProviderController extends Controller
         ]);
     }
 
+    public function uploadImageBase64(Request $request, string $type): JsonResponse
+    {
+        if (!in_array($type, ['logo', 'banner'])) abort(404);
+
+        $provider = $this->provider($request);
+        if (!$provider) return response()->json(['message' => 'Provider tidak ditemukan.'], 404);
+
+        $data = $request->validate([
+            'data' => ['required', 'string'],
+            'mime' => ['required', 'string', 'in:image/jpeg,image/png,image/webp,image/gif'],
+        ]);
+
+        $old    = $provider->{"{$type}_path"};
+        $binary = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['data']));
+        $ext    = match($data['mime']) { 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', default => 'jpg' };
+        $path   = "home_providers/{$provider->id}/{$type}." . $ext;
+
+        Storage::disk('public')->put($path, $binary);
+        $provider->update(["{$type}_path" => $path]);
+        if ($old && $old !== $path) Storage::disk('public')->delete($old);
+
+        return response()->json([
+            'message'      => ucfirst($type) . ' berhasil diupload.',
+            "{$type}_path" => $path,
+        ]);
+    }
+
     // ── Services CRUD ────────────────────────────────────────────────────────
 
     public function storeService(Request $request): JsonResponse

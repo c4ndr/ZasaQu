@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import useMartCartCount from '../../hooks/useMartCartCount'
@@ -14,6 +14,8 @@ export default function MartProductPage() {
   const [product, setProduct] = useState(null)
   const [imgIdx, setImgIdx]   = useState(0)
   const [qty, setQty]         = useState(1)
+  const touchStartX = useRef(null)
+  const touchStartY = useRef(null)
   const [adding, setAdding]   = useState(false)
   const [msg, setMsg]         = useState('')
 
@@ -42,6 +44,25 @@ export default function MartProductPage() {
   const disc   = product.compare_price > product.price
     ? Math.round((1 - product.price / product.compare_price) * 100) : 0
 
+  const prevImg = () => setImgIdx(i => (i - 1 + images.length) % images.length)
+  const nextImg = () => setImgIdx(i => (i + 1) % images.length)
+
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+  const onTouchEnd = (e) => {
+    if (touchStartX.current === null || images.length <= 1) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    // Only swipe if horizontal movement > 40px and more horizontal than vertical
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) nextImg(); else prevImg()
+    }
+    touchStartX.current = null
+    touchStartY.current = null
+  }
+
   return (
     <div style={{ background: 'var(--k-bg)', minHeight: '100vh', paddingBottom: 100 }}>
       {/* Back */}
@@ -58,8 +79,9 @@ export default function MartProductPage() {
         </button>
       </div>
 
-      {/* Images */}
-      <div style={{ position: 'relative', background: '#f3f4f6' }}>
+      {/* Images — swipeable */}
+      <div style={{ position: 'relative', background: '#f3f4f6', userSelect: 'none' }}
+        onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div style={{ paddingBottom: '80%', position: 'relative' }}>
           {images.length > 0
             ? <img src={`${STORAGE}/${images[imgIdx]}`} alt={product.name}
@@ -70,6 +92,22 @@ export default function MartProductPage() {
             <span style={{ position: 'absolute', top: 12, left: 12, background: '#EF4444', color: '#fff', fontSize: 13, fontWeight: 800, padding: '4px 10px', borderRadius: 8 }}>
               -{disc}%
             </span>
+          )}
+          {/* Dot indicator */}
+          {images.length > 1 && (
+            <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
+              {images.map((_, i) => (
+                <div key={i} onClick={() => setImgIdx(i)}
+                  style={{ width: imgIdx === i ? 20 : 7, height: 7, borderRadius: 4, background: imgIdx === i ? '#6366F1' : 'rgba(255,255,255,0.75)', transition: 'width 0.2s, background 0.2s', cursor: 'pointer' }} />
+              ))}
+            </div>
+          )}
+          {/* Arrow buttons (shown on hover / always on desktop) */}
+          {images.length > 1 && (
+            <>
+              <button onClick={prevImg} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '50%', width: 34, height: 34, color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+              <button onClick={nextImg} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '50%', width: 34, height: 34, color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+            </>
           )}
         </div>
         {images.length > 1 && (

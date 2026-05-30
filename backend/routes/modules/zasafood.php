@@ -63,8 +63,10 @@ Route::prefix('food/merchant')
     Route::get('statistics',         [MerchantProfileController::class, 'statistics']);
     Route::patch('profile',          [MerchantProfileController::class, 'update']);
     Route::post('toggle-open',       [MerchantProfileController::class, 'toggleOpen']);
-    Route::post('upload-logo',       [MerchantProfileController::class, 'uploadLogo']);
-    Route::post('upload-banner',     [MerchantProfileController::class, 'uploadBanner']);
+    Route::post('upload-logo',        [MerchantProfileController::class, 'uploadLogo']);
+    Route::post('upload-banner',      [MerchantProfileController::class, 'uploadBanner']);
+    Route::post('upload-logo-base64', [MerchantProfileController::class, 'uploadLogoBase64']);
+    Route::post('upload-banner-base64',[MerchantProfileController::class, 'uploadBannerBase64']);
 
     Route::prefix('menu')->group(function () {
         Route::get('categories',              [MerchantMenuController::class, 'indexCategories']);

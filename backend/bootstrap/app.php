@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Trust all proxies (Cloudflare tunnel)
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role'        => RoleMiddleware::class,
             'active'      => EnsureUserActive::class,

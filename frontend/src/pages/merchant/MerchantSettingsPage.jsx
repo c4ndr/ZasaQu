@@ -2,6 +2,34 @@ import { useState, useEffect } from 'react'
 import MerchantLayout from '../../components/MerchantLayout'
 import api, { storageUrl } from '../../services/api'
 import MerchantLocationPicker from '../../components/MerchantLocationPicker'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { isNative } from '../../utils/nativePlatform'
+
+async function pickImageNative() {
+  const photo = await Camera.getPhoto({
+    allowEditing: false,
+    resultType: CameraResultType.DataUrl,
+    source: CameraSource.Photos,
+    quality: 75,
+    width: 1200,
+    height: 1200,
+  })
+  if (!photo.dataUrl) throw new Error('Tidak ada data foto')
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const max = 1200
+      const r   = Math.min(max / img.width, max / img.height, 1)
+      const cv  = document.createElement('canvas')
+      cv.width  = Math.round(img.width * r)
+      cv.height = Math.round(img.height * r)
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height)
+      resolve({ dataUrl: cv.toDataURL('image/jpeg', 0.80), mime: 'image/jpeg' })
+    }
+    img.onerror = () => reject(new Error('Gagal memproses foto'))
+    img.src = photo.dataUrl
+  })
+}
 
 function fmtStatus(s) {
   return { pending: 'Menunggu Persetujuan', active: 'Aktif', suspended: 'Disuspend' }[s] ?? s
@@ -67,6 +95,22 @@ export default function MerchantSettingsPage() {
     }
   }
 
+  // Native Android: pakai Capacitor Camera → base64
+  async function handleUploadNative(type) {
+    setUploading(u => ({ ...u, [type]: true }))
+    try {
+      const { dataUrl, mime } = await pickImageNative()
+      setPreviews(p => ({ ...p, [type]: dataUrl }))
+      const res = await api.post(`/food/merchant/upload-${type}-base64`, { data: dataUrl, mime })
+      setMerchant(m => ({ ...m, [`${type}_path`]: res.data[`${type}_path`] }))
+      showToast('success', res.data.message || `${type === 'logo' ? 'Logo' : 'Banner'} diperbarui.`)
+    } catch (e) {
+      const msg = String(e?.message || e || 'unknown')
+      if (!/cancel(l?ed)?|no image|user denied/i.test(msg)) showToast('error', 'Gagal upload: ' + msg)
+      setPreviews(p => ({ ...p, [type]: null }))
+    } finally { setUploading(u => ({ ...u, [type]: false })) }
+  }
+
   async function handleUpload(e, type) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -84,7 +128,6 @@ export default function MerchantSettingsPage() {
       return
     }
 
-    // Tampilkan preview lokal langsung (bypass cache)
     const localUrl = URL.createObjectURL(file)
     setPreviews(p => ({ ...p, [type]: localUrl }))
     setUploading(u => ({ ...u, [type]: true }))
@@ -93,11 +136,9 @@ export default function MerchantSettingsPage() {
     fd.append('image', file)
     try {
       const res = await api.post(`/food/merchant/upload-${type}`, fd)
-      // Simpan path baru + timestamp cache-buster
       setMerchant(m => ({ ...m, [`${type}_path`]: res.data[`${type}_path`], [`${type}_ts`]: Date.now() }))
       showToast('success', res.data.message)
     } catch (err) {
-      // Batalkan preview lokal jika upload gagal
       setPreviews(p => ({ ...p, [type]: null }))
       showToast('error', err.response?.data?.message || 'Gagal upload.')
     } finally {
@@ -163,35 +204,29 @@ export default function MerchantSettingsPage() {
             {['logo', 'banner'].map(type => {
               const path    = merchant?.[`${type}_path`]
               const ts      = merchant?.[`${type}_ts`] || ''
-              // Preview lokal (objectURL) diutamakan, fallback ke storageUrl + cache-buster
               const imgSrc  = previews[type] || (path ? storageUrl(path) + `?t=${ts}` : null)
               const isUpl   = uploading[type]
-              return (
+              const imgBox  = (
+                <div style={{
+                  width: type === 'logo' ? 88 : 176, height: 88,
+                  borderRadius: type === 'logo' ? '50%' : 12,
+                  background: 'var(--k-input)', border: `2px dashed ${isUpl ? '#F97316' : 'var(--k-border)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  overflow: 'hidden', marginBottom: 6, position: 'relative', transition: 'border-color 0.2s',
+                }}>
+                  {imgSrc ? <img src={imgSrc} alt={type} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 28 }}>{type === 'logo' ? '🏪' : '🖼️'}</span>}
+                  {isUpl && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>⏳</div>}
+                </div>
+              )
+              const caption = <div style={{ fontSize: 11, color: isUpl ? '#F97316' : 'var(--k-sub)', fontWeight: isUpl ? 700 : 400 }}>{isUpl ? 'Mengupload...' : `${type === 'logo' ? 'Logo' : 'Banner'} (klik ganti)`}</div>
+              return isNative ? (
+                <div key={type} onClick={() => !isUpl && handleUploadNative(type)} style={{ cursor: isUpl ? 'wait' : 'pointer', textAlign: 'center' }}>
+                  {imgBox}{caption}
+                </div>
+              ) : (
                 <label key={type} style={{ cursor: isUpl ? 'wait' : 'pointer', textAlign: 'center' }}>
-                  <div style={{
-                    width: type === 'logo' ? 88 : 176, height: 88,
-                    borderRadius: type === 'logo' ? '50%' : 12,
-                    background: 'var(--k-input)', border: `2px dashed ${isUpl ? '#F97316' : 'var(--k-border)'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    overflow: 'hidden', marginBottom: 6, position: 'relative',
-                    transition: 'border-color 0.2s',
-                  }}>
-                    {imgSrc
-                      ? <img src={imgSrc} alt={type} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <span style={{ fontSize: 28 }}>{type === 'logo' ? '🏪' : '🖼️'}</span>
-                    }
-                    {isUpl && (
-                      <div style={{
-                        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
-                      }}>⏳</div>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 11, color: isUpl ? '#F97316' : 'var(--k-sub)', fontWeight: isUpl ? 700 : 400 }}>
-                    {isUpl ? 'Mengupload...' : `${type === 'logo' ? 'Logo' : 'Banner'} (klik ganti)`}
-                  </div>
-                  <input type="file" accept="image/*" style={{ display: 'none' }} disabled={isUpl}
-                    onChange={e => handleUpload(e, type)} />
+                  {imgBox}{caption}
+                  <input type="file" accept="image/*" style={{ display: 'none' }} disabled={isUpl} onChange={e => handleUpload(e, type)} />
                 </label>
               )
             })}
