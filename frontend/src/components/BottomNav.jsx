@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import useMartCartCount from '../hooks/useMartCartCount'
+import useAppInfo from '../hooks/useAppInfo'
 
 function AvatarIcon({ name, isActive }) {
   const initial = (name ?? '?')[0].toUpperCase()
@@ -117,11 +118,34 @@ const MITRA_ITEMS = (name) => [
 export default function BottomNav() {
   const { user } = useAuth()
   const { count: cartCount } = useMartCartCount()
+  const { features } = useAppInfo()
+  const feat = features ?? {}
 
   if (!user || user.role === 'admin' || user.role === 'merchant' || user.role === 'home_provider' || user.role === 'seller') return null
 
-  const items = user.role?.startsWith('mitra') ? MITRA_ITEMS(user.name) : PELANGGAN_ITEMS(user.name)
-  const centerIdx = 2
+  const isMitra = user.role?.startsWith('mitra')
+
+  // Filter item berdasarkan feature flags
+  const allPelanggan = PELANGGAN_ITEMS(user.name)
+  const filteredPelanggan = allPelanggan.filter(item => {
+    if (item.to === '/orders' || item.to === '/jastip') return feat.zasago !== false
+    if (item.to === '/mart')  return feat.zasamart !== false
+    if (item.to === '/food')  return feat.zasafood !== false
+    return true
+  })
+
+  const allMitra = MITRA_ITEMS(user.name)
+  const filteredMitra = allMitra.filter(item => {
+    if (item.to === '/mitra/orders')      return feat.zasago !== false
+    if (item.to === '/mitra/food/orders') return feat.zasafood !== false
+    return true
+  })
+
+  const items = isMitra ? filteredMitra : filteredPelanggan
+
+  // Center item: ZasaMart untuk pelanggan (index 2 dari all), tapi hanya jika ada ≥3 item
+  // Fallback: item tengah (Math.floor)
+  const centerIdx = Math.floor(items.length / 2)
 
   return (
     <nav style={{

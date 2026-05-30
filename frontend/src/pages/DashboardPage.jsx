@@ -141,7 +141,8 @@ export default function DashboardPage() {
   const touchStartX = useRef(null)
   const { count: notifCount } = useNotifCount()
   const { isDark, toggle: toggleTheme } = useTheme()
-  const { app_logo_url, app_name } = useAppInfo()
+  const { app_logo_url, app_name, features } = useAppInfo()
+  const feat = features ?? {}
   const greeting = getGreeting()
 
   useEffect(() => {
@@ -510,73 +511,80 @@ export default function DashboardPage() {
 
               {/* ZasaGo */}
               <ServiceCard
-                to="/jastip"
-                emoji="📦"
-                bgDecor="🚚"
-                title="ZasaGo"
-                desc="Kirim & titip barang"
-                badge="AKTIF"
-                badgeColor="#059669"
-                badgeBg="rgba(0,200,150,0.12)"
+                to={feat.zasago ? '/jastip' : null}
+                emoji="📦" bgDecor="🚚"
+                title="ZasaGo" desc="Kirim & titip barang"
+                badge={feat.zasago ? 'AKTIF' : 'SEGERA'}
+                badgeColor={feat.zasago ? '#059669' : 'var(--k-muted)'}
+                badgeBg={feat.zasago ? 'rgba(0,200,150,0.12)' : 'var(--k-input)'}
                 gradient="linear-gradient(145deg, #EBF5FF 0%, #F0FAFB 100%)"
                 borderColor="rgba(59,130,246,0.15)"
+                active={feat.zasago !== false}
               />
 
               {/* ZasaFood */}
               <ServiceCard
-                to="/food"
-                emoji="🍜"
-                bgDecor="🍱"
-                title="ZasaFood"
-                desc="Makanan & minuman"
-                badge="AKTIF"
-                badgeColor="#EA580C"
-                badgeBg="rgba(249,115,22,0.12)"
+                to={feat.zasafood ? '/food' : null}
+                emoji="🍜" bgDecor="🍱"
+                title="ZasaFood" desc="Makanan & minuman"
+                badge={feat.zasafood ? 'AKTIF' : 'SEGERA'}
+                badgeColor={feat.zasafood ? '#EA580C' : 'var(--k-muted)'}
+                badgeBg={feat.zasafood ? 'rgba(249,115,22,0.12)' : 'var(--k-input)'}
                 gradient="linear-gradient(145deg, #FFF4EE 0%, #FFFBF7 100%)"
                 borderColor="rgba(249,115,22,0.18)"
+                active={feat.zasafood !== false}
               />
 
               {/* ZasaHome */}
               <ServiceCard
-                to="/home"
-                emoji="🏠"
-                bgDecor="🧺"
-                title="ZasaHome"
-                desc="Laundry & jasa rumah"
-                badge="BARU"
-                badgeColor="#6366F1"
-                badgeBg="rgba(99,102,241,0.12)"
+                to={feat.zasahome ? '/home' : null}
+                emoji="🏠" bgDecor="🧺"
+                title="ZasaHome" desc="Laundry & jasa rumah"
+                badge={feat.zasahome ? 'AKTIF' : 'SEGERA'}
+                badgeColor={feat.zasahome ? '#6366F1' : 'var(--k-muted)'}
+                badgeBg={feat.zasahome ? 'rgba(99,102,241,0.12)' : 'var(--k-input)'}
                 gradient="linear-gradient(145deg, #EEF2FF 0%, #F8F7FF 100%)"
                 borderColor="rgba(99,102,241,0.18)"
+                active={feat.zasahome !== false}
               />
 
               {/* ZasaMart */}
               <ServiceCard
-                to="/mart"
-                emoji="🛒"
-                bgDecor="🏪"
-                title="ZasaMart"
-                desc="Produk UMKM lokal"
-                badge="BARU"
-                badgeColor="#8B5CF6"
-                badgeBg="rgba(139,92,246,0.12)"
+                to={feat.zasamart ? '/mart' : null}
+                emoji="🛒" bgDecor="🏪"
+                title="ZasaMart" desc="Produk UMKM lokal"
+                badge={feat.zasamart ? 'AKTIF' : 'SEGERA'}
+                badgeColor={feat.zasamart ? '#8B5CF6' : 'var(--k-muted)'}
+                badgeBg={feat.zasamart ? 'rgba(139,92,246,0.12)' : 'var(--k-input)'}
                 gradient="linear-gradient(145deg, #F5F3FF 0%, #FAF8FF 100%)"
                 borderColor="rgba(139,92,246,0.18)"
+                active={feat.zasamart !== false}
               />
 
               {/* ZasaRide */}
               <ServiceCard
-                to={null}
-                emoji="🛵"
-                bgDecor="🗺️"
-                title="ZasaRide"
-                desc="Ojek & antar jemput"
-                badge="SEGERA"
-                badgeColor="var(--k-muted)"
-                badgeBg="var(--k-input)"
+                to={feat.zasaride ? '/ride' : null}
+                emoji="🛵" bgDecor="🗺️"
+                title="ZasaRide" desc="Ojek & antar jemput"
+                badge={feat.zasaride ? 'AKTIF' : 'SEGERA'}
+                badgeColor={feat.zasaride ? '#059669' : 'var(--k-muted)'}
+                badgeBg={feat.zasaride ? 'rgba(0,200,150,0.12)' : 'var(--k-input)'}
                 gradient="linear-gradient(145deg, #F5F3FF 0%, #FAF8FF 100%)"
                 borderColor="rgba(139,92,246,0.12)"
-                active={false}
+                active={feat.zasaride === true}
+              />
+
+              {/* ZasaServ */}
+              <ServiceCard
+                to={feat.zasaserv ? '/serv' : null}
+                emoji="🔧" bgDecor="⚙️"
+                title="ZasaServ" desc="Servis & perbaikan"
+                badge={feat.zasaserv ? 'AKTIF' : 'SEGERA'}
+                badgeColor={feat.zasaserv ? '#059669' : 'var(--k-muted)'}
+                badgeBg={feat.zasaserv ? 'rgba(0,200,150,0.12)' : 'var(--k-input)'}
+                gradient="linear-gradient(145deg, #F0FDF4 0%, #F7FFF5 100%)"
+                borderColor="rgba(34,197,94,0.15)"
+                active={feat.zasaserv === true}
               />
             </div>
           </>

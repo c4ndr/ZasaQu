@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 
 const BASE  = (import.meta.env.VITE_API_URL || '') + '/api'
 const EVENT = 'zasaqu:app-info-updated'
-const FALLBACK = { app_name: 'ZasaQu', app_tagline: '', app_logo_url: null, maintenance_mode: false }
+const DEFAULT_FEATURES = { zasago: true, zasafood: true, zasamart: true, zasahome: true, zasaride: false, zasaserv: false }
+const FALLBACK = { app_name: 'ZasaQu', app_tagline: '', app_logo_url: null, maintenance_mode: false, features: DEFAULT_FEATURES }
 
 let cache = null
 

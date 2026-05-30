@@ -86,11 +86,21 @@ Route::get('app-info', function () {
         }
     }
 
+    // Feature flags — satu query untuk semua modul
+    $featureKeys = ['feature_zasago', 'feature_zasafood', 'feature_zasamart', 'feature_zasahome', 'feature_zasaride', 'feature_zasaserv'];
+    $featureRows = \App\Models\AdminSetting::whereIn('key', $featureKeys)->get()->keyBy('key');
+    $features = [];
+    foreach ($featureKeys as $k) {
+        $module = str_replace('feature_', '', $k);
+        $features[$module] = ($featureRows[$k]->value ?? '1') === '1';
+    }
+
     return response()->json([
         'app_name'         => $rows['app_name']->value         ?? 'ZasaQu',
         'app_tagline'      => $rows['app_tagline']->value      ?? '',
         'app_logo_url'     => $logoDataUrl,
         'maintenance_mode' => ($rows['maintenance_mode']->value ?? '0') === '1',
+        'features'         => $features,
     ]);
 });
 
