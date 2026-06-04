@@ -23,10 +23,6 @@ class WithdrawController extends Controller
 
     public function create(Request $request): JsonResponse
     {
-        if (!$request->user()->isMitra()) {
-            return response()->json(['message' => 'Hanya mitra yang bisa melakukan withdraw.'], 403);
-        }
-
         $data = $request->validate([
             'amount'             => ['required', 'numeric', 'min:10000'],
             'destination_type'   => ['required', 'in:dana,ovo,gopay,bank'],

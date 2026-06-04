@@ -57,6 +57,7 @@ import FoodCartPage from './pages/zasafood/FoodCartPage'
 import FoodOrdersPage from './pages/zasafood/FoodOrdersPage'
 import FoodTrackingPage from './pages/zasafood/FoodTrackingPage'
 import MitraFoodOrdersPage from './pages/zasafood/MitraFoodOrdersPage'
+import MitraMartOrdersPage from './pages/zasamart/MitraMartOrdersPage'
 import FoodJastipSessionsPage from './pages/zasafood/FoodJastipSessionsPage'
 import AdminFoodOrdersPage from './pages/admin/AdminFoodOrdersPage'
 import AdminMitraVerificationPage from './pages/admin/AdminMitraVerificationPage'
@@ -227,6 +228,7 @@ function AppRoutes() {
       <Route path="/food/orders/:id" element={<ModuleRoute featureKey="zasafood"><FoodTrackingPage /></ModuleRoute>} />
       <Route path="/food/jastip/sessions" element={<ModuleRoute featureKey="zasafood"><FoodJastipSessionsPage /></ModuleRoute>} />
       <Route path="/mitra/food/orders" element={<MitraRoute><ModuleRoute featureKey="zasafood"><MitraFoodOrdersPage /></ModuleRoute></MitraRoute>} />
+      <Route path="/mitra/mart/orders" element={<MitraRoute><ModuleRoute featureKey="zasamart"><MitraMartOrdersPage /></ModuleRoute></MitraRoute>} />
       <Route path="/mitra/onboarding" element={<PrivateRoute><MitraOnboardingPage /></PrivateRoute>} />
       <Route path="/admin/mitra/verify" element={<AdminRoute><AdminMitraVerificationPage /></AdminRoute>} />
 

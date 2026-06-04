@@ -10,8 +10,8 @@ class RatingService
 {
     public function submitRating(Order $order, User $rater, int $score, ?string $comment): Rating
     {
-        if ($order->status !== 'completed') {
-            throw new \Exception('Rating hanya bisa diberikan untuk order yang sudah selesai.');
+        if (!in_array($order->status, ['delivered', 'completed'])) {
+            throw new \Exception('Rating hanya bisa diberikan untuk order yang sudah terkirim atau selesai.');
         }
 
         // Tentukan ratee berdasarkan siapa yang memberi rating

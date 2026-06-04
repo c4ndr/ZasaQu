@@ -45,6 +45,14 @@ echo "✓ Scheduler: aktif (log: /tmp/zashago-scheduler.log)"
 
 sleep 1
 
+# Queue worker (Midtrans callback, notifikasi async, dll)
+nohup php /home/candra/zashaGo/backend/artisan queue:work \
+  --sleep=3 --tries=3 --max-time=3600 \
+  > /tmp/zashago-queue.log 2>&1 &
+echo "✓ Queue:     aktif (log: /tmp/zashago-queue.log)"
+
+sleep 1
+
 # Frontend
 nohup bash -c 'cd /home/candra/zashaGo/frontend && npm run dev' \
   > /tmp/zashago-frontend.log 2>&1 &

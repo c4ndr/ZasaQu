@@ -27,7 +27,11 @@ class RatingController extends Controller
             return response()->json(['message' => 'Tidak diizinkan.'], 403);
         }
 
-        $rating = $this->ratingService->submitRating($order, $user, $data['score'], $data['comment'] ?? null);
+        try {
+            $rating = $this->ratingService->submitRating($order, $user, $data['score'], $data['comment'] ?? null);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'message' => 'Rating berhasil dikirim.',

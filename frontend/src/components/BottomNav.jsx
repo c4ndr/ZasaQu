@@ -77,6 +77,16 @@ const IconFood = ({ filled }) => (
   </svg>
 )
 
+const IconServ = ({ filled }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    {filled ? (
+      <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" fill="currentColor"/>
+    ) : (
+      <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
+    )}
+  </svg>
+)
+
 const IconMart = ({ filled }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     {filled
@@ -102,17 +112,19 @@ const IconMart = ({ filled }) => (
 const PELANGGAN_ITEMS = (name) => [
   { to: '/dashboard', Icon: IconHome,   label: 'Beranda',  exact: true },
   { to: '/orders',    Icon: IconBox,    label: 'ZasaGo'  },
+  { to: '/home',      Icon: IconServ,   label: 'ZasaHome' },
   { to: '/mart',      Icon: IconMart,   label: 'ZasaMart', centerColor: 'linear-gradient(145deg, #7C3AED 0%, #4F46E5 100%)', centerShadow: 'rgba(124,58,237,0.50)' },
   { to: '/food',      Icon: IconFood,   label: 'ZasaFood' },
   { to: '/profile',   Icon: null,       label: 'Akun',    avatar: true },
 ]
 
 const MITRA_ITEMS = (name) => [
-  { to: '/dashboard',         Icon: IconHome, label: 'Beranda',  exact: true },
-  { to: '/mitra/orders',      Icon: IconBox,  label: 'ZasaGo'  },
-  { to: '/mitra/food/orders', Icon: IconFood, label: 'ZasaFood' },
-  { to: '/mitra/gps',         Icon: IconPin,  label: 'GPS'      },
-  { to: '/profile',           Icon: null,     label: 'Akun',    avatar: true },
+  { to: '/dashboard',          Icon: IconHome, label: 'Beranda',  exact: true },
+  { to: '/mitra/orders',       Icon: IconBox,  label: 'ZasaGo'  },
+  { to: '/mitra/food/orders',  Icon: IconFood, label: 'ZasaFood' },
+  { to: '/mitra/mart/orders',  Icon: IconMart, label: 'ZasaMart', centerColor: 'linear-gradient(145deg, #7C3AED 0%, #4F46E5 100%)', centerShadow: 'rgba(124,58,237,0.50)' },
+  { to: '/mitra/gps',          Icon: IconPin,  label: 'GPS'      },
+  { to: '/profile',            Icon: null,     label: 'Akun',    avatar: true },
 ]
 
 export default function BottomNav() {
@@ -129,6 +141,7 @@ export default function BottomNav() {
   const allPelanggan = PELANGGAN_ITEMS(user.name)
   const filteredPelanggan = allPelanggan.filter(item => {
     if (item.to === '/orders' || item.to === '/jastip') return feat.zasago !== false
+    if (item.to === '/home')  return feat.zasahome !== false
     if (item.to === '/mart')  return feat.zasamart !== false
     if (item.to === '/food')  return feat.zasafood !== false
     return true
@@ -136,8 +149,9 @@ export default function BottomNav() {
 
   const allMitra = MITRA_ITEMS(user.name)
   const filteredMitra = allMitra.filter(item => {
-    if (item.to === '/mitra/orders')      return feat.zasago !== false
-    if (item.to === '/mitra/food/orders') return feat.zasafood !== false
+    if (item.to === '/mitra/orders')       return feat.zasago !== false
+    if (item.to === '/mitra/food/orders')  return feat.zasafood !== false
+    if (item.to === '/mitra/mart/orders')  return feat.zasamart !== false
     return true
   })
 
