@@ -487,6 +487,39 @@ export default function RegisterPage() {
             Masuk
           </Link>
         </p>
+
+        {/* Download APK */}
+        <a href="/zasaqu.apk" download="ZasaQu.apk" style={{ textDecoration: 'none', display: 'block', marginTop: 20 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            background: 'linear-gradient(135deg, rgba(0,200,150,0.08), rgba(0,200,150,0.03))',
+            border: '1px solid rgba(0,200,150,0.2)',
+            borderRadius: 18, padding: '14px 18px', cursor: 'pointer',
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 14, flexShrink: 0,
+              background: 'linear-gradient(135deg, var(--k-accent), #00A87D)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,200,150,0.3)',
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 16l-4-4h3V4h2v8h3l-4 4z" fill="#0C0C16"/>
+                <path d="M4 18h16v2H4v-2z" fill="#0C0C16"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--k-text)', marginBottom: 2 }}>
+                Download Aplikasi Android
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>
+                ZasaQu.apk · 11 MB · Versi terbaru
+              </p>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M9 18l6-6-6-6" stroke="var(--k-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        </a>
       </div>
     </div>
   )
