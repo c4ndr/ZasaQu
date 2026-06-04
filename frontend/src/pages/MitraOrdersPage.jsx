@@ -312,7 +312,7 @@ function compressImage(file) {
 }
 
 // GEOFENCE_RADIUS: jarak maksimal dari titik target sebelum foto diizinkan (meter)
-const GEOFENCE_RADIUS = 300
+const GEOFENCE_RADIUS = 5
 
 function getCurrentPosition() {
   return new Promise((resolve, reject) => {
