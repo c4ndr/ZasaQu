@@ -1,61 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { MapContainer, Marker, Circle, useMap } from 'react-leaflet'
-import SatelliteTiles from '../components/SatelliteTiles'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import Map, { Marker, Source, Layer } from 'react-map-gl/maplibre'
+import { SATELLITE_STYLE } from '../utils/mapStyle'
+import { circleGeoJson } from '../utils/geo'
 import useGps from '../hooks/useGps'
 import LocationSearch from '../components/LocationSearch'
 import api from '../services/api'
 import { isNative, requestGeolocationPermission } from '../utils/nativePlatform'
-
-// ── Fix ikon Leaflet ──────────────────────────────────────────────────────────
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
-
-// ── Ikon posisi mitra (dot pulse) ─────────────────────────────────────────────
-const myIcon = L.divIcon({
-  html: `
-    <div style="position:relative;width:52px;height:52px;display:flex;align-items:center;justify-content:center">
-      <div style="
-        position:absolute;width:52px;height:52px;border-radius:50%;
-        background:rgba(0,200,150,0.15);
-        animation:gps-ring 2s ease-out infinite;
-      "></div>
-      <div style="
-        position:absolute;width:36px;height:36px;border-radius:50%;
-        background:rgba(0,200,150,0.25);
-        animation:gps-ring 2s ease-out infinite 0.4s;
-      "></div>
-      <div style="
-        width:20px;height:20px;border-radius:50%;
-        background:#00C896;border:3px solid #fff;
-        box-shadow:0 2px 12px rgba(0,200,150,0.6);
-        position:relative;z-index:1;
-      "></div>
-    </div>`,
-  iconSize:   [52, 52],
-  iconAnchor: [26, 26],
-  className:  '',
-})
-
-// ── Follow lokasi di peta ─────────────────────────────────────────────────────
-function MapFollower({ position, follow }) {
-  const map    = useMap()
-  const isFirst = useRef(true)
-  useEffect(() => {
-    if (!position) return
-    if (isFirst.current || follow) {
-      map.flyTo(position, map.getZoom() < 14 ? 16 : map.getZoom(), { duration: 0.8 })
-      isFirst.current = false
-    }
-  }, [position, follow, map])
-  return null
-}
 
 // ── Format koordinat ──────────────────────────────────────────────────────────
 function fmtCoord(v) { return v?.toFixed(6) ?? '—' }
@@ -149,6 +100,8 @@ export default function MitraGpsPage() {
       setLoadingSession(false)
     }
   }
+
+  const mapRef = useRef(null)
 
   const { location, error, active } = useGps({
     enabled:  gpsEnabled,
@@ -283,6 +236,14 @@ export default function MitraGpsPage() {
     setGpsEnabled(true)
   }
 
+  // Follow lokasi di peta ketika GPS aktif
+  useEffect(() => {
+    if (!location || !follow) return
+    const map = mapRef.current?.getMap()
+    if (!map) return
+    map.easeTo({ center: [location.lng, location.lat], duration: 600 })
+  }, [location, follow])
+
   // Tick waktu terakhir update
   const [tick, setTick] = useState(0)
   useEffect(() => {
@@ -290,9 +251,6 @@ export default function MitraGpsPage() {
     const t = setInterval(() => setTick(x => x + 1), 5000)
     return () => clearInterval(t)
   }, [active])
-
-  const defaultCenter = location ? [location.lat, location.lng] : [-6.2088, 106.8456]
-  const mapPosition   = location ? [location.lat, location.lng] : null
 
   function sinceUpdate() {
     if (!lastUpdate) return null
@@ -374,54 +332,47 @@ export default function MitraGpsPage() {
         </span>
       </div>
 
-      {/* ── Peta ── */}
+      {/* ── Peta MapLibre GL ── */}
       <div style={{ flex: 1, minHeight: panelOpen ? 'calc(100vh - 280px)' : 'calc(100vh - 72px)', transition: 'min-height 0.3s' }}>
-        <MapContainer
-          center={defaultCenter}
-          zoom={16}
-          style={{ height: '100%', width: '100%', minHeight: 300 }}
-          zoomControl={true}
+        <Map
+          ref={mapRef}
+          initialViewState={{ longitude: location?.lng ?? 106.8456, latitude: location?.lat ?? -6.2088, zoom: 16 }}
+          mapStyle={SATELLITE_STYLE}
+          style={{ width: '100%', height: '100%', minHeight: 300 }}
         >
-          <SatelliteTiles />
-
-          {mapPosition && (
-            <>
-              <MapFollower position={mapPosition} follow={follow} />
-
-              {/* Lingkaran akurasi GPS */}
-              {accuracy && (
-                <Circle
-                  center={mapPosition}
-                  radius={accuracy}
-                  pathOptions={{ color: '#00C896', fillColor: '#00C896', fillOpacity: 0.06, weight: 1, opacity: 0.4 }}
-                />
-              )}
-
-              {/* Marker posisi mitra */}
-              <Marker position={mapPosition} icon={myIcon} />
-            </>
+          {/* Lingkaran akurasi GPS */}
+          {location && accuracy && (
+            <Source id="accuracy-circle" type="geojson" data={circleGeoJson(location.lat, location.lng, accuracy)}>
+              <Layer id="accuracy-fill" type="fill" paint={{ 'fill-color': '#00C896', 'fill-opacity': 0.06 }} />
+              <Layer id="accuracy-border" type="line" paint={{ 'line-color': '#00C896', 'line-width': 1, 'line-opacity': 0.4 }} />
+            </Source>
           )}
 
-          {/* Jika GPS belum aktif — tampilkan overlay petunjuk */}
-          {!mapPosition && (
-            <div style={{
-              position: 'absolute', inset: 0, zIndex: 500,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(12,12,22,0.5)', pointerEvents: 'none',
-            }}>
-              <div style={{
-                padding: '16px 24px', borderRadius: 16,
-                background: 'rgba(25,25,39,0.95)', border: '1px solid rgba(37,37,56,0.8)',
-                textAlign: 'center',
-              }}>
-                <p style={{ fontSize: 32, marginBottom: 8 }}>📍</p>
-                <p style={{ color: 'var(--k-sub)', fontSize: 13, fontWeight: 600 }}>
-                  Aktifkan GPS untuk memulai
-                </p>
+          {/* Marker posisi mitra — dot pulse */}
+          {location && (
+            <Marker longitude={location.lng} latitude={location.lat} anchor="center">
+              <div style={{ position: 'relative', width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'absolute', width: 52, height: 52, borderRadius: '50%', background: 'rgba(0,200,150,0.15)', animation: 'gps-ring 2s ease-out infinite' }} />
+                <div style={{ position: 'absolute', width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,200,150,0.25)', animation: 'gps-ring 2s ease-out infinite 0.4s' }} />
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#00C896', border: '3px solid #fff', boxShadow: '0 2px 12px rgba(0,200,150,.6)', position: 'relative', zIndex: 1 }} />
               </div>
-            </div>
+            </Marker>
           )}
-        </MapContainer>
+        </Map>
+
+        {/* Overlay jika GPS belum aktif */}
+        {!location && (
+          <div style={{
+            position: 'absolute', top: 72, left: 0, right: 0, bottom: 0, zIndex: 2,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(12,12,22,0.5)', pointerEvents: 'none',
+          }}>
+            <div style={{ padding: '16px 24px', borderRadius: 16, background: 'rgba(25,25,39,0.95)', border: '1px solid rgba(37,37,56,0.8)', textAlign: 'center' }}>
+              <p style={{ fontSize: 32, marginBottom: 8 }}>📍</p>
+              <p style={{ color: 'var(--k-sub)', fontSize: 13, fontWeight: 600 }}>Aktifkan GPS untuk memulai</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Tombol GPS floating — selalu terlihat meski panel tertutup ── */}

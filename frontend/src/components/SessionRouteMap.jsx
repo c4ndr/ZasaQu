@@ -1,59 +1,51 @@
-import { useEffect } from 'react'
-import { MapContainer, Marker, useMap } from 'react-leaflet'
-import SatelliteTiles from './SatelliteTiles'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import { useRef, useEffect } from 'react'
+import Map, { Marker } from 'react-map-gl/maplibre'
+import { SATELLITE_STYLE } from '../utils/mapStyle'
 import RoadPolyline from './RoadPolyline'
+import { fitPoints } from '../utils/geo'
 
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
-
-const originIcon = L.divIcon({
-  html: `<div style="width:30px;height:30px;border-radius:50%;background:#00C896;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,200,150,0.5);display:flex;align-items:center;justify-content:center;font-size:13px;">A</div>`,
-  iconSize: [30, 30], iconAnchor: [15, 15], className: '',
-})
-const destIcon = L.divIcon({
-  html: `<div style="width:30px;height:30px;border-radius:50%;background:#818CF8;border:3px solid #fff;box-shadow:0 2px 8px rgba(129,140,248,0.5);display:flex;align-items:center;justify-content:center;font-size:13px;">B</div>`,
-  iconSize: [30, 30], iconAnchor: [15, 15], className: '',
-})
-
-function FitRoute({ origin, dest }) {
-  const map = useMap()
-  useEffect(() => {
-    if (origin && dest) map.fitBounds([origin, dest], { padding: [32, 32] })
-  }, [origin, dest, map])
-  return null
-}
+const originStyle = { width: 30, height: 30, borderRadius: '50%', background: '#00C896', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,200,150,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13 }
+const destStyle   = { ...originStyle, background: '#818CF8', boxShadow: '0 2px 8px rgba(129,140,248,.5)' }
 
 export default function SessionRouteMap({ session, height = 180 }) {
-  const origin = [parseFloat(session.origin_lat),      parseFloat(session.origin_lng)]
-  const dest   = [parseFloat(session.destination_lat), parseFloat(session.destination_lng)]
+  const mapRef = useRef(null)
 
-  const valid = origin.every(v => !isNaN(v)) && dest.every(v => !isNaN(v))
-  if (!valid) return null
+  const originLat = parseFloat(session.origin_lat)
+  const originLng = parseFloat(session.origin_lng)
+  const destLat   = parseFloat(session.destination_lat)
+  const destLng   = parseFloat(session.destination_lng)
+
+  if (isNaN(originLat) || isNaN(originLng) || isNaN(destLat) || isNaN(destLng)) return null
+
+  const origin = [originLat, originLng]
+  const dest   = [destLat,   destLng]
+
+  // Fit bounds setelah map siap
+  useEffect(() => {
+    const map = mapRef.current?.getMap()
+    if (!map) return
+    const fit = () => fitPoints(map, [origin, dest], 40)
+    if (map.loaded()) { fit() } else { map.once('load', fit) }
+  }, []) // eslint-disable-line
 
   return (
     <div style={{ height, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--k-border)' }}>
-      <MapContainer
-        center={origin}
-        zoom={12}
-        style={{ height: '100%', width: '100%' }}
-        zoomControl={false}
+      <Map
+        ref={mapRef}
+        initialViewState={{ longitude: originLng, latitude: originLat, zoom: 12 }}
+        mapStyle={SATELLITE_STYLE}
+        style={{ width: '100%', height: '100%' }}
+        interactive={false}
         attributionControl={false}
-        dragging={true}
-        scrollWheelZoom={false}
-        doubleClickZoom={false}
       >
-        <SatelliteTiles />
-        <RoadPolyline pickup={origin} dropoff={dest} color="#818CF8" weight={4} opacity={0.85} />
-        <Marker position={origin} icon={originIcon} />
-        <Marker position={dest}   icon={destIcon} />
-        <FitRoute origin={origin} dest={dest} />
-      </MapContainer>
+        <RoadPolyline pickup={origin} dropoff={dest} color="#818CF8" weight={4} opacity={0.85} id="session-route" />
+        <Marker longitude={originLng} latitude={originLat} anchor="center">
+          <div style={originStyle}>A</div>
+        </Marker>
+        <Marker longitude={destLng} latitude={destLat} anchor="center">
+          <div style={destStyle}>B</div>
+        </Marker>
+      </Map>
     </div>
   )
 }

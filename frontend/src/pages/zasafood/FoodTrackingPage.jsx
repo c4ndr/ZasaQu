@@ -1,42 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { MapContainer, Marker, useMap } from 'react-leaflet'
-import SatelliteTiles from '../../components/SatelliteTiles'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import Map, { Marker } from 'react-map-gl/maplibre'
+import { SATELLITE_STYLE } from '../../utils/mapStyle'
 import api from '../../services/api'
 import echo from '../../services/echo'
-
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
-
-const mitraIcon = L.divIcon({
-  html: `<div style="width:40px;height:40px;border-radius:50%;background:#F97316;border:3px solid #fff;box-shadow:0 4px 12px rgba(249,115,22,0.5);display:flex;align-items:center;justify-content:center;font-size:18px;">🏍️</div>`,
-  iconSize: [40, 40], iconAnchor: [20, 20], className: '',
-})
-const merchantPin = L.divIcon({
-  html: `<div style="width:36px;height:36px;border-radius:50%;background:#00C896;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:16px;">🏪</div>`,
-  iconSize: [36, 36], iconAnchor: [18, 18], className: '',
-})
-const destPin = L.divIcon({
-  html: `<div style="width:36px;height:36px;border-radius:50%;background:#F56565;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:16px;">📍</div>`,
-  iconSize: [36, 36], iconAnchor: [18, 18], className: '',
-})
-
-function MapFollower({ center }) {
-  const map = useMap()
-  const first = useRef(true)
-  useEffect(() => {
-    if (!center) return
-    if (first.current) { map.setView([center.lat, center.lng], 15); first.current = false }
-    else map.panTo([center.lat, center.lng], { animate: true, duration: 1 })
-  }, [center])
-  return null
-}
 
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 
@@ -77,6 +44,8 @@ export default function FoodTrackingPage() {
   const [rating,  setRating]  = useState({ merchant_score: 0, mitra_score: 0 })
   const [rated,   setRated]   = useState(false)
   const pollRef = useRef(null)
+  const mapRef  = useRef(null)
+  const firstGps = useRef(true)
 
   const loadOrder = useCallback(async () => {
     try {
@@ -86,6 +55,19 @@ export default function FoodTrackingPage() {
     } catch { navigate('/food/orders') }
     finally { setLoading(false) }
   }, [id])
+
+  // GPS follow: setView pertama kali, easeTo setelahnya
+  useEffect(() => {
+    if (!gps) return
+    const map = mapRef.current?.getMap()
+    if (!map) return
+    if (firstGps.current) {
+      map.jumpTo({ center: [gps.lng, gps.lat], zoom: 15 })
+      firstGps.current = false
+    } else {
+      map.easeTo({ center: [gps.lng, gps.lat], duration: 1000 })
+    }
+  }, [gps])
 
   useEffect(() => {
     loadOrder()
@@ -174,15 +156,45 @@ export default function FoodTrackingPage() {
       {/* Peta GPS */}
       {showMap && (
         <div style={{ height: 240 }}>
-          <MapContainer center={[gps.lat, gps.lng]} zoom={15} style={{ height: '100%' }} zoomControl={false}>
-            <SatelliteTiles />
-            <Marker position={[gps.lat, gps.lng]} icon={mitraIcon} />
+          <Map
+            ref={mapRef}
+            initialViewState={{ longitude: gps.lng, latitude: gps.lat, zoom: 15 }}
+            mapStyle={SATELLITE_STYLE}
+            style={{ width: '100%', height: '100%' }}
+          >
+            {/* Mitra marker: motor emoji, background orange */}
+            <Marker longitude={gps.lng} latitude={gps.lat} anchor="center">
+              <div style={{
+                width: 40, height: 40, borderRadius: '50%',
+                background: '#F97316', border: '3px solid #fff',
+                boxShadow: '0 4px 12px rgba(249,115,22,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18,
+              }}>🏍️</div>
+            </Marker>
+
+            {/* Merchant marker: toko emoji, background hijau */}
             {order.merchant?.lat && order.merchant?.lng && (
-              <Marker position={[order.merchant.lat, order.merchant.lng]} icon={merchantPin} />
+              <Marker longitude={order.merchant.lng} latitude={order.merchant.lat} anchor="center">
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: '#00C896', border: '3px solid #fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16,
+                }}>🏪</div>
+              </Marker>
             )}
-            <Marker position={[order.delivery_lat, order.delivery_lng]} icon={destPin} />
-            <MapFollower center={gps} />
-          </MapContainer>
+
+            {/* Destinasi marker: pin emoji, background merah */}
+            <Marker longitude={order.delivery_lng} latitude={order.delivery_lat} anchor="center">
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%',
+                background: '#F56565', border: '3px solid #fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 16,
+              }}>📍</div>
+            </Marker>
+          </Map>
         </div>
       )}
 

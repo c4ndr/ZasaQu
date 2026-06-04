@@ -1,68 +1,53 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { MapContainer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
-import SatelliteTiles from '../components/SatelliteTiles'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import Map, { Marker, Source, Layer } from 'react-map-gl/maplibre'
+import { SATELLITE_STYLE } from '../utils/mapStyle'
+import { fitPoints } from '../utils/geo'
+import useRoadRoute from '../hooks/useRoadRoute'
 import useOrderTracking from '../hooks/useOrderTracking'
 import api from '../services/api'
 
-// ── Fix ikon Leaflet ──────────────────────────────────────────────────────────
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
-
-// ── Ikon SVG custom ───────────────────────────────────────────────────────────
-const mitraIcon = L.divIcon({
-  html: `<div style="
-    width:44px;height:44px;border-radius:50%;
-    background:#3B82F6;border:3px solid #fff;
-    box-shadow:0 4px 14px rgba(59,130,246,0.5);
-    display:flex;align-items:center;justify-content:center;
-    font-size:20px;
-  ">🏍️</div>`,
-  iconSize: [44, 44], iconAnchor: [22, 22], className: '',
-})
-
-const makePin = (color, emoji) => L.divIcon({
-  html: `<div style="position:relative;width:36px;height:46px;display:flex;justify-content:center">
-    <svg viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="46" style="position:absolute;top:0;left:0">
-      <path d="M18 1C9.163 1 2 8.163 2 17c0 10.8 16 28 16 28S34 27.8 34 17C34 8.163 26.837 1 18 1z" fill="${color}" stroke="white" stroke-width="2"/>
-      <circle cx="18" cy="17" r="7" fill="white"/>
-    </svg>
-    <span style="position:absolute;top:8px;font-size:14px;z-index:1">${emoji}</span>
-  </div>`,
-  iconSize: [36, 46], iconAnchor: [18, 46], className: '',
-})
-
-const pickupPin  = makePin('#00C896', '🟢')
-const dropoffPin = makePin('#F56565', '🔴')
-
-// ── Follow mitra di peta ──────────────────────────────────────────────────────
-function MapFollower({ center, follow }) {
-  const map = useMap()
-  const firstRun = useRef(true)
-  useEffect(() => {
-    if (!center) return
-    if (firstRun.current || follow) {
-      map.flyTo([center.lat, center.lng], map.getZoom() < 14 ? 15 : map.getZoom(), { duration: 1 })
-      firstRun.current = false
-    }
-  }, [center, follow, map])
-  return null
+// ── Marker SVG ────────────────────────────────────────────────────────────────
+function MitraMarker() {
+  return (
+    <div style={{
+      width: 44, height: 44, borderRadius: '50%',
+      background: '#3B82F6', border: '3px solid #fff',
+      boxShadow: '0 4px 14px rgba(59,130,246,.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 20, userSelect: 'none',
+    }}>🏍️</div>
+  )
+}
+function PinMarker({ color, emoji }) {
+  return (
+    <div style={{ position: 'relative', width: 36, height: 46, display: 'flex', justifyContent: 'center', userSelect: 'none' }}>
+      <svg viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="46" style={{ position: 'absolute', top: 0, left: 0 }}>
+        <path d="M18 1C9.163 1 2 8.163 2 17c0 10.8 16 28 16 28S34 27.8 34 17C34 8.163 26.837 1 18 1z" fill={color} stroke="white" strokeWidth="2" />
+        <circle cx="18" cy="17" r="7" fill="white" />
+      </svg>
+      <span style={{ position: 'absolute', top: 8, fontSize: 14, zIndex: 1 }}>{emoji}</span>
+    </div>
+  )
 }
 
-// ── Fit bounds ke semua marker ────────────────────────────────────────────────
-function FitBounds({ points }) {
-  const map = useMap()
-  useEffect(() => {
-    if (points.length < 2) return
-    try { map.fitBounds(points, { padding: [50, 50] }) } catch {}
-  }, []) // eslint-disable-line
-  return null
+// ── Rute jalan (GeoJSON Source + Layer) ───────────────────────────────────────
+function RouteLayer({ pickup, dropoff }) {
+  const { routePoints } = useRoadRoute(pickup, dropoff)
+  const data = {
+    type: 'Feature',
+    geometry: {
+      type: 'LineString',
+      coordinates: (routePoints ?? [pickup, dropoff]).map(([lat, lng]) => [lng, lat]),
+    },
+  }
+  return (
+    <Source id="tracking-route" type="geojson" data={data}>
+      <Layer id="tracking-route-line" type="line"
+        paint={{ 'line-color': '#00C896', 'line-width': 4, 'line-opacity': 0.85 }}
+        layout={{ 'line-join': 'round', 'line-cap': 'round' }} />
+    </Source>
+  )
 }
 
 // ── Konstanta status ──────────────────────────────────────────────────────────
@@ -316,6 +301,7 @@ function formatNotifMessage(n) {
 // ── Halaman utama ─────────────────────────────────────────────────────────────
 export default function TrackingPage() {
   const { id } = useParams()
+  const mapRef  = useRef(null)
   const [order,      setOrder]      = useState(null)
   const [loading,    setLoading]    = useState(true)
   const [follow,     setFollow]     = useState(true)
@@ -323,6 +309,40 @@ export default function TrackingPage() {
   const { mitraLocation, gpsActive, notifications, statusUpdate } = useOrderTracking(id)
   const [shownUpdate, setShownUpdate] = useState(null)
   const dismissNotif = useCallback(() => setShownUpdate(null), [])
+
+  // ── Smooth animation untuk marker mitra ─────────────────────────────────────
+  const [displayPos,  setDisplayPos]  = useState(null)
+  const prevPosRef    = useRef(null)
+  const animFrameRef  = useRef(null)
+
+  useEffect(() => {
+    if (!mitraLocation) { setDisplayPos(null); return }
+    const from = prevPosRef.current
+    const to   = mitraLocation
+    prevPosRef.current = to
+    if (!from || (from.lat === to.lat && from.lng === to.lng)) { setDisplayPos(to); return }
+
+    const startTime = performance.now()
+    const DURATION  = 4500  // sedikit di bawah GPS_INTERVAL=5s
+
+    const tick = (now) => {
+      const t     = Math.min((now - startTime) / DURATION, 1)
+      const ease  = 1 - (1 - t) ** 3  // ease-out cubic
+      setDisplayPos({ lat: from.lat + (to.lat - from.lat) * ease, lng: from.lng + (to.lng - from.lng) * ease })
+      if (t < 1) animFrameRef.current = requestAnimationFrame(tick)
+    }
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+    animFrameRef.current = requestAnimationFrame(tick)
+    return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current) }
+  }, [mitraLocation])
+
+  // Camera follow saat GPS aktif
+  useEffect(() => {
+    if (!follow || !displayPos) return
+    const map = mapRef.current?.getMap()
+    if (!map) return
+    map.easeTo({ center: [displayPos.lng, displayPos.lat], duration: 500 })
+  }, [displayPos, follow])
 
   useEffect(() => {
     api.get(`/orders/${id}`).then(r => setOrder(r.data)).finally(() => setLoading(false))
@@ -347,14 +367,10 @@ export default function TrackingPage() {
 
   if (!order) return null
 
-  const mapCenter   = mitraLocation
-    ? [mitraLocation.lat, mitraLocation.lng]
-    : [order.pickup_lat, order.pickup_lng]
-
-  const allPoints = [
-    [order.pickup_lat, order.pickup_lng],
-    [order.dropoff_lat, order.dropoff_lng],
-  ]
+  const pickup   = [parseFloat(order.pickup_lat),  parseFloat(order.pickup_lng)]
+  const dropoff  = [parseFloat(order.dropoff_lat), parseFloat(order.dropoff_lng)]
+  const initLng  = (displayPos ?? mitraLocation)?.lng ?? pickup[1]
+  const initLat  = (displayPos ?? mitraLocation)?.lat ?? pickup[0]
 
   const currentStep  = STATUS_STEPS.findIndex(s => s.key === order.status)
   const isDone       = ['completed', 'cancelled'].includes(order.status)
@@ -369,14 +385,6 @@ export default function TrackingPage() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse-gps { 0%,100% { box-shadow: 0 0 0 0 rgba(0,200,150,0.4); } 50% { box-shadow: 0 0 0 8px rgba(0,200,150,0); } }
-        .leaflet-container { background: #1A1A28 !important; }
-        .leaflet-tile-pane { filter: brightness(0.92) saturate(0.9); }
-        .leaflet-popup-content-wrapper { background: #1E1E2E !important; color: #E8E8F2 !important; border: 1px solid #252538 !important; border-radius: 14px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important; }
-        .leaflet-popup-tip { background: #1E1E2E !important; }
-        .leaflet-popup-content { font-size: 13px !important; color: #E8E8F2 !important; }
-        .leaflet-control-zoom a { background: #1E1E2E !important; color: #E8E8F2 !important; border-color: #252538 !important; }
-        .leaflet-control-zoom a:hover { background: #252535 !important; }
-        .leaflet-bar { border: 1px solid #252538 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
       `}</style>
 
       {/* ── Navbar ── */}
@@ -475,84 +483,50 @@ export default function TrackingPage() {
         </div>
       )}
 
-      {/* ── Peta (full screen) ── */}
+      {/* ── Peta MapLibre GL ── */}
       <div style={{ flex: 1, minHeight: panelOpen ? 'calc(100vh - 340px)' : 'calc(100vh - 72px)', transition: 'min-height 0.3s' }}>
-        <MapContainer
-          center={mapCenter}
-          zoom={14}
-          style={{ height: '100%', width: '100%', minHeight: 300 }}
-          zoomControl={true}
+        <Map
+          ref={mapRef}
+          initialViewState={{ longitude: initLng, latitude: initLat, zoom: 14 }}
+          mapStyle={SATELLITE_STYLE}
+          style={{ width: '100%', height: '100%', minHeight: 300 }}
+          attributionControl={false}
+          onLoad={() => { if (!mitraLocation) fitPoints(mapRef.current?.getMap(), [pickup, dropoff], 60) }}
         >
-          <SatelliteTiles />
+          {/* Rute dengan jalur jalan nyata */}
+          <RouteLayer pickup={pickup} dropoff={dropoff} />
 
-          {/* Fit semua titik saat pertama load */}
-          {!mitraLocation && <FitBounds points={allPoints} />}
-
-          {/* Ikuti mitra */}
-          {mitraLocation && <MapFollower center={mitraLocation} follow={follow} />}
-
-          {/* Garis rute */}
-          <Polyline
-            positions={allPoints}
-            pathOptions={{ color: '#00C896', weight: 3, opacity: 0.5, dashArray: '8 6' }}
-          />
-
-          {/* Overlay saat GPS mitra belum aktif */}
-          {showGpsHint && (
-            <div style={{
-              position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-              zIndex: 500, padding: '10px 16px', borderRadius: 14, whiteSpace: 'nowrap',
-              background: 'rgba(25,25,39,0.92)', border: '1px solid rgba(246,173,85,0.3)',
-              backdropFilter: 'blur(12px)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'none',
-            }}>
-              <span style={{ fontSize: 14 }}>⏳</span>
-              <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-warn)' }}>
-                Menunggu mitra mengaktifkan GPS...
-              </p>
-            </div>
-          )}
-
-          {/* Marker mitra */}
-          {mitraLocation && (
-            <Marker position={[mitraLocation.lat, mitraLocation.lng]} icon={mitraIcon}>
-              <Popup>
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontWeight: 700, marginBottom: 2 }}>{order.mitra?.name ?? 'Mitra'}</p>
-                  <p style={{ fontSize: 11, color: '#A0A0BC' }}>{gpsActive ? '🟢 Online' : '⚫ Offline'}</p>
-                </div>
-              </Popup>
+          {/* Marker mitra — posisi diinterpolasi smooth */}
+          {displayPos && (
+            <Marker longitude={displayPos.lng} latitude={displayPos.lat} anchor="center">
+              <MitraMarker />
             </Marker>
           )}
 
           {/* Marker pickup */}
-          <Marker position={[order.pickup_lat, order.pickup_lng]} icon={pickupPin}>
-            <Popup>
-              <div>
-                <p style={{ fontWeight: 700, marginBottom: 4 }}>📍 Pickup</p>
-                <a href={`https://www.google.com/maps/dir/?api=1&destination=${order.pickup_lat},${order.pickup_lng}`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: 12, color: '#4285F4', display: 'block', marginTop: 4 }}>
-                  {order.pickup_address} ↗
-                </a>
-              </div>
-            </Popup>
+          <Marker longitude={pickup[1]} latitude={pickup[0]} anchor="bottom">
+            <PinMarker color="#00C896" emoji="🟢" />
           </Marker>
 
           {/* Marker tujuan */}
-          <Marker position={[order.dropoff_lat, order.dropoff_lng]} icon={dropoffPin}>
-            <Popup>
-              <div>
-                <p style={{ fontWeight: 700, marginBottom: 4 }}>🏁 Tujuan</p>
-                <a href={`https://www.google.com/maps/dir/?api=1&destination=${order.dropoff_lat},${order.dropoff_lng}`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: 12, color: '#4285F4', display: 'block', marginTop: 4 }}>
-                  {order.dropoff_address} ↗
-                </a>
-              </div>
-            </Popup>
+          <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom">
+            <PinMarker color="#F56565" emoji="🔴" />
           </Marker>
-        </MapContainer>
+        </Map>
+
+        {/* Hint GPS belum aktif */}
+        {showGpsHint && (
+          <div style={{
+            position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 4, padding: '10px 16px', borderRadius: 14, whiteSpace: 'nowrap',
+            background: 'rgba(25,25,39,0.92)', border: '1px solid rgba(246,173,85,0.3)',
+            backdropFilter: 'blur(12px)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'none',
+          }}>
+            <span style={{ fontSize: 14 }}>⏳</span>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-warn)' }}>Menunggu mitra mengaktifkan GPS...</p>
+          </div>
+        )}
       </div>
 
       {/* ── Tombol buka/tutup panel ── */}

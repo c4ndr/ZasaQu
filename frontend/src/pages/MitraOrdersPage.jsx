@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { MapContainer, Marker, useMap } from 'react-leaflet'
-import SatelliteTiles from '../components/SatelliteTiles'
+import Map, { Marker } from 'react-map-gl/maplibre'
+import { SATELLITE_STYLE } from '../utils/mapStyle'
+import { fitPoints, distanceMeter } from '../utils/geo'
 import RoadPolyline from '../components/RoadPolyline'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 import BottomNav from '../components/BottomNav'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
@@ -16,35 +15,17 @@ import ChatButton from '../components/ChatButton'
 // Baca window.isSecureContext saat runtime — menghormati Chrome flags
 function getSecureCtx() { return typeof window !== 'undefined' && window.isSecureContext }
 
-// ── Fix ikon Leaflet ──────────────────────────────────────────────────────────
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
-
-const makePin = (color) => L.divIcon({
-  html: `<div style="position:relative;width:28px;height:36px">
-    <svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="36">
-      <path d="M14 1C7.373 1 2 6.373 2 13c0 8.4 12 22 12 22S26 21.4 26 13C26 6.373 20.627 1 14 1z"
-        fill="${color}" stroke="white" stroke-width="2"/>
-      <circle cx="14" cy="13" r="5" fill="white"/>
-    </svg>
-  </div>`,
-  iconSize: [28, 36], iconAnchor: [14, 36], className: '',
-})
-
-const pickupPin  = makePin('#00C896')
-const dropoffPin = makePin('#F56565')
-
-// ── Fit bounds saat peta muncul ───────────────────────────────────────────────
-function FitRoute({ pickup, dropoff }) {
-  const map = useMap()
-  useEffect(() => {
-    try { map.fitBounds([pickup, dropoff], { padding: [48, 48] }) } catch {}
-  }, [map, pickup, dropoff])
-  return null
+// ── Pin marker JSX untuk MapLibre ─────────────────────────────────────────────
+function PinMarker({ color }) {
+  return (
+    <div style={{ position: 'relative', width: 28, height: 36, pointerEvents: 'none' }}>
+      <svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="36">
+        <path d="M14 1C7.373 1 2 6.373 2 13c0 8.4 12 22 12 22S26 21.4 26 13C26 6.373 20.627 1 14 1z"
+          fill={color} stroke="white" strokeWidth="2" />
+        <circle cx="14" cy="13" r="5" fill="white" />
+      </svg>
+    </div>
+  )
 }
 
 // ── Konstanta ─────────────────────────────────────────────────────────────────
@@ -98,90 +79,71 @@ function MapsLink({ lat, lng, address, color = 'var(--k-text)', fontSize = 13, s
   )
 }
 
-// ── Mini peta rute ────────────────────────────────────────────────────────────
+// ── Mini peta rute (MapLibre GL) ──────────────────────────────────────────────
 function MiniMap({ order, height = 160 }) {
+  const mapRef  = useRef(null)
   const pickup  = [parseFloat(order.pickup_lat),  parseFloat(order.pickup_lng)]
   const dropoff = [parseFloat(order.dropoff_lat), parseFloat(order.dropoff_lng)]
+
   return (
     <div style={{ height, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--k-border)' }}>
-      <style>{`
-        .leaflet-container { background: #1A1A28 !important; }
-        .leaflet-tile-pane { filter: brightness(0.9) saturate(0.85); }
-        .leaflet-control-zoom { display: none !important; }
-        .leaflet-control-attribution { display: none !important; }
-      `}</style>
-      <MapContainer
-        center={pickup} zoom={13}
-        style={{ height: '100%', width: '100%' }}
-        zoomControl={false} attributionControl={false} dragging={false}
-        scrollWheelZoom={false} doubleClickZoom={false}
+      <Map
+        ref={mapRef}
+        initialViewState={{ longitude: pickup[1], latitude: pickup[0], zoom: 13 }}
+        mapStyle={SATELLITE_STYLE}
+        style={{ width: '100%', height: '100%' }}
+        interactive={false}
+        attributionControl={false}
+        onLoad={() => fitPoints(mapRef.current?.getMap(), [pickup, dropoff], 48)}
       >
-        <SatelliteTiles />
-        <FitRoute pickup={pickup} dropoff={dropoff} />
-        <RoadPolyline pickup={pickup} dropoff={dropoff} weight={3} opacity={0.7} />
-        <Marker position={pickup}  icon={pickupPin} />
-        <Marker position={dropoff} icon={dropoffPin} />
-      </MapContainer>
+        <RoadPolyline pickup={pickup} dropoff={dropoff} weight={3} opacity={0.7} id={`route-${order.id}`} />
+        <Marker longitude={pickup[1]}  latitude={pickup[0]}  anchor="bottom"><PinMarker color="#00C896" /></Marker>
+        <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom"><PinMarker color="#F56565" /></Marker>
+      </Map>
     </div>
   )
 }
 
-// ── Modal peta fullscreen ─────────────────────────────────────────────────────
+// ── Modal peta fullscreen (MapLibre GL) ───────────────────────────────────────
 function MapModal({ order, onClose }) {
+  const mapRef  = useRef(null)
   const pickup  = [parseFloat(order.pickup_lat),  parseFloat(order.pickup_lng)]
   const dropoff = [parseFloat(order.dropoff_lat), parseFloat(order.dropoff_lng)]
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999,
-      display: 'flex', flexDirection: 'column',
-      background: 'var(--k-bg)',
-    }}>
-      <style>{`
-        .map-modal .leaflet-container { background: #1A1A28 !important; }
-        .map-modal .leaflet-tile-pane { filter: brightness(0.92) saturate(0.85); }
-        .map-modal .leaflet-control-zoom a { background: #1E1E2E !important; color: #E8E8F2 !important; border-color: #252538 !important; }
-        .map-modal .leaflet-bar { border: 1px solid #252538 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
-        .map-modal .leaflet-popup-content-wrapper { background: #1E1E2E !important; color: #E8E8F2 !important; border: 1px solid #252538 !important; border-radius: 12px !important; }
-        .map-modal .leaflet-popup-tip { background: #1E1E2E !important; }
-      `}</style>
 
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', background: 'var(--k-bg)' }}>
       {/* Tombol tutup */}
       <button onClick={onClose} style={{
-        position: 'absolute', top: 14, right: 14, zIndex: 10001,
-        width: 40, height: 40, borderRadius: 12,
+        position: 'absolute', top: 14, right: 14, zIndex: 10001, width: 40, height: 40, borderRadius: 12,
         background: 'rgba(25,25,39,0.92)', border: '1px solid rgba(37,37,56,0.8)',
-        backdropFilter: 'blur(12px)', color: 'var(--k-sub)',
-        fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        backdropFilter: 'blur(12px)', color: 'var(--k-sub)', fontSize: 20, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
       }}>✕</button>
 
       {/* Label order */}
-      <div style={{
-        position: 'absolute', top: 14, left: 14, zIndex: 10001,
-        padding: '8px 14px', borderRadius: 12,
-        background: 'rgba(25,25,39,0.92)', border: '1px solid rgba(37,37,56,0.8)',
-        backdropFilter: 'blur(12px)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-      }}>
+      <div style={{ position: 'absolute', top: 14, left: 14, zIndex: 10001, padding: '8px 14px', borderRadius: 12, background: 'rgba(25,25,39,0.92)', border: '1px solid rgba(37,37,56,0.8)', backdropFilter: 'blur(12px)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
         <p style={{ fontSize: 11, color: 'var(--k-muted)', fontFamily: 'monospace' }}>{order.order_number}</p>
         <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)' }}>{formatRp(order.shipping_fee)}</p>
       </div>
 
       {/* Peta */}
-      <div className="map-modal" style={{ flex: 1 }}>
-        <MapContainer center={pickup} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl>
-          <SatelliteTiles />
-          <FitRoute pickup={pickup} dropoff={dropoff} />
-          <RoadPolyline pickup={pickup} dropoff={dropoff} weight={4} opacity={0.8} />
-          <Marker position={pickup}  icon={pickupPin} />
-          <Marker position={dropoff} icon={dropoffPin} />
-        </MapContainer>
+      <div style={{ flex: 1 }}>
+        <Map
+          ref={mapRef}
+          initialViewState={{ longitude: pickup[1], latitude: pickup[0], zoom: 13 }}
+          mapStyle={SATELLITE_STYLE}
+          style={{ width: '100%', height: '100%' }}
+          attributionControl={false}
+          onLoad={() => fitPoints(mapRef.current?.getMap(), [pickup, dropoff], 60)}
+        >
+          <RoadPolyline pickup={pickup} dropoff={dropoff} weight={4} opacity={0.8} id={`modal-${order.id}`} />
+          <Marker longitude={pickup[1]}  latitude={pickup[0]}  anchor="bottom"><PinMarker color="#00C896" /></Marker>
+          <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom"><PinMarker color="#F56565" /></Marker>
+        </Map>
       </div>
 
       {/* Info rute bawah */}
-      <div style={{
-        background: 'var(--k-surface)', borderTop: '1px solid var(--k-border)',
-        padding: '14px 16px 28px',
-      }}>
+      <div style={{ background: 'var(--k-surface)', borderTop: '1px solid var(--k-border)', padding: '14px 16px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3 }}>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--k-accent)' }} />
@@ -189,10 +151,8 @@ function MapModal({ order, onClose }) {
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#F56565' }} />
           </div>
           <div style={{ flex: 1 }}>
-            <MapsLink lat={order.pickup_lat} lng={order.pickup_lng} address={order.pickup_address}
-              color="var(--k-text)" style={{ marginBottom: 12 }} />
-            <MapsLink lat={order.dropoff_lat} lng={order.dropoff_lng} address={order.dropoff_address}
-              color="var(--k-sub)" />
+            <MapsLink lat={order.pickup_lat} lng={order.pickup_lng} address={order.pickup_address} color="var(--k-text)" style={{ marginBottom: 12 }} />
+            <MapsLink lat={order.dropoff_lat} lng={order.dropoff_lng} address={order.dropoff_address} color="var(--k-sub)" />
           </div>
         </div>
       </div>
@@ -349,7 +309,19 @@ function compressImage(file) {
   })
 }
 
-function PhotoSlot({ orderId, stage, label, emoji, desc, initialDone, onUploaded }) {
+// GEOFENCE_RADIUS: jarak maksimal dari titik target sebelum foto diizinkan (meter)
+const GEOFENCE_RADIUS = 300
+
+function getCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(new Error('no-geo')); return }
+    navigator.geolocation.getCurrentPosition(resolve, reject,
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 })
+  })
+}
+
+// targetLat/Lng: koordinat yang harus didekati sebelum foto diizinkan
+function PhotoSlot({ orderId, stage, label, emoji, desc, initialDone, onUploaded, targetLat, targetLng }) {
   const [done,       setDone]       = useState(initialDone)
   const [busy,       setBusy]       = useState(false)
   const [error,      setError]      = useState('')
@@ -410,16 +382,35 @@ function PhotoSlot({ orderId, stage, label, emoji, desc, initialDone, onUploaded
 
   const openPicker = async () => {
     setError('')
+
+    // Cek geofence: mitra harus berada di dekat titik target sebelum bisa foto
+    if (targetLat && targetLng) {
+      try {
+        const pos  = await getCurrentPosition()
+        const dist = distanceMeter(pos.coords.latitude, pos.coords.longitude, targetLat, targetLng)
+        if (dist > GEOFENCE_RADIUS) {
+          setError(`Anda masih ${dist >= 1000 ? (dist/1000).toFixed(1)+'km' : dist+'m'} dari lokasi target (maks ${GEOFENCE_RADIUS}m). Dekati lokasi terlebih dahulu.`)
+          return
+        }
+      } catch (e) {
+        if (e?.message === 'no-geo') {
+          setError('GPS tidak tersedia di perangkat ini.')
+          return
+        }
+        // Jika GPS timeout/gagal — lanjutkan saja (jangan blokir mitra)
+      }
+    }
+
     if (isNative) {
-      // Capacitor Camera: buka kamera native langsung (lebih andal di Android)
+      // Capacitor Camera: HANYA kamera, bukan galeri
       try {
         const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera')
         const photo = await Camera.getPhoto({
-          quality:      78,
-          width:        1280,
-          resultType:   CameraResultType.DataUrl,
-          source:       CameraSource.Prompt, // tawari kamera atau galeri
-          allowEditing: false,
+          quality:            78,
+          width:              1280,
+          resultType:         CameraResultType.DataUrl,
+          source:             CameraSource.Camera, // kamera saja, bukan galeri
+          allowEditing:       false,
           correctOrientation: true,
         })
         const res  = await fetch(photo.dataUrl)
@@ -431,6 +422,7 @@ function PhotoSlot({ orderId, stage, label, emoji, desc, initialDone, onUploaded
         }
       }
     } else {
+      // Web: input dengan capture=environment → Android Chrome buka kamera langsung
       inputRef.current?.click()
     }
   }
@@ -474,6 +466,12 @@ function PhotoSlot({ orderId, stage, label, emoji, desc, initialDone, onUploaded
   )
 }
 
+// Koordinat target per stage: pickup/packing → titik jemput, delivery → titik antar
+function getStageTarget(order, stageKey) {
+  if (stageKey === 'delivery') return { lat: parseFloat(order.dropoff_lat), lng: parseFloat(order.dropoff_lng) }
+  return { lat: parseFloat(order.pickup_lat), lng: parseFloat(order.pickup_lng) }
+}
+
 function PhotoUpload({ order, onUploaded }) {
   const uploaded  = new Set((order.photos ?? []).map(p => p.stage))
   const totalDone = uploaded.size
@@ -487,18 +485,23 @@ function PhotoUpload({ order, onUploaded }) {
         </span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {PHOTO_STAGES.map(s => (
-          <PhotoSlot
-            key={`${order.id}-${s.key}`}
-            orderId={order.id}
-            stage={s.key}
-            label={s.label}
-            emoji={s.emoji}
-            desc={s.desc}
-            initialDone={uploaded.has(s.key)}
-            onUploaded={onUploaded}
-          />
-        ))}
+        {PHOTO_STAGES.map(s => {
+          const target = getStageTarget(order, s.key)
+          return (
+            <PhotoSlot
+              key={`${order.id}-${s.key}`}
+              orderId={order.id}
+              stage={s.key}
+              label={s.label}
+              emoji={s.emoji}
+              desc={s.desc}
+              initialDone={uploaded.has(s.key)}
+              onUploaded={onUploaded}
+              targetLat={target.lat}
+              targetLng={target.lng}
+            />
+          )
+        })}
       </div>
       {totalDone === 3 && (
         <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.2)', color: 'var(--k-accent)', fontSize: 12, fontWeight: 600, textAlign: 'center' }}>
@@ -663,6 +666,8 @@ function ActiveCard({ order, onUpdate, onRefresh, loading, hasUnreadChat }) {
                 desc={gateStage.desc}
                 initialDone={uploadedStages.has(gateStage.key)}
                 onUploaded={onRefresh}
+                targetLat={getStageTarget(order, gateStage.key).lat}
+                targetLng={getStageTarget(order, gateStage.key).lng}
               />
             </div>
           )}
