@@ -294,8 +294,13 @@ class OrderService
             // Mitra income: wallet vs COD berbeda alurnya
             if ($mitra) {
                 if ($order->payment_method === 'cod') {
-                    // COD: mitra terima cash langsung dari pelanggan, saldo wallet tidak disentuh.
-                    // platform_commission tetap tercatat di kolom order untuk laporan admin.
+                    // COD: mitra terima cash penuh dari pelanggan.
+                    // Platform potong komisi dari wallet mitra (boleh minus = hutang komisi).
+                    $commission = (float) $order->platform_commission;
+                    if ($commission > 0) {
+                        $this->walletService->debitForce($mitra, $commission, 'platform_commission',
+                            "Komisi platform order #{$order->order_number} (COD)", $order);
+                    }
                 } else {
                     $this->walletService->credit($mitra, (float) $order->mitra_income, 'order_income',
                         "Pendapatan order #{$order->order_number}", $order);

@@ -64,6 +64,33 @@ class WalletService
         });
     }
 
+    // Debit tanpa cek saldo — khusus potongan komisi COD yang wajib dipungut
+    // Saldo bisa jadi minus (hutang komisi mitra ke platform)
+    public function debitForce(User $user, float $amount, string $type, string $description, ?Model $reference = null, string $serviceModule = 'zasago'): WalletTransaction
+    {
+        return DB::transaction(function () use ($user, $amount, $type, $description, $reference, $serviceModule) {
+            $wallet = Wallet::lockForUpdate()->where('user_id', $user->id)->firstOrFail();
+
+            $before = (float) $wallet->balance;
+            $after  = $before - $amount;
+
+            $wallet->update(['balance' => $after]);
+
+            return WalletTransaction::create([
+                'wallet_id'      => $wallet->id,
+                'service_module' => $serviceModule,
+                'type'           => $type,
+                'amount'         => $amount,
+                'balance_before' => $before,
+                'balance_after'  => $after,
+                'description'    => $description,
+                'reference_type' => $reference ? get_class($reference) : null,
+                'reference_id'   => $reference?->id,
+                'status'         => 'completed',
+            ]);
+        });
+    }
+
     public function getTransactions(User $user, int $perPage = 20)
     {
         return WalletTransaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
