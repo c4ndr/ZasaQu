@@ -125,8 +125,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('virtual-account', [TopUpController::class, 'createVirtualAccount']);
         Route::post('qris', [TopUpController::class, 'createQris']);
         Route::post('midtrans',           [TopUpController::class, 'createMidtrans']);
-        Route::post('ipaymu/va',          [TopUpController::class, 'createIpaymuVA']);
-        Route::post('ipaymu/qris',        [TopUpController::class, 'createIpaymuQRIS']);
+        Route::post('ipaymu/va',           [TopUpController::class, 'createIpaymuVA']);
+        Route::post('ipaymu/qris',         [TopUpController::class, 'createIpaymuQRIS']);
+        Route::get('ipaymu/{id}/status',   [TopUpController::class, 'checkIpaymuStatus']);
         if (!app()->isProduction()) {
             Route::post('{id}/simulate-qris', [TopUpController::class, 'simulateQrisCallback']);
             Route::post('{id}/simulate-va',   [TopUpController::class, 'simulateVaCallback']);

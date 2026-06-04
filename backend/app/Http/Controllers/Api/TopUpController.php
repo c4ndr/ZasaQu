@@ -270,6 +270,49 @@ class TopUpController extends Controller
         return response('OK', 200);
     }
 
+    // Cek status pembayaran iPaymu (polling dari frontend)
+    public function checkIpaymuStatus(Request $request, int $topUpId): JsonResponse
+    {
+        $topUp = TopUpRequest::where('id', $topUpId)
+            ->where('user_id', $request->user()->id)
+            ->whereIn('method', ['ipaymu_va', 'ipaymu_qris'])
+            ->firstOrFail();
+
+        if ($topUp->status === 'confirmed') {
+            return response()->json(['status' => 'confirmed', 'message' => 'Pembayaran berhasil.']);
+        }
+
+        if ($topUp->ipaymu_expired_at && $topUp->ipaymu_expired_at->isPast()) {
+            return response()->json(['status' => 'expired', 'message' => 'Transaksi sudah kedaluwarsa.']);
+        }
+
+        // Cek ke iPaymu jika punya session ID
+        if ($topUp->ipaymu_session_id) {
+            $result = $this->ipaymuService->checkStatus($topUp->ipaymu_session_id);
+            $status = strtolower($result['Data']['Status'] ?? '');
+
+            if ($status === 'berhasil' || $status === 'sukses') {
+                DB::transaction(function () use ($topUp) {
+                    $topUp->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+                    $this->walletService->credit(
+                        $topUp->user,
+                        (float) $topUp->amount,
+                        'top_up',
+                        'Top up via iPaymu (' . strtoupper($topUp->ipaymu_channel) . ')',
+                        $topUp
+                    );
+                });
+                return response()->json(['status' => 'confirmed', 'message' => 'Pembayaran berhasil.']);
+            }
+        }
+
+        return response()->json([
+            'status'     => 'pending',
+            'message'    => 'Menunggu pembayaran.',
+            'expired_at' => $topUp->ipaymu_expired_at,
+        ]);
+    }
+
     // ── Midtrans ──────────────────────────────────────────────────────────────
 
     public function createMidtrans(Request $request): JsonResponse
