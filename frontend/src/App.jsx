@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import ApkPopup from './components/ApkPopup'
 import { useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { useTheme } from './hooks/useTheme'
@@ -304,6 +305,7 @@ export default function App() {
       <ThemeInitializer />
       <AuthProvider>
         <AppRoutes />
+        <ApkPopup />
       </AuthProvider>
     </BrowserRouter>
   )

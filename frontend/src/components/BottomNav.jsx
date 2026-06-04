@@ -112,19 +112,17 @@ const IconMart = ({ filled }) => (
 const PELANGGAN_ITEMS = (name) => [
   { to: '/dashboard', Icon: IconHome,   label: 'Beranda',  exact: true },
   { to: '/orders',    Icon: IconBox,    label: 'ZasaGo'  },
-  { to: '/home',      Icon: IconServ,   label: 'ZasaHome' },
   { to: '/mart',      Icon: IconMart,   label: 'ZasaMart', centerColor: 'linear-gradient(145deg, #7C3AED 0%, #4F46E5 100%)', centerShadow: 'rgba(124,58,237,0.50)' },
   { to: '/food',      Icon: IconFood,   label: 'ZasaFood' },
   { to: '/profile',   Icon: null,       label: 'Akun',    avatar: true },
 ]
 
 const MITRA_ITEMS = (name) => [
-  { to: '/dashboard',          Icon: IconHome, label: 'Beranda',  exact: true },
-  { to: '/mitra/orders',       Icon: IconBox,  label: 'ZasaGo'  },
-  { to: '/mitra/food/orders',  Icon: IconFood, label: 'ZasaFood' },
-  { to: '/mitra/mart/orders',  Icon: IconMart, label: 'ZasaMart', centerColor: 'linear-gradient(145deg, #7C3AED 0%, #4F46E5 100%)', centerShadow: 'rgba(124,58,237,0.50)' },
-  { to: '/mitra/gps',          Icon: IconPin,  label: 'GPS'      },
-  { to: '/profile',            Icon: null,     label: 'Akun',    avatar: true },
+  { to: '/dashboard',         Icon: IconHome, label: 'Beranda', exact: true },
+  { to: '/mitra/orders',      Icon: IconBox,  label: 'ZasaGo'  },
+  { to: '/mitra/gps',         Icon: IconPin,  label: 'GPS',     centerColor: 'linear-gradient(145deg, #00C896 0%, #00A87D 100%)', centerShadow: 'rgba(0,200,150,0.50)' },
+  { to: '/mitra/food/orders', Icon: IconFood, label: 'ZasaFood' },
+  { to: '/profile',           Icon: null,     label: 'Akun',   avatar: true },
 ]
 
 export default function BottomNav() {
@@ -140,18 +138,16 @@ export default function BottomNav() {
   // Filter item berdasarkan feature flags
   const allPelanggan = PELANGGAN_ITEMS(user.name)
   const filteredPelanggan = allPelanggan.filter(item => {
-    if (item.to === '/orders' || item.to === '/jastip') return feat.zasago !== false
-    if (item.to === '/home')  return feat.zasahome !== false
-    if (item.to === '/mart')  return feat.zasamart !== false
-    if (item.to === '/food')  return feat.zasafood !== false
+    if (item.to === '/orders') return feat.zasago   !== false
+    if (item.to === '/mart')   return feat.zasamart !== false
+    if (item.to === '/food')   return feat.zasafood !== false
     return true
   })
 
   const allMitra = MITRA_ITEMS(user.name)
   const filteredMitra = allMitra.filter(item => {
-    if (item.to === '/mitra/orders')       return feat.zasago !== false
-    if (item.to === '/mitra/food/orders')  return feat.zasafood !== false
-    if (item.to === '/mitra/mart/orders')  return feat.zasamart !== false
+    if (item.to === '/mitra/orders')      return feat.zasago   !== false
+    if (item.to === '/mitra/food/orders') return feat.zasafood !== false
     return true
   })
 
@@ -169,14 +165,13 @@ export default function BottomNav() {
       boxShadow: '0 -1px 0 var(--k-border), 0 -4px 16px rgba(0,0,0,0.06)',
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', height: 62 }}>
         {items.map(({ to, Icon, label, exact, avatar, centerColor, centerShadow }, idx) => {
-          const isCenter  = idx === centerIdx
-          const cBg       = centerColor  || 'linear-gradient(145deg, #FB923C 0%, #F97316 100%)'
-          const cBgAct    = centerColor  || 'linear-gradient(145deg, #F97316 0%, #C2410C 100%)'
-          const cShadow   = centerShadow || 'rgba(249,115,22,0.50)'
-          // Badge: hanya ZasaMart (/mart) yang tampilkan jumlah cart
-          const badgeNum  = to === '/mart' && cartCount > 0 ? cartCount : 0
+          const isCenter   = idx === centerIdx
+          const cBg        = centerColor  || 'linear-gradient(145deg, #FB923C 0%, #F97316 100%)'
+          const cBgAct     = centerColor  || 'linear-gradient(145deg, #F97316 0%, #C2410C 100%)'
+          const cShadow    = centerShadow || 'rgba(249,115,22,0.50)'
+          const badgeNum   = to === '/mart' && cartCount > 0 ? cartCount : 0
           const badgeLabel = badgeNum > 99 ? '99+' : String(badgeNum)
           return (
             <NavLink
@@ -186,20 +181,20 @@ export default function BottomNav() {
               style={{ flex: 1, textDecoration: 'none' }}
             >
               {({ isActive }) => isCenter ? (
-                /* Raised "airdrop" center button */
+                /* Raised center button */
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  paddingBottom: 8, gap: 5,
-                  transform: 'translateY(-14px)',
+                  justifyContent: 'center', height: '100%', gap: 4,
+                  transform: 'translateY(-12px)',
                 }}>
                   <div style={{ position: 'relative' }}>
                     <div style={{
-                      width: 54, height: 54, borderRadius: 18,
+                      width: 52, height: 52, borderRadius: 16,
                       background: isActive ? cBgAct : cBg,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       boxShadow: isActive
-                        ? `0 6px 22px ${cShadow}, 0 2px 6px rgba(0,0,0,0.12)`
-                        : `0 4px 16px ${cShadow.replace('0.50', '0.38')}, 0 2px 6px rgba(0,0,0,0.10)`,
+                        ? `0 6px 20px ${cShadow}, 0 2px 6px rgba(0,0,0,0.12)`
+                        : `0 4px 14px ${cShadow.replace('0.50', '0.38')}, 0 2px 6px rgba(0,0,0,0.10)`,
                       border: '3px solid var(--k-surface)',
                       transition: 'box-shadow 0.2s, background 0.2s',
                       color: '#fff',
@@ -208,28 +203,26 @@ export default function BottomNav() {
                     </div>
                     {badgeNum > 0 && (
                       <span style={{
-                        position: 'absolute', top: -5, right: -5,
+                        position: 'absolute', top: -4, right: -4,
                         background: '#EF4444', color: '#fff',
                         fontSize: 9, fontWeight: 900,
                         minWidth: 17, height: 17, borderRadius: 9,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: '2px solid var(--k-surface)', padding: '0 3px',
-                        lineHeight: 1,
+                        border: '2px solid var(--k-surface)', padding: '0 3px', lineHeight: 1,
                       }}>{badgeLabel}</span>
                     )}
                   </div>
                   <span style={{
                     fontSize: 10, fontWeight: isActive ? 700 : 600,
                     color: isActive ? 'var(--k-primary)' : 'var(--k-muted)',
-                    transition: 'color 0.18s',
-                    letterSpacing: '0.01em',
+                    transition: 'color 0.18s', lineHeight: 1,
                   }}>{label}</span>
                 </div>
               ) : (
-                /* Regular flat items */
+                /* Regular flat item */
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  paddingTop: 10, paddingBottom: 10, gap: 3,
+                  justifyContent: 'center', height: '100%', gap: 4,
                 }}>
                   <span style={{
                     position: 'relative',
@@ -243,28 +236,25 @@ export default function BottomNav() {
                     }
                     {badgeNum > 0 && (
                       <span style={{
-                        position: 'absolute', top: -5, right: -5,
+                        position: 'absolute', top: -4, right: -4,
                         background: '#EF4444', color: '#fff',
                         fontSize: 9, fontWeight: 900,
                         minWidth: 16, height: 16, borderRadius: 8,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: '1.5px solid var(--k-surface)', padding: '0 2px',
-                        lineHeight: 1,
+                        border: '1.5px solid var(--k-surface)', padding: '0 2px', lineHeight: 1,
                       }}>{badgeLabel}</span>
                     )}
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: isActive ? 700 : 500,
                     color: isActive ? 'var(--k-primary)' : 'var(--k-muted)',
-                    transition: 'color 0.18s',
-                    letterSpacing: '0.01em',
+                    transition: 'color 0.18s', lineHeight: 1,
                   }}>{label}</span>
                   <span style={{
                     height: 3, borderRadius: 3,
-                    width: isActive ? 20 : 0,
+                    width: isActive ? 18 : 0,
                     background: 'var(--k-primary)',
                     transition: 'width 0.2s ease',
-                    marginTop: 1,
                   }} />
                 </div>
               )}
