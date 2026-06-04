@@ -1,10 +1,10 @@
 #!/bin/bash
-# ZashaGo — HTTPS Tunnel via Cloudflare
-# Cukup jalankan: bash /home/candra/zashaGo/start-tunnel.sh
+# ZashaGo — Cloudflare Tunnel Permanen (zasaqu.uk)
+# Jalankan: bash /home/candra/zashaGo/start-tunnel.sh
 
 echo ""
 echo "╔══════════════════════════════════════╗"
-echo "║     ZashaGo — HTTPS Tunnel           ║"
+echo "║   ZashaGo — Tunnel Permanen          ║"
 echo "╚══════════════════════════════════════╝"
 echo ""
 
@@ -17,26 +17,19 @@ if ! curl -s --max-time 3 http://localhost:5173 > /dev/null 2>&1; then
 fi
 
 echo "✓ Frontend aktif di port 5173"
-echo "  Membuka tunnel... mohon tunggu 5-10 detik"
+echo "  Memulai tunnel ke zasaqu.uk..."
+echo ""
+echo "╔══════════════════════════════════════════════════╗"
+echo "║  ✅ ZasaQu siap diakses dari luar jaringan!     ║"
+echo "║                                                  ║"
+echo "║  🌐 https://zasaqu.uk                           ║"
+echo "║                                                  ║"
+echo "║  • URL PERMANEN — tidak berubah meski restart    ║"
+echo "║  • GPS & kamera aktif (sudah HTTPS)              ║"
+echo "║  • API & WebSocket berjalan lewat tunnel ini     ║"
+echo "║                                                  ║"
+echo "║  Tekan Ctrl+C untuk stop tunnel                  ║"
+echo "╚══════════════════════════════════════════════════╝"
 echo ""
 
-# Cloudflared quick tunnel — tidak perlu login, support WebSocket
-# Output URL-nya ke stderr, kita capture dari sana
-cloudflared tunnel --url http://localhost:5173 2>&1 | while IFS= read -r line; do
-  if [[ "$line" == *"trycloudflare.com"* ]]; then
-    URL=$(echo "$line" | grep -o 'https://[^ ]*trycloudflare\.com[^ ]*')
-    echo "╔══════════════════════════════════════════════════╗"
-    echo "║  ✅ ZashaGo siap diakses dari luar jaringan!    ║"
-    echo "║                                                  ║"
-    printf  "║  🌐 %-46s ║\n" "$URL"
-    echo "║                                                  ║"
-    echo "║  • Buka di HP / browser luar jaringan            ║"
-    echo "║  • GPS & kamera aktif (sudah HTTPS)              ║"
-    echo "║  • API & WebSocket berjalan lewat tunnel ini     ║"
-    echo "║  • URL berubah setiap restart tunnel             ║"
-    echo "║                                                  ║"
-    echo "║  Tekan Ctrl+C untuk stop tunnel                  ║"
-    echo "╚══════════════════════════════════════════════════╝"
-    echo ""
-  fi
-done
+cloudflared tunnel run zasaqu

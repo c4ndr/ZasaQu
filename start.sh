@@ -58,7 +58,16 @@ nohup bash -c 'cd /home/candra/zashaGo/frontend && npm run dev' \
   > /tmp/zashago-frontend.log 2>&1 &
 echo "✓ Frontend:  http://192.168.1.8:5173 (log: /tmp/zashago-frontend.log)"
 
+sleep 2
+
+# Cloudflare Tunnel permanen (zasaqu.uk)
+nohup cloudflared tunnel run zasaqu \
+  > /tmp/zashago-tunnel.log 2>&1 &
+echo "✓ Tunnel:    https://zasaqu.uk (log: /tmp/zashago-tunnel.log)"
+
 echo ""
 echo "Semua service ZashaGo berjalan di background."
+echo "  🌐 Akses publik: https://zasaqu.uk"
+echo ""
 echo "Untuk cek log: tail -f /tmp/zashago-backend.log"
-echo "Untuk stop:    pkill -f 'artisan serve' && pkill -f 'reverb' && pkill -f 'vite' && pkill -f 'redis-server'"
+echo "Untuk stop:    pkill -f 'artisan serve' && pkill -f 'reverb' && pkill -f 'vite' && pkill -f 'redis-server' && pkill -f 'cloudflared'"
