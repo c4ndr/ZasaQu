@@ -87,8 +87,8 @@ class HealthController extends Controller
         }
 
         // ── FCM / Push ────────────────────────────────────────────────────────
-        $fcmConfigured = !empty(config('services.firebase.credentials_path'))
-                      || !empty(config('services.firebase.server_key'));
+        $fcmConfigured = !empty(config('services.fcm.project_id'))
+                      && file_exists(config('services.fcm.service_account_path', ''));
         $checks['push_notifications'] = [
             'status'      => $fcmConfigured ? 'ok' : 'warning',
             'configured'  => $fcmConfigured,
