@@ -121,16 +121,16 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::prefix('topup')->group(function () {
         Route::get('bank-accounts', [TopUpController::class, 'bankAccounts']);
         Route::get('history', [TopUpController::class, 'history']);
-        Route::post('manual', [TopUpController::class, 'createManual']);
-        Route::post('virtual-account', [TopUpController::class, 'createVirtualAccount']);
-        Route::post('qris', [TopUpController::class, 'createQris']);
-        Route::post('midtrans',           [TopUpController::class, 'createMidtrans']);
+        Route::post('manual',              [TopUpController::class, 'createManual']);
+        Route::post('virtual-account',     [TopUpController::class, 'createVirtualAccount']);
+        Route::post('midtrans',            [TopUpController::class, 'createMidtrans']);
         Route::post('ipaymu/va',           [TopUpController::class, 'createIpaymuVA']);
         Route::post('ipaymu/qris',         [TopUpController::class, 'createIpaymuQRIS']);
         Route::get('ipaymu/{id}/status',   [TopUpController::class, 'checkIpaymuStatus']);
+        // QRIS simulasi dihapus — QRIS sekarang via iPaymu (/topup/ipaymu/qris)
+        // VA simulasi tetap ada untuk dev mode
         if (!app()->isProduction()) {
-            Route::post('{id}/simulate-qris', [TopUpController::class, 'simulateQrisCallback']);
-            Route::post('{id}/simulate-va',   [TopUpController::class, 'simulateVaCallback']);
+            Route::post('{id}/simulate-va', [TopUpController::class, 'simulateVaCallback']);
         }
     });
 

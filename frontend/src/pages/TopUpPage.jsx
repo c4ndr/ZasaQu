@@ -62,7 +62,7 @@ const METHODS = [
   },
   {
     id: 'qris', label: 'QRIS', icon: '⚡',
-    desc: 'Scan & bayar otomatis',
+    desc: 'Scan & bayar via iPaymu',
     grad: 'linear-gradient(135deg, #00C896, #00A87D)',
     color: '#00C896',
   },
@@ -173,39 +173,28 @@ function ResultScreen({ result, method, onBack, onSimulate, simLoading }) {
           </div>
         )}
 
-        {/* QRIS */}
-        {method === 'qris' && data?.qris_transaction && (
+        {/* QRIS iPaymu */}
+        {method === 'qris' && data && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-            <div style={{ background: 'var(--k-card)', border: '1px solid rgba(0,200,150,0.3)', borderRadius: 18, padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <p style={{ color: 'var(--k-muted)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Scan QRIS</p>
-                <button onClick={() => copy(data.qris_transaction.qris_code)} style={{
-                  padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                  background: copied ? 'rgba(0,200,150,0.15)' : 'var(--k-card2)',
-                  color: copied ? 'var(--k-accent)' : 'var(--k-sub)',
-                  border: `1px solid ${copied ? 'rgba(0,200,150,0.3)' : 'var(--k-border)'}`,
-                  cursor: 'pointer', transition: 'all 0.2s',
-                }}>
-                  {copied ? '✓ Tersalin' : 'Salin Kode'}
-                </button>
+            {data.qris_url ? (
+              <div style={{ background: 'var(--k-card)', border: '1px solid rgba(0,200,150,0.3)', borderRadius: 18, padding: '20px', textAlign: 'center' }}>
+                <p style={{ color: 'var(--k-muted)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>Scan QRIS iPaymu</p>
+                <img src={data.qris_url} alt="QRIS" style={{ width: 220, height: 220, objectFit: 'contain', borderRadius: 12 }} />
               </div>
-              {/* QR Code sungguhan */}
-              <QrImage code={data.qris_transaction.qris_code} amount={data.amount} />
-            </div>
+            ) : (
+              <div style={{ background: 'var(--k-card)', border: '1px solid rgba(0,200,150,0.3)', borderRadius: 18, padding: '20px' }}>
+                <p style={{ color: 'var(--k-muted)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>QRIS iPaymu</p>
+                <p style={{ fontSize: 13, color: 'var(--k-sub)', textAlign: 'center' }}>
+                  Menunggu konfirmasi iPaymu. Cek status pembayaran di riwayat top up.
+                </p>
+              </div>
+            )}
             <div style={{ background: 'rgba(246,173,85,0.08)', border: '1px solid rgba(246,173,85,0.2)', borderRadius: 14, padding: '12px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ fontSize: 16 }}>⏱️</span>
               <p style={{ color: 'var(--k-warn)', fontSize: 13, fontWeight: 600 }}>
-                Berlaku hingga {formatDate(data.qris_transaction.expired_at)}
+                Berlaku hingga {data.expired_at ? formatDate(data.expired_at) : '1 jam'}
               </p>
             </div>
-            <button onClick={onSimulate} disabled={simLoading} style={{
-              padding: '13px', borderRadius: 14, fontSize: 14, fontWeight: 700,
-              background: 'rgba(0,200,150,0.1)', color: 'var(--k-accent)',
-              border: '1px solid rgba(0,200,150,0.25)', cursor: simLoading ? 'not-allowed' : 'pointer',
-              opacity: simLoading ? 0.6 : 1,
-            }}>
-              {simLoading ? 'Memproses...' : '🧪 [DEV] Simulasi Bayar QRIS'}
-            </button>
           </div>
         )}
 
@@ -282,9 +271,9 @@ export default function TopUpPage() {
         fd.append('proof_image', proofFile)
         res = await api.post('/topup/manual', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       } else if (method === 'va') {
-        res = await api.post('/topup/virtual-account', { amount: Number(amount) })
-      } else {
-        res = await api.post('/topup/qris', { amount: Number(amount) })
+        res = await api.post('/topup/ipaymu/va', { amount: Number(amount), channel: 'bni' })
+      } else if (method === 'qris') {
+        res = await api.post('/topup/ipaymu/qris', { amount: Number(amount) })
       }
       setResult(res.data)
     } catch (err) {
@@ -296,9 +285,8 @@ export default function TopUpPage() {
   const simulatePayment = async () => {
     setSimLoading(true)
     try {
-      const id  = result.data.id
-      const ep  = method === 'qris' ? `/topup/${id}/simulate-qris` : `/topup/${id}/simulate-va`
-      await api.post(ep)
+      const id = result.data.id
+      await api.post(`/topup/${id}/simulate-va`)
       navigate('/wallet')
     } catch { setError('Simulasi gagal.') }
     finally { setSimLoading(false) }
@@ -369,7 +357,7 @@ export default function TopUpPage() {
                     rejected:  { label: 'Ditolak',       color: '#F56565' },
                     expired:   { label: 'Kedaluwarsa',   color: '#A0A0BC' },
                   }
-                  const METHOD_MAP = { bank_manual: '📋 Manual', virtual_account: '🏦 VA', qris: '⚡ QRIS', midtrans: '💳 Midtrans' }
+                  const METHOD_MAP = { bank_manual: '📋 Manual', virtual_account: '🏦 VA', qris: '⚡ QRIS (lama)', midtrans: '💳 Midtrans', ipaymu_va: '🏦 VA iPaymu', ipaymu_qris: '⚡ QRIS iPaymu' }
                   const s = STATUS_MAP[r.status] ?? { label: r.status, color: '#A0A0BC' }
                   return (
                     <div key={r.id} style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '14px 16px' }}>

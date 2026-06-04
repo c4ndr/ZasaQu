@@ -75,38 +75,13 @@ class TopUpController extends Controller
         ], 201);
     }
 
+    // QRIS simulasi dinonaktifkan — gunakan POST /topup/ipaymu/qris
     public function createQris(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:10000', 'max:10000000'],
-        ]);
-
-        $topUp = $this->paymentService->createQris($request->user(), (float) $data['amount']);
-
         return response()->json([
-            'message' => 'QRIS berhasil dibuat. Scan dan bayar dalam 15 menit.',
-            'data'    => $topUp,
-        ], 201);
-    }
-
-    // Simulasi callback QRIS (di production diganti webhook dari payment gateway)
-    public function simulateQrisCallback(Request $request, int $topUpId): JsonResponse
-    {
-        $topUp = TopUpRequest::where('id', $topUpId)
-            ->where('user_id', $request->user()->id)
-            ->where('method', 'qris')
-            ->where('status', 'pending')
-            ->firstOrFail();
-
-        $qris = $topUp->qrisTransaction;
-
-        if ($qris->expired_at->isPast()) {
-            return response()->json(['message' => 'QRIS sudah kedaluwarsa.'], 422);
-        }
-
-        $this->paymentService->confirmQrisPayment($qris);
-
-        return response()->json(['message' => 'Pembayaran QRIS berhasil dikonfirmasi.']);
+            'message' => 'Top up QRIS sekarang menggunakan iPaymu. Gunakan endpoint /topup/ipaymu/qris.',
+            'redirect' => '/topup/ipaymu/qris',
+        ], 410);
     }
 
     // Simulasi callback VA (di production diganti webhook dari bank)
