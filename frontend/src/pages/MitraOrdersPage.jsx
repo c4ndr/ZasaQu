@@ -765,7 +765,7 @@ export default function MitraOrdersPage() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 100 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 100 }}>
       <style>{`@keyframes gps-blink { 0%,100%{opacity:1} 50%{opacity:0.3} } @keyframes spin { to{transform:rotate(360deg)} }`}</style>
 
       {/* Header */}

@@ -148,7 +148,7 @@ function ThemeInitializer() {
 
 function MaintenanceScreen() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--k-bg)', padding: 32, textAlign: 'center' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--k-bg)', padding: 32, textAlign: 'center' }}>
       <div style={{ fontSize: 64, marginBottom: 16 }}>🔧</div>
       <div style={{ fontWeight: 800, fontSize: 20, color: 'var(--k-text)', marginBottom: 8 }}>Sedang Pemeliharaan</div>
       <div style={{ fontSize: 14, color: 'var(--k-sub)', maxWidth: 280, lineHeight: 1.6 }}>

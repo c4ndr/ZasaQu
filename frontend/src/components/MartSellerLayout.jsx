@@ -14,7 +14,7 @@ export default function MartSellerLayout({ children, title }) {
   const navigate   = useNavigate()
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ background: 'linear-gradient(135deg,#4F46E5,#7C3AED)', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 50 }}>
         <span style={{ fontSize: 22 }}>🏪</span>

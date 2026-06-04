@@ -65,7 +65,7 @@ export default function FoodPage() {
   }, [userLat, userLng])
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 80 }}>
       {/* Header */}
       <div style={{
         background: 'var(--k-surface)',

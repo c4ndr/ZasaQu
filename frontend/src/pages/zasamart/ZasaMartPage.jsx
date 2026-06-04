@@ -115,7 +115,7 @@ export default function ZasaMartPage() {
   }, [activecat, search, sort])
 
   return (
-    <div style={{ background: 'var(--k-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+    <div style={{ background: 'var(--k-bg)', minHeight: '100dvh', paddingBottom: 80 }}>
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%)', padding: '20px 20px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>

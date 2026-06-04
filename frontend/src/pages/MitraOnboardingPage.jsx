@@ -153,13 +153,13 @@ export default function MitraOnboardingPage() {
   const docs         = data?.documents ?? []
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ color: 'var(--k-sub)' }}>Memuat...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 40 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 40 }}>
       {toast && (
         <div style={{
           position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',

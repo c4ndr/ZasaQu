@@ -39,13 +39,13 @@ export default function HomeProviderPage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ color: 'var(--k-muted)' }}>Memuat...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: totalItems > 0 ? 100 : 20 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: totalItems > 0 ? 100 : 20 }}>
       {/* Banner */}
       <div style={{ position: 'relative', height: 180, background: 'var(--k-card)', overflow: 'hidden' }}>
         {provider.banner_path

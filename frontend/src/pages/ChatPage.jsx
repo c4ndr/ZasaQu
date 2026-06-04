@@ -238,7 +238,7 @@ export default function ChatPage() {
   })
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
       <div style={{ width: 30, height: 30, border: '2.5px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Memuat percakapan...</p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -246,7 +246,7 @@ export default function ChatPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column' }}>
       <style>{`
         @keyframes msgIn {
           from { opacity: 0; transform: translateY(6px); }

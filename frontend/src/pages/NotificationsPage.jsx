@@ -124,7 +124,7 @@ export default function NotificationsPage() {
   const unreadCount = notifs.filter(n => !n.read_at).length
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 100 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 100 }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* Header */}

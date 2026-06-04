@@ -24,14 +24,14 @@ export default function MartSellerPage() {
   }, [id])
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--k-bg)' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--k-bg)' }}>
       <div style={{ width: 28, height: 28, border: '3px solid #6366F1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 
   if (error || !seller) return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <p style={{ fontSize: 48, marginBottom: 12 }}>🏪</p>
       <p style={{ fontWeight: 700, color: 'var(--k-text)', marginBottom: 6 }}>Toko Tidak Ditemukan</p>
       <p style={{ fontSize: 13, color: 'var(--k-muted)', marginBottom: 20 }}>{error || 'Toko tidak tersedia.'}</p>
@@ -47,7 +47,7 @@ export default function MartSellerPage() {
     : products
 
   return (
-    <div style={{ background: 'var(--k-bg)', minHeight: '100vh', paddingBottom: 32 }}>
+    <div style={{ background: 'var(--k-bg)', minHeight: '100dvh', paddingBottom: 32 }}>
       {/* Header */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)' }}>
         <button onClick={() => navigate(-1)} style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 18, color: 'var(--k-text)', flexShrink: 0 }}>←</button>

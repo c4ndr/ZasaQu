@@ -196,7 +196,7 @@ export default function MitraFoodOrdersPage() {
   const merchantGroups = Object.values(ordersByMerchant)
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 80 }}>
       {toast && (
         <div style={{
           position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,

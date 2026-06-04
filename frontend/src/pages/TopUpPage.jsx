@@ -93,7 +93,7 @@ function ResultScreen({ result, method, onBack, onSimulate, simLoading }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column' }}>
 
       {/* Navbar */}
       <nav style={{ background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -300,7 +300,7 @@ export default function TopUpPage() {
   const activeMethod = METHODS.find(m => m.id === method)
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 32 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 32 }}>
 
       {/* Header */}
       <div style={{

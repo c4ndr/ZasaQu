@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
   const stepIdx = steps.indexOf(step)
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column' }}>
 
       {/* Hero */}
       <div style={{

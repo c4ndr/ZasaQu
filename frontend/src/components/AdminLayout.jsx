@@ -84,7 +84,7 @@ export default function AdminLayout({ children }) {
   const pageTitle = PAGE_TITLE[location.pathname] ?? 'Admin Panel'
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', color: 'var(--k-text)' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', color: 'var(--k-text)' }}>
       <style>{`
         /* Sidebar drawer */
         .adm-drawer {

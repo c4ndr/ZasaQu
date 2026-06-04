@@ -191,7 +191,7 @@ export default function DashboardPage() {
   if (user?.role === 'admin') return null
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 100 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 100 }}>
 
       {/* ── Header ─────────────────────────────────── */}
       <div style={{

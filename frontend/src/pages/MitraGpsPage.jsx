@@ -260,7 +260,7 @@ export default function MitraGpsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       <style>{`
         @keyframes gps-ring {
           0%   { transform: scale(0.6); opacity: 0.8; }

@@ -42,7 +42,7 @@ export default function WithdrawPage() {
   }, [tab])
 
   if (!user?.role?.startsWith('mitra')) return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
       <p style={{ fontSize: 40 }}>🚫</p>
       <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Hanya mitra yang bisa melakukan withdraw.</p>
       <Link to="/wallet" style={{ color: 'var(--k-accent)', fontSize: 14, textDecoration: 'none', fontWeight: 700 }}>Kembali ke Wallet</Link>
@@ -71,7 +71,7 @@ export default function WithdrawPage() {
 
   // ── Layar sukses ────────────────────────────────────────────────────────────
   if (success) return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center' }}>
       <div style={{ width: 80, height: 80, borderRadius: 24, background: 'rgba(0,200,150,0.1)', border: '2px solid rgba(0,200,150,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, marginBottom: 20 }}>✅</div>
       <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--k-text)', marginBottom: 8 }}>Withdraw Diajukan</h2>
       <p style={{ color: 'var(--k-muted)', fontSize: 14, lineHeight: 1.7, marginBottom: 28, maxWidth: 300 }}>
@@ -85,7 +85,7 @@ export default function WithdrawPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 32 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 32 }}>
 
       {/* Header */}
       <div style={{ padding: '52px 20px 28px', background: 'linear-gradient(160deg, #151015 0%, var(--k-bg) 100%)' }}>

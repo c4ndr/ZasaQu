@@ -67,13 +67,13 @@ export default function FoodMerchantPage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ color: 'var(--k-sub)' }}>Memuat...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: cartCount > 0 ? 100 : 20 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: cartCount > 0 ? 100 : 20 }}>
       {/* Header / Banner */}
       <div style={{ position: 'relative' }}>
         <div style={{ height: 160, background: 'var(--k-input)', overflow: 'hidden' }}>

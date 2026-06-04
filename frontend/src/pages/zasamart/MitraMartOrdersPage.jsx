@@ -90,7 +90,7 @@ export default function MitraMartOrdersPage() {
   const hasActive = myOrders.length > 0
 
   return (
-    <div style={{ background: 'var(--k-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+    <div style={{ background: 'var(--k-bg)', minHeight: '100dvh', paddingBottom: 80 }}>
       {toast && (
         <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, padding: '12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: toast.type === 'success' ? '#00C896' : '#F56565', color: '#fff', whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
           {toast.msg}

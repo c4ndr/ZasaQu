@@ -59,7 +59,7 @@ export default function FoodOrdersPage() {
   const hasMore = meta && page < meta.last_page
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 80 }}>
       <div style={{ padding: '20px 16px 0', background: 'var(--k-card)', borderBottom: '1px solid var(--k-border)' }}>
         <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 14 }}>Pesanan Makanan</div>
         <div style={{ display: 'flex', gap: 8, paddingBottom: 14 }}>

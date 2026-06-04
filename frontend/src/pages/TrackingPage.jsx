@@ -310,39 +310,13 @@ export default function TrackingPage() {
   const [shownUpdate, setShownUpdate] = useState(null)
   const dismissNotif = useCallback(() => setShownUpdate(null), [])
 
-  // ── Smooth animation untuk marker mitra ─────────────────────────────────────
-  const [displayPos,  setDisplayPos]  = useState(null)
-  const prevPosRef    = useRef(null)
-  const animFrameRef  = useRef(null)
-
+  // Camera follow smooth — easeTo saja, tanpa rAF React state (tidak re-render)
   useEffect(() => {
-    if (!mitraLocation) { setDisplayPos(null); return }
-    const from = prevPosRef.current
-    const to   = mitraLocation
-    prevPosRef.current = to
-    if (!from || (from.lat === to.lat && from.lng === to.lng)) { setDisplayPos(to); return }
-
-    const startTime = performance.now()
-    const DURATION  = 4500  // sedikit di bawah GPS_INTERVAL=5s
-
-    const tick = (now) => {
-      const t     = Math.min((now - startTime) / DURATION, 1)
-      const ease  = 1 - (1 - t) ** 3  // ease-out cubic
-      setDisplayPos({ lat: from.lat + (to.lat - from.lat) * ease, lng: from.lng + (to.lng - from.lng) * ease })
-      if (t < 1) animFrameRef.current = requestAnimationFrame(tick)
-    }
-    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
-    animFrameRef.current = requestAnimationFrame(tick)
-    return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current) }
-  }, [mitraLocation])
-
-  // Camera follow saat GPS aktif
-  useEffect(() => {
-    if (!follow || !displayPos) return
+    if (!mitraLocation) return
     const map = mapRef.current?.getMap()
     if (!map) return
-    map.easeTo({ center: [displayPos.lng, displayPos.lat], duration: 500 })
-  }, [displayPos, follow])
+    if (follow) map.easeTo({ center: [mitraLocation.lng, mitraLocation.lat], duration: 4000, easing: t => 1 - (1-t)**3 })
+  }, [mitraLocation, follow])
 
   useEffect(() => {
     api.get(`/orders/${id}`).then(r => setOrder(r.data)).finally(() => setLoading(false))
@@ -356,7 +330,7 @@ export default function TrackingPage() {
   }, [statusUpdate, id])
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: 32, height: 32, border: '3px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
         <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Memuat peta...</p>
@@ -369,8 +343,8 @@ export default function TrackingPage() {
 
   const pickup   = [parseFloat(order.pickup_lat),  parseFloat(order.pickup_lng)]
   const dropoff  = [parseFloat(order.dropoff_lat), parseFloat(order.dropoff_lng)]
-  const initLng  = (displayPos ?? mitraLocation)?.lng ?? pickup[1]
-  const initLat  = (displayPos ?? mitraLocation)?.lat ?? pickup[0]
+  const initLng  = mitraLocation?.lng ?? pickup[1]
+  const initLat  = mitraLocation?.lat ?? pickup[0]
 
   const currentStep  = STATUS_STEPS.findIndex(s => s.key === order.status)
   const isDone       = ['completed', 'cancelled'].includes(order.status)
@@ -380,7 +354,7 @@ export default function TrackingPage() {
                        ['accepted','on_pickup','picked_up','on_delivery'].includes(order.status)
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       {shownUpdate && <StatusNotif update={shownUpdate} onDismiss={dismissNotif} />}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -497,8 +471,8 @@ export default function TrackingPage() {
           <RouteLayer pickup={pickup} dropoff={dropoff} />
 
           {/* Marker mitra — posisi diinterpolasi smooth */}
-          {displayPos && (
-            <Marker longitude={displayPos.lng} latitude={displayPos.lat} anchor="center">
+          {mitraLocation && (
+            <Marker longitude={mitraLocation.lng} latitude={mitraLocation.lat} anchor="center">
               <MitraMarker />
             </Marker>
           )}

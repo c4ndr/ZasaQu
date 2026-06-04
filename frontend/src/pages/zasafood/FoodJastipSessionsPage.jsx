@@ -32,7 +32,7 @@ export default function FoodJastipSessionsPage() {
   }, [vehicleFilter, userLat, userLng])
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 80 }}>
       {/* Header */}
       <div style={{
         padding: '16px 20px', background: 'var(--k-card)',

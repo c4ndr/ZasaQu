@@ -74,7 +74,7 @@ export default function MartCheckoutPage() {
   }
 
   return (
-    <div style={{ background: 'var(--k-bg)', minHeight: '100vh', paddingBottom: 100 }}>
+    <div style={{ background: 'var(--k-bg)', minHeight: '100dvh', paddingBottom: 100 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)', position: 'sticky', top: 0, zIndex: 10 }}>
         <button onClick={() => navigate(-1)} style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 18, color: 'var(--k-text)' }}>←</button>
         <p style={{ fontWeight: 800, fontSize: 16, color: 'var(--k-text)' }}>Checkout</p>

@@ -41,7 +41,7 @@ export default function HomeOrderDetailPage() {
   }
 
   if (loading || !order) return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ color: 'var(--k-muted)' }}>{loading ? 'Memuat...' : 'Pesanan tidak ditemukan.'}</p>
     </div>
   )
@@ -49,7 +49,7 @@ export default function HomeOrderDetailPage() {
   const si = STATUS_INFO[order.status] ?? { label: order.status, color: '#A0A0BC', emoji: '?' }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 40 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 40 }}>
       <div style={{ padding: '52px 20px 20px', background: 'linear-gradient(160deg,#0F1E25 0%,var(--k-bg) 100%)' }}>
         <button onClick={() => navigate('/home/orders')} style={{ background: 'none', border: 'none', color: 'var(--k-muted)', fontSize: 14, cursor: 'pointer', marginBottom: 12, padding: 0 }}>
           ← Pesanan Saya

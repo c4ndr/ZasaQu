@@ -284,7 +284,7 @@ export default function CreateOrderPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 32 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 32 }}>
 
       {/* Navbar */}
       <nav style={{

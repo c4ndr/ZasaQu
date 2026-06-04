@@ -34,7 +34,7 @@ export default function MartProductPage() {
   }
 
   if (!product) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ width: 28, height: 28, border: '3px solid #6366F1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
@@ -64,7 +64,7 @@ export default function MartProductPage() {
   }
 
   return (
-    <div style={{ background: 'var(--k-bg)', minHeight: '100vh', paddingBottom: 100 }}>
+    <div style={{ background: 'var(--k-bg)', minHeight: '100dvh', paddingBottom: 100 }}>
       {/* Back */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--k-surface)' }}>
         <button onClick={() => navigate(-1)} style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 18, color: 'var(--k-text)' }}>←</button>

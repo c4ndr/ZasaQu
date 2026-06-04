@@ -22,13 +22,13 @@ export default function MerchantLayout({ children, title }) {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--k-bg)', fontFamily: 'system-ui,sans-serif' }}>
+    <div style={{ display: 'flex', minHeight: '100dvh', background: 'var(--k-bg)', fontFamily: 'system-ui,sans-serif' }}>
       {/* Sidebar */}
       <aside style={{
         width: open ? 220 : 60, transition: 'width .2s',
         background: 'var(--k-card)', borderRight: '1px solid var(--k-border)',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
-        position: 'sticky', top: 0, height: '100vh', overflow: 'hidden',
+        position: 'sticky', top: 0, height: '100dvh', overflow: 'hidden',
       }}>
         {/* Toggle */}
         <button onClick={() => setOpen(v => !v)} style={{

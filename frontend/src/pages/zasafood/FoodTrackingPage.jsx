@@ -128,7 +128,7 @@ export default function FoodTrackingPage() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: 'var(--k-sub)' }}>Memuat...</p></div>
+  if (loading) return <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: 'var(--k-sub)' }}>Memuat...</p></div>
   if (!order)  return null
 
   const sm = STATUS_META[order.status] ?? STATUS_META.pending
@@ -138,7 +138,7 @@ export default function FoodTrackingPage() {
   const showRating  = order.status === 'completed' && !rated
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--k-bg)', paddingBottom: 20 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 20 }}>
       {toast && (
         <div style={{
           position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
