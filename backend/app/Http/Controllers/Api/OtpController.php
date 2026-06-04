@@ -55,9 +55,10 @@ class OtpController extends Controller
         // Fonnte gagal kirim (device disconnect, quota habis, dll)
         if ($otp->plain_code !== null) {
             return response()->json([
-                'message' => 'Gagal mengirim OTP via WhatsApp. Coba beberapa saat lagi.',
-                'error'   => 'whatsapp_unavailable',
-            ], 503);
+                'message'  => 'WhatsApp tidak tersedia saat ini. Gunakan kode berikut untuk melanjutkan.',
+                'otp_code' => $otp->plain_code,
+                'warning'  => 'Kode ini tampil karena WhatsApp gateway sedang offline.',
+            ]);
         }
 
         return response()->json(['message' => 'Kode OTP telah dikirim ke WhatsApp kamu. Berlaku 5 menit.']);
