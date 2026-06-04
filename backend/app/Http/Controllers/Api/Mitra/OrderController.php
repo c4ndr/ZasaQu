@@ -1,7 +1,9 @@
 <?php
 namespace App\Http\Controllers\Api\Mitra;
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\Order;
+use App\Models\Wallet;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,6 +41,19 @@ class OrderController extends Controller
 
         try {
             DB::transaction(function () use ($mitra, $id, $vehicleType) {
+                // Cek saldo minimum mitra sebelum accept
+                $minBalance = (float) (AdminSetting::where('key', 'wallet_minimum_mitra')->value('value') ?? 0);
+                if ($minBalance > 0) {
+                    $wallet = Wallet::lockForUpdate()->where('user_id', $mitra->id)->firstOrFail();
+                    if ($wallet->availableBalance() < $minBalance) {
+                        throw new \Exception(
+                            'Saldo tidak mencukupi. Minimum saldo untuk menerima order adalah Rp '
+                            . number_format($minBalance, 0, ',', '.') . '. '
+                            . 'Saldo Anda saat ini: Rp ' . number_format($wallet->availableBalance(), 0, ',', '.')
+                        );
+                    }
+                }
+
                 // Lock baris order agar tidak bisa di-accept dua mitra sekaligus
                 $order = Order::where('vehicle_type', $vehicleType)
                     ->where('status', 'pending')

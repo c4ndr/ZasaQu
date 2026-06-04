@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,16 @@ class WalletController extends Controller
 
     public function summary(Request $request): JsonResponse
     {
-        return response()->json($this->walletService->getSummary($request->user()));
+        $user    = $request->user();
+        $summary = $this->walletService->getSummary($user);
+
+        // Untuk mitra: sertakan saldo minimum yang diwajibkan
+        if (str_starts_with($user->role ?? '', 'mitra')) {
+            $summary['min_balance']   = (float) (AdminSetting::where('key', 'wallet_minimum_mitra')->value('value') ?? 0);
+            $summary['can_accept']    = $summary['available'] >= $summary['min_balance'];
+        }
+
+        return response()->json($summary);
     }
 
     public function transactions(Request $request): JsonResponse

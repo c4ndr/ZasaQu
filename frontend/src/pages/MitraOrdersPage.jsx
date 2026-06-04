@@ -163,7 +163,7 @@ function MapModal({ order, onClose }) {
 }
 
 // ── Card order tersedia ───────────────────────────────────────────────────────
-function AvailableCard({ order, onAccept, loading, blocked }) {
+function AvailableCard({ order, onAccept, loading, blocked, blockedReason }) {
   const [showMap, setShowMap] = useState(false)
   const [mapModal, setMapModal] = useState(false)
 
@@ -260,7 +260,7 @@ function AvailableCard({ order, onAccept, loading, blocked }) {
                 opacity: loading ? 0.5 : 1,
                 transition: 'all 0.2s',
               }}>
-              {loading ? '...' : blocked ? '🚫 Tidak Bisa' : 'Terima Order'}
+              {loading ? '...' : blocked ? (blockedReason === 'Saldo kurang' ? '💰 Saldo Kurang' : '🚫 Tidak Bisa') : 'Terima Order'}
             </button>
           </div>
         </div>
@@ -896,15 +896,23 @@ export default function MitraOrdersPage() {
   const [actionId,  setActionId]  = useState(null)
   const [gpsOnline,    setGpsOnline]    = useState(false)
   const [acceptError,  setAcceptError]  = useState('')
-  // Poll status GPS mitra dari server setiap 15 detik
+  const [walletInfo,   setWalletInfo]   = useState(null)  // { available, min_balance, can_accept }
+
+  // Poll GPS status setiap 15 detik
   useEffect(() => {
-    const checkGps = () => {
-      api.get('/mitra/gps/status').then(r => {
-        setGpsOnline(r.data?.active === true)
-      }).catch(() => setGpsOnline(false))
-    }
+    const checkGps = () => api.get('/mitra/gps/status')
+      .then(r => setGpsOnline(r.data?.active === true)).catch(() => setGpsOnline(false))
     checkGps()
     const t = setInterval(checkGps, 15000)
+    return () => clearInterval(t)
+  }, [])
+
+  // Fetch wallet summary (saldo + min_balance) setiap 30 detik
+  useEffect(() => {
+    const fetchWallet = () => api.get('/wallet/summary')
+      .then(r => setWalletInfo(r.data)).catch(() => {})
+    fetchWallet()
+    const t = setInterval(fetchWallet, 30000)
     return () => clearInterval(t)
   }, [])
 
@@ -921,11 +929,17 @@ export default function MitraOrdersPage() {
   const vehicleType = user?.role === 'mitra_motor' ? 'motor' : user?.role === 'mitra_mobil' ? 'mobil' : null
 
   const accept = async (id) => {
+    // Cek saldo minimum (pre-check, validasi ulang di server)
+    if (walletInfo && walletInfo.min_balance > 0 && !walletInfo.can_accept) return
     if (!gpsOnline && !window.confirm(
       'GPS Anda belum aktif!\n\nPelanggan tidak bisa melacak posisi Anda selama pengiriman.\n\nAktifkan GPS di halaman GPS sebelum menerima order.\n\nLanjutkan tetap tanpa GPS?'
     )) return
     setActionId(id)
-    try { await api.post(`/mitra/orders/${id}/accept`); await fetchAll(); setTab('active') }
+    try {
+      await api.post(`/mitra/orders/${id}/accept`)
+      await Promise.all([fetchAll(), api.get('/wallet/summary').then(r => setWalletInfo(r.data))])
+      setTab('active')
+    }
     catch (err) { setAcceptError(err.response?.data?.message || 'Gagal menerima order') }
     finally { setActionId(null) }
   }
@@ -1053,6 +1067,29 @@ export default function MitraOrdersPage() {
             <EmptyState icon="🔍" title="Tidak ada order tersedia" sub="Order baru akan muncul di sini secara otomatis" />
           ) : (
             <>
+              {/* Banner: saldo tidak mencukupi minimum */}
+              {walletInfo && walletInfo.min_balance > 0 && !walletInfo.can_accept && (
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 12,
+                  padding: '14px 16px', borderRadius: 14,
+                  background: 'rgba(245,101,101,0.08)', border: '1.5px solid rgba(245,101,101,0.3)',
+                }}>
+                  <span style={{ fontSize: 22, flexShrink: 0 }}>💰</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ color: 'var(--k-danger)', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                      Saldo tidak mencukupi — tidak bisa terima order
+                    </p>
+                    <p style={{ color: 'var(--k-muted)', fontSize: 12, lineHeight: 1.6 }}>
+                      Saldo Anda: <strong style={{ color: 'var(--k-text)' }}>Rp {Number(walletInfo.available).toLocaleString('id-ID')}</strong>
+                      {' '}· Minimum: <strong style={{ color: 'var(--k-text)' }}>Rp {Number(walletInfo.min_balance).toLocaleString('id-ID')}</strong>
+                    </p>
+                    <p style={{ color: 'var(--k-muted)', fontSize: 11, marginTop: 4 }}>
+                      Silakan top up saldo terlebih dahulu untuk dapat menerima order.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Banner: sudah ada order aktif */}
               {active.length > 0 && (
                 <div style={{
@@ -1071,6 +1108,7 @@ export default function MitraOrdersPage() {
                   </div>
                 </div>
               )}
+
               {/* Error dari server saat coba accept */}
               {acceptError && (
                 <div style={{
@@ -1088,10 +1126,12 @@ export default function MitraOrdersPage() {
                   </button>
                 </div>
               )}
+
               {available.map(order => (
                 <AvailableCard key={order.id} order={order}
                   onAccept={accept} loading={actionId === order.id}
-                  blocked={active.length > 0} />
+                  blocked={active.length > 0 || (walletInfo?.min_balance > 0 && !walletInfo?.can_accept)}
+                  blockedReason={walletInfo?.min_balance > 0 && !walletInfo?.can_accept ? 'Saldo kurang' : null} />
               ))}
             </>
           )

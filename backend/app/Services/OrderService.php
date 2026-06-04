@@ -295,10 +295,10 @@ class OrderService
             if ($mitra) {
                 if ($order->payment_method === 'cod') {
                     // COD: mitra terima cash penuh dari pelanggan.
-                    // Platform potong komisi dari wallet mitra (boleh minus = hutang komisi).
+                    // Komisi platform dipotong dari wallet mitra (saldo minimum sudah dijamin saat accept).
                     $commission = (float) $order->platform_commission;
                     if ($commission > 0) {
-                        $this->walletService->debitForce($mitra, $commission, 'platform_commission',
+                        $this->walletService->debit($mitra, $commission, 'platform_commission',
                             "Komisi platform order #{$order->order_number} (COD)", $order);
                     }
                 } else {
