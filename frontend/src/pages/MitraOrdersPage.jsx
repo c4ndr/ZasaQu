@@ -731,6 +731,9 @@ export default function MitraOrdersPage() {
   const vehicleType = user?.role === 'mitra_motor' ? 'motor' : user?.role === 'mitra_mobil' ? 'mobil' : null
 
   const accept = async (id) => {
+    if (!gpsOnline && !window.confirm(
+      'GPS Anda belum aktif!\n\nPelanggan tidak bisa melacak posisi Anda selama pengiriman.\n\nAktifkan GPS di halaman GPS sebelum menerima order.\n\nLanjutkan tetap tanpa GPS?'
+    )) return
     setActionId(id)
     try { await api.post(`/mitra/orders/${id}/accept`); await fetchAll(); setTab('active') }
     catch (err) { setAcceptError(err.response?.data?.message || 'Gagal menerima order') }

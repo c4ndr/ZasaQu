@@ -159,6 +159,26 @@ export default function MitraGpsPage() {
     },
   })
 
+  // Screen Wake Lock — cegah layar mati saat GPS aktif (Chrome/Edge/Android Browser)
+  useEffect(() => {
+    if (!active || !('wakeLock' in navigator)) return
+    let lock = null
+    navigator.wakeLock.request('screen')
+      .then(l => { lock = l })
+      .catch(() => {})
+    // Re-acquire saat tab visible kembali (browser release wake lock saat tab hidden)
+    const reacquire = async () => {
+      if (document.visibilityState === 'visible' && active) {
+        try { lock = await navigator.wakeLock.request('screen') } catch {}
+      }
+    }
+    document.addEventListener('visibilitychange', reacquire)
+    return () => {
+      lock?.release().catch(() => {})
+      document.removeEventListener('visibilitychange', reacquire)
+    }
+  }, [active])
+
   // Saat error dari hook, matikan GPS otomatis agar tombol kembali ke "Aktifkan"
   useEffect(() => {
     if (error) setGpsEnabled(false)

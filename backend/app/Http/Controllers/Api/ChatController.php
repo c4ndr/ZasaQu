@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\Order;
+use App\Services\NotificationService;
 use App\Services\PhoneDetectionService;
 use App\Services\ViolationService;
 use Illuminate\Http\JsonResponse;
@@ -29,6 +30,7 @@ class ChatController extends Controller
     public function __construct(
         private PhoneDetectionService $phoneDetector,
         private ViolationService      $violationService,
+        private NotificationService   $notifService,
     ) {}
 
     public function getOrCreateRoom(int $orderId, Request $request): JsonResponse
@@ -108,6 +110,14 @@ class ChatController extends Controller
 
         // Broadcast ke channel chat room
         broadcast(new NewChatMessage($message));
+
+        // Push notification ke pihak lain (bukan pengirim)
+        if (!$isBlocked) {
+            $recipient = ($user->id === $order->customer_id) ? $order->mitra : $order->customer;
+            if ($recipient) {
+                $this->notifService->newChatMessage($recipient, $user->name, $order->order_number, $order->id);
+            }
+        }
 
         $response = ['message' => 'Pesan terkirim.', 'data' => $message];
 

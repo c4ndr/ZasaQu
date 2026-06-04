@@ -291,10 +291,24 @@ class OrderService
                     "Pembayaran order #{$order->order_number}", $order);
             }
 
-            // Kredit pendapatan ke mitra
+            // Mitra income: wallet vs COD berbeda alurnya
             if ($mitra) {
-                $this->walletService->credit($mitra, (float) $order->mitra_income, 'order_income',
-                    "Pendapatan order #{$order->order_number}", $order);
+                if ($order->payment_method === 'cod') {
+                    // COD: mitra terima cash langsung dari pelanggan
+                    // Platform potong komisi dari wallet mitra
+                    $commission = (float) $order->platform_commission;
+                    if ($commission > 0) {
+                        try {
+                            $this->walletService->debit($mitra, $commission, 'platform_commission',
+                                "Komisi platform order #{$order->order_number}", $order);
+                        } catch (\Exception) {
+                            // Saldo mitra tidak cukup — komisi tercatat via order, admin bisa tagih manual
+                        }
+                    }
+                } else {
+                    $this->walletService->credit($mitra, (float) $order->mitra_income, 'order_income',
+                        "Pendapatan order #{$order->order_number}", $order);
+                }
 
                 // Update total transaksi dan badge mitra
                 $detail = $mitra->mitraDetail;

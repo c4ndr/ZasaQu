@@ -120,6 +120,7 @@ export default function useGps({ enabled = false, onLost, onUpdate } = {}) {
     }).then(id => { watchIdRef.current = id }).catch(() => {})
 
     // Kirim ke server tiap 5 detik
+    // Kegagalan getCurrent di interval TIDAK mematikan GPS — watchPosition masih jalan
     intervalRef.current = setInterval(() => {
       geo.getCurrent(highOpts)
         .then(pos => {
@@ -129,7 +130,7 @@ export default function useGps({ enabled = false, onLost, onUpdate } = {}) {
           sendLocation(lat, lng)
           onUpdateRef.current?.(pos)
         })
-        .catch(() => { setActive(false) })
+        .catch(() => {})
     }, GPS_INTERVAL)
 
     return () => { stopTracking() }

@@ -130,4 +130,17 @@ class NotificationService
             ['order_number' => $orderNumber, 'order_id' => $orderId]
         );
     }
+
+    public function newChatMessage(User $recipient, string $senderName, string $orderNumber, int $orderId): void
+    {
+        // Hanya kirim FCM push, tidak buat DB record agar tidak spam notifikasi in-app
+        try {
+            App::make(FcmService::class)->sendToUser(
+                $recipient,
+                "Pesan dari {$senderName}",
+                "Ada pesan baru di order #{$orderNumber}. Ketuk untuk membalas.",
+                ['type' => 'chat_message', 'order_id' => (string) $orderId, 'order_number' => $orderNumber]
+            );
+        } catch (\Throwable) {}
+    }
 }
