@@ -223,25 +223,28 @@ class TopUpController extends Controller
     }
 
     // Callback / webhook dari iPaymu (tidak butuh auth)
+    // iPaymu mengirim field: trxId, referenceId, status, via, price, buyerName, buyerEmail, buyerPhone
     public function ipaymuCallback(Request $request): \Illuminate\Http\Response
     {
         try {
-            // iPaymu kirim status pembayaran
-            $status      = $request->input('status', '');       // berhasil / pending / gagal
-            $sessionId   = $request->input('session_id', '');
-            $trxId       = $request->input('trx_id', '');
-            $referenceId = $request->input('reference_id', '');
-
             Log::info('iPaymu callback', $request->all());
 
+            // Support application/json dan application/x-www-form-urlencoded
+            $status      = $request->input('status', '');
+            $trxId       = $request->input('trxId', $request->input('trx_id', ''));
+            $referenceId = $request->input('referenceId', $request->input('reference_id', ''));
+            $sessionId   = $request->input('sessionId', $request->input('session_id', ''));
+
+            // iPaymu status: "berhasil" = sukses
             if (strtolower($status) !== 'berhasil') {
                 return response('OK', 200);
             }
 
-            DB::transaction(function () use ($sessionId, $referenceId) {
-                $topUp = TopUpRequest::where(function ($q) use ($sessionId, $referenceId) {
-                        $q->where('ipaymu_session_id', $sessionId)
-                          ->orWhere('ipaymu_reference_id', $referenceId);
+            DB::transaction(function () use ($sessionId, $referenceId, $trxId) {
+                $topUp = TopUpRequest::where(function ($q) use ($sessionId, $referenceId, $trxId) {
+                        $q->when($sessionId,   fn($q) => $q->orWhere('ipaymu_session_id',   $sessionId))
+                          ->when($referenceId, fn($q) => $q->orWhere('ipaymu_reference_id', $referenceId))
+                          ->when($trxId,       fn($q) => $q->orWhere('ipaymu_trx_id',       $trxId));
                     })
                     ->where('status', 'pending')
                     ->whereIn('method', ['ipaymu_va', 'ipaymu_qris'])
@@ -253,6 +256,7 @@ class TopUpController extends Controller
                 $topUp->update([
                     'status'       => 'confirmed',
                     'confirmed_at' => now(),
+                    'ipaymu_trx_id' => $trxId ?: $topUp->ipaymu_trx_id,
                 ]);
 
                 $this->walletService->credit(
