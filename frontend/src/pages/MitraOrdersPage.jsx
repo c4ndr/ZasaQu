@@ -312,7 +312,8 @@ function compressImage(file) {
 }
 
 // GEOFENCE_RADIUS: jarak maksimal dari titik target sebelum foto diizinkan (meter)
-const GEOFENCE_RADIUS = 5
+// GPS Android di lapangan akurasinya 10–30m, 5m hampir tidak bisa dicapai
+const GEOFENCE_RADIUS = 30
 
 function getCurrentPosition() {
   return new Promise((resolve, reject) => {
