@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import Map, { Marker, Source, Layer } from 'react-map-gl/maplibre'
 import { SATELLITE_STYLE } from '../utils/mapStyle'
 import { circleGeoJson } from '../utils/geo'
-import useGps from '../hooks/useGps'
+import { useMitraGps } from '../context/MitraGpsContext'
 import LocationSearch from '../components/LocationSearch'
 import api from '../services/api'
 import { isNative, requestGeolocationPermission } from '../utils/nativePlatform'
@@ -51,7 +51,9 @@ function isDesktopDevice() {
 
 // ── Halaman utama ─────────────────────────────────────────────────────────────
 export default function MitraGpsPage() {
-  const [gpsEnabled,  setGpsEnabled]  = useState(false)
+  const { location, error, active, enabled, setEnabled } = useMitraGps()
+  const gpsEnabled  = enabled
+  const setGpsEnabled = setEnabled
   const [follow,      setFollow]      = useState(true)
   const [panelOpen,   setPanelOpen]   = useState(true)
   const [lastUpdate,  setLastUpdate]  = useState(null)
@@ -102,40 +104,6 @@ export default function MitraGpsPage() {
   }
 
   const mapRef = useRef(null)
-
-  const { location, error, active } = useGps({
-    enabled:  gpsEnabled,
-    onLost:   () => setGpsEnabled(false),
-    onUpdate: (pos) => {
-      setLastUpdate(new Date())
-      setAccuracy(pos?.coords?.accuracy ?? null)
-    },
-  })
-
-  // Screen Wake Lock — cegah layar mati saat GPS aktif (Chrome/Edge/Android Browser)
-  useEffect(() => {
-    if (!active || !('wakeLock' in navigator)) return
-    let lock = null
-    navigator.wakeLock.request('screen')
-      .then(l => { lock = l })
-      .catch(() => {})
-    // Re-acquire saat tab visible kembali (browser release wake lock saat tab hidden)
-    const reacquire = async () => {
-      if (document.visibilityState === 'visible' && active) {
-        try { lock = await navigator.wakeLock.request('screen') } catch {}
-      }
-    }
-    document.addEventListener('visibilitychange', reacquire)
-    return () => {
-      lock?.release().catch(() => {})
-      document.removeEventListener('visibilitychange', reacquire)
-    }
-  }, [active])
-
-  // Saat error dari hook, matikan GPS otomatis agar tombol kembali ke "Aktifkan"
-  useEffect(() => {
-    if (error) setGpsEnabled(false)
-  }, [error])
 
   // ── Auto-fill origin dari GPS jika tersedia saat form dibuka ─────────────────
   useEffect(() => {

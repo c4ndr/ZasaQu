@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import ApkPopup from './components/ApkPopup'
 import { useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { MitraGpsProvider } from './context/MitraGpsContext'
 import { useTheme } from './hooks/useTheme'
 import { unlockAudio } from './hooks/useNewOrderNotif'
 import { isNative, initPushNotifications } from './utils/nativePlatform'
@@ -304,8 +305,10 @@ export default function App() {
     <BrowserRouter>
       <ThemeInitializer />
       <AuthProvider>
-        <AppRoutes />
-        <ApkPopup />
+        <MitraGpsProvider>
+          <AppRoutes />
+          <ApkPopup />
+        </MitraGpsProvider>
       </AuthProvider>
     </BrowserRouter>
   )

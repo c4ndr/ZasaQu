@@ -1,16 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import Map, { Marker } from 'react-map-gl/maplibre'
+import Map, { Marker, Source, Layer } from 'react-map-gl/maplibre'
 import { SATELLITE_STYLE } from '../utils/mapStyle'
 import { fitPoints, distanceMeter } from '../utils/geo'
 import RoadPolyline from '../components/RoadPolyline'
 import BottomNav from '../components/BottomNav'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { useMitraGps } from '../context/MitraGpsContext'
 import { requestNotifPermission } from '../utils/systemNotif'
 import { isNative } from '../utils/nativePlatform'
 import useOrderChatBadges from '../hooks/useOrderChatBadges'
 import ChatButton from '../components/ChatButton'
+import useRoadRoute from '../hooks/useRoadRoute'
 
 // Baca window.isSecureContext saat runtime — menghormati Chrome flags
 function getSecureCtx() { return typeof window !== 'undefined' && window.isSecureContext }
@@ -591,8 +593,7 @@ function OrderDetailPanel({ order }) {
   )
 }
 
-function ActiveCard({ order, onUpdate, onRefresh, loading, hasUnreadChat }) {
-  const [mapModal, setMapModal] = useState(false)
+function ActiveCard({ order, onUpdate, onRefresh, loading, hasUnreadChat, gpsLocation }) {
 
   const uploadedStages = new Set((order.photos ?? []).map(p => p.stage))
   const gateStage      = order.require_photo ? (PHOTO_GATE[order.status] ?? null) : null
@@ -601,21 +602,13 @@ function ActiveCard({ order, onUpdate, onRefresh, loading, hasUnreadChat }) {
 
   return (
     <>
-      {mapModal && <MapModal order={order} onClose={() => setMapModal(false)} />}
-
       <div style={{
         background: 'var(--k-card)', border: `1px solid ${STATUS_COLOR[order.status]}33`,
         borderRadius: 20, overflow: 'hidden',
       }}>
-        {/* Mini peta */}
-        <div style={{ position: 'relative' }}>
-          <MiniMap order={order} height={160} />
-          <button onClick={() => setMapModal(true)} style={{
-            position: 'absolute', top: 8, right: 8, zIndex: 500,
-            padding: '6px 12px', borderRadius: 10, fontSize: 11, fontWeight: 700,
-            background: 'rgba(25,25,39,0.9)', border: '1px solid rgba(37,37,56,0.8)',
-            backdropFilter: 'blur(8px)', color: 'var(--k-sub)', cursor: 'pointer',
-          }}>⛶ Perbesar</button>
+        {/* Peta navigasi ala Grab/Gojek */}
+        <div style={{ padding: '12px 12px 0' }}>
+          <NavMap order={order} gpsLocation={gpsLocation} height={280} />
         </div>
 
         <div style={{ padding: '14px 16px' }}>
@@ -701,9 +694,165 @@ function ActiveCard({ order, onUpdate, onRefresh, loading, hasUnreadChat }) {
   )
 }
 
+// ── Navigasi ala Grab/Gojek ───────────────────────────────────────────────────
+function getNavTarget(order) {
+  const toDropoff = ['picked_up', 'on_delivery', 'delivered'].includes(order.status)
+  return {
+    lat:     parseFloat(toDropoff ? order.dropoff_lat : order.pickup_lat),
+    lng:     parseFloat(toDropoff ? order.dropoff_lng : order.pickup_lng),
+    address: toDropoff ? order.dropoff_address : order.pickup_address,
+    label:   toDropoff ? 'Titik Antar' : 'Titik Jemput',
+    color:   toDropoff ? '#F56565' : '#00C896',
+  }
+}
+
+function NavMap({ order, gpsLocation, height = 300 }) {
+  const mapRef  = useRef(null)
+  const target  = getNavTarget(order)
+  const pickup  = [parseFloat(order.pickup_lat),  parseFloat(order.pickup_lng)]
+  const dropoff = [parseFloat(order.dropoff_lat), parseFloat(order.dropoff_lng)]
+  const fromPos = gpsLocation ? [gpsLocation.lat, gpsLocation.lng] : pickup
+  const toPos   = [target.lat, target.lng]
+
+  // Route dari posisi mitra ke target
+  const { routePoints, distanceKm } = useRoadRoute(fromPos, toPos)
+  const etaMin = distanceKm ? Math.ceil(distanceKm / 30 * 60) : null
+
+  // Auto-follow GPS
+  useEffect(() => {
+    if (!gpsLocation) return
+    mapRef.current?.getMap()?.easeTo({
+      center: [gpsLocation.lng, gpsLocation.lat], duration: 2000,
+    })
+  }, [gpsLocation])
+
+  // GeoJSON route line
+  const routeGeoJson = {
+    type: 'Feature',
+    geometry: {
+      type: 'LineString',
+      coordinates: (routePoints ?? [fromPos, toPos]).map(([lat, lng]) => [lng, lat]),
+    },
+  }
+
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}`
+
+  return (
+    <div>
+      {/* ── Peta navigasi ── */}
+      <div style={{ height, borderRadius: 16, overflow: 'hidden', position: 'relative', border: '1px solid var(--k-border)' }}>
+        <Map
+          ref={mapRef}
+          initialViewState={{
+            longitude: gpsLocation?.lng ?? fromPos[1],
+            latitude:  gpsLocation?.lat ?? fromPos[0],
+            zoom: 15,
+          }}
+          mapStyle={SATELLITE_STYLE}
+          style={{ width: '100%', height: '100%' }}
+          attributionControl={false}
+          onLoad={() => { if (!gpsLocation) fitPoints(mapRef.current?.getMap(), [pickup, dropoff], 60) }}
+        >
+          {/* Route road */}
+          <Source id={`nav-route-${order.id}`} type="geojson" data={routeGeoJson}>
+            <Layer id={`nav-line-${order.id}`} type="line"
+              paint={{ 'line-color': '#3B82F6', 'line-width': 5, 'line-opacity': 0.9 }}
+              layout={{ 'line-join': 'round', 'line-cap': 'round' }} />
+          </Source>
+
+          {/* Posisi mitra — dot biru berdenyut */}
+          {gpsLocation && (
+            <Marker longitude={gpsLocation.lng} latitude={gpsLocation.lat} anchor="center">
+              <div style={{ position: 'relative', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'absolute', width: 48, height: 48, borderRadius: '50%', background: 'rgba(59,130,246,0.2)', animation: 'gps-ring 2s ease-out infinite' }} />
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#3B82F6', border: '3px solid #fff', boxShadow: '0 2px 10px rgba(59,130,246,.6)', zIndex: 1 }} />
+              </div>
+            </Marker>
+          )}
+
+          {/* Target marker */}
+          <Marker longitude={target.lng} latitude={target.lat} anchor="bottom">
+            <div style={{ position: 'relative', width: 32, height: 40, pointerEvents: 'none' }}>
+              <svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="40">
+                <path d="M16 0C8.268 0 2 6.268 2 14c0 9.6 14 26 14 26S30 23.6 30 14C30 6.268 23.732 0 16 0z" fill={target.color} stroke="white" strokeWidth="2" />
+                <circle cx="16" cy="14" r="6" fill="white" />
+              </svg>
+            </div>
+          </Marker>
+
+          {/* Pickup & dropoff (kecil, sebagai referensi) */}
+          {!['picked_up','on_delivery','delivered'].includes(order.status) && (
+            <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom">
+              <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#F56565', border: '2px solid #fff', opacity: 0.7 }} />
+            </Marker>
+          )}
+        </Map>
+
+        {/* Badge GPS off */}
+        {!gpsLocation && (
+          <div style={{
+            position: 'absolute', bottom: 8, left: 8, right: 8, zIndex: 4,
+            padding: '8px 14px', borderRadius: 12,
+            background: 'rgba(25,25,39,0.92)', border: '1px solid rgba(246,173,85,0.3)',
+            backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span style={{ fontSize: 14 }}>⚠️</span>
+            <p style={{ fontSize: 12, color: 'var(--k-warn)', fontWeight: 600 }}>
+              GPS belum aktif — aktifkan di halaman GPS agar posisi Anda terlihat
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Info navigasi (jarak, ETA, tombol Maps) ── */}
+      <div style={{
+        marginTop: 10, padding: '12px 14px', borderRadius: 14,
+        background: 'var(--k-card2)', border: '1px solid var(--k-border)',
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+          background: `${target.color}18`, border: `1px solid ${target.color}44`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+        }}>
+          {['picked_up','on_delivery','delivered'].includes(order.status) ? '🏁' : '📍'}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 11, color: 'var(--k-muted)', marginBottom: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {target.label}
+          </p>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {target.address}
+          </p>
+          {(distanceKm || etaMin) && (
+            <div style={{ display: 'flex', gap: 10, marginTop: 3 }}>
+              {distanceKm && <span style={{ fontSize: 12, color: '#3B82F6', fontWeight: 700 }}>📏 {distanceKm} km</span>}
+              {etaMin     && <span style={{ fontSize: 12, color: 'var(--k-muted)', fontWeight: 600 }}>⏱ ~{etaMin} mnt</span>}
+            </div>
+          )}
+        </div>
+        <a
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            padding: '9px 14px', borderRadius: 12, fontSize: 12, fontWeight: 700,
+            background: '#4285F4', color: '#fff', textDecoration: 'none',
+            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+            boxShadow: '0 2px 8px rgba(66,133,244,.3)',
+          }}
+        >
+          🧭 Maps
+        </a>
+      </div>
+    </div>
+  )
+}
+
 // ── Halaman utama ─────────────────────────────────────────────────────────────
 export default function MitraOrdersPage() {
   const { user } = useAuth()
+  const { location: gpsLocation } = useMitraGps()
   const [tab,       setTab]       = useState('available')
   const [available, setAvailable] = useState([])
   const [myOrders,  setMyOrders]  = useState([])
@@ -766,7 +915,7 @@ export default function MitraOrdersPage() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 100 }}>
-      <style>{`@keyframes gps-blink { 0%,100%{opacity:1} 50%{opacity:0.3} } @keyframes spin { to{transform:rotate(360deg)} }`}</style>
+      <style>{`@keyframes gps-blink { 0%,100%{opacity:1} 50%{opacity:0.3} } @keyframes spin { to{transform:rotate(360deg)} } @keyframes gps-ring { 0%{transform:scale(0.6);opacity:0.8} 100%{transform:scale(1.6);opacity:0} }`}</style>
 
       {/* Header */}
       <div style={{
@@ -916,7 +1065,8 @@ export default function MitraOrdersPage() {
           ) : active.map(order => (
             <ActiveCard key={order.id} order={order}
               onUpdate={updateStatus} onRefresh={fetchAll} loading={actionId === order.id}
-              hasUnreadChat={!!chatUnread[String(order.id)]} />
+              hasUnreadChat={!!chatUnread[String(order.id)]}
+              gpsLocation={gpsLocation} />
           ))
         ) : (
           history.length === 0 ? (
