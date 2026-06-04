@@ -62,7 +62,7 @@ class OtpService
 
         try {
             $response = Http::timeout(10)
-                ->withToken($token)
+                ->withHeaders(['Authorization' => $token])
                 ->post('https://api.fonnte.com/send', [
                     'target'  => $this->toInternational($phone),
                     'message' => $message,

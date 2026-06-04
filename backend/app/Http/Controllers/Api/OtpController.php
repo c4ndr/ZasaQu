@@ -52,16 +52,15 @@ class OtpController extends Controller
 
         $otp = $this->otpService->send($data['phone'], $data['type']);
 
-        $response = ['message' => 'Kode OTP telah dikirim. Berlaku 5 menit.'];
-
-        // Mode demo: tampilkan OTP langsung di response (hanya saat local/tidak ada SMS gateway)
-        // Tampilkan kode hanya jika OTP tidak terkirim via WA (mode demo/dev)
-        if (app()->environment('local') && $otp->plain_code !== null) {
-            $response['demo_otp'] = $otp->plain_code;
-            $response['demo_note'] = 'Kode ini hanya muncul saat Fonnte belum dikonfigurasi';
+        // Fonnte gagal kirim (device disconnect, quota habis, dll)
+        if ($otp->plain_code !== null) {
+            return response()->json([
+                'message' => 'Gagal mengirim OTP via WhatsApp. Coba beberapa saat lagi.',
+                'error'   => 'whatsapp_unavailable',
+            ], 503);
         }
 
-        return response()->json($response);
+        return response()->json(['message' => 'Kode OTP telah dikirim ke WhatsApp kamu. Berlaku 5 menit.']);
     }
 
     public function register(Request $request): JsonResponse
