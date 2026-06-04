@@ -61,7 +61,7 @@ echo "✓ Frontend:  http://192.168.1.8:5173 (log: /tmp/zashago-frontend.log)"
 sleep 2
 
 # Cloudflare Tunnel permanen (zasaqu.uk)
-nohup cloudflared tunnel run zasaqu \
+nohup cloudflared tunnel --config ~/.cloudflared/config.yml run zasaqu \
   > /tmp/zashago-tunnel.log 2>&1 &
 echo "✓ Tunnel:    https://zasaqu.uk (log: /tmp/zashago-tunnel.log)"
 

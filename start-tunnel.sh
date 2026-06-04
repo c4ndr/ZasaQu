@@ -32,4 +32,4 @@ echo "║  Tekan Ctrl+C untuk stop tunnel                  ║"
 echo "╚══════════════════════════════════════════════════╝"
 echo ""
 
-cloudflared tunnel run zasaqu
+cloudflared tunnel --config ~/.cloudflared/config.yml run zasaqu
