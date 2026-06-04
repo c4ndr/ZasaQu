@@ -14,6 +14,7 @@ use App\Models\WalletTransaction;
 use App\Models\WithdrawRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class StatController extends Controller
 {
@@ -109,6 +110,116 @@ class StatController extends Controller
         });
 
         return response()->json($trend);
+    }
+
+    public function commissionDetail(Request $request): JsonResponse
+    {
+        $period = $request->query('period', 'month');
+
+        $from = match ($period) {
+            'today' => today()->startOfDay(),
+            'week'  => now()->startOfWeek(),
+            'month' => now()->startOfMonth(),
+            default => null,
+        };
+
+        $w = fn($q) => $from ? $q->where('completed_at', '>=', $from) : $q;
+
+        // ── Per modul ────────────────────────────────────────────────────────────
+        $zgQ    = $w(Order::where('status', 'completed'));
+        $foodQ  = $w(FoodOrder::where('status', 'completed'));
+        $martQ  = $w(MartOrder::where('status', 'completed'));
+        $homeQ  = $w(HomeOrder::where('status', 'completed'));
+
+        $zgTotal    = (float) (clone $zgQ)->sum('platform_commission');
+        $zgCount    = (int)   (clone $zgQ)->count();
+        $zgCod      = (float) (clone $zgQ)->where('payment_method', 'cod')->sum('platform_commission');
+        $zgWallet   = (float) (clone $zgQ)->where('payment_method', 'wallet')->sum('platform_commission');
+
+        $foodTotal  = (float) ((clone $foodQ)->sum('platform_commission_food') + (clone $foodQ)->sum('platform_commission_delivery'));
+        $foodCount  = (int)   (clone $foodQ)->count();
+
+        $martTotal  = (float) (clone $martQ)->sum('platform_commission');
+        $martCount  = (int)   (clone $martQ)->count();
+
+        $homeTotal  = (float) (clone $homeQ)->sum('platform_commission');
+        $homeCount  = (int)   (clone $homeQ)->count();
+
+        $grand = $zgTotal + $foodTotal + $martTotal + $homeTotal;
+
+        $modules = [
+            ['key'=>'zasago', 'label'=>'ZasaGo',  'emoji'=>'🏍️', 'color'=>'#00C896',
+             'total'=>$zgTotal,   'count'=>$zgCount,   'avg'=>$zgCount>0   ? round($zgTotal/$zgCount)   : 0,
+             'cod'=>$zgCod, 'wallet'=>$zgWallet],
+            ['key'=>'food',   'label'=>'ZasaFood', 'emoji'=>'🍜', 'color'=>'#F97316',
+             'total'=>$foodTotal, 'count'=>$foodCount, 'avg'=>$foodCount>0 ? round($foodTotal/$foodCount) : 0],
+            ['key'=>'mart',   'label'=>'ZasaMart', 'emoji'=>'🛒', 'color'=>'#3B82F6',
+             'total'=>$martTotal, 'count'=>$martCount, 'avg'=>$martCount>0 ? round($martTotal/$martCount) : 0],
+            ['key'=>'home',   'label'=>'ZasaHome', 'emoji'=>'🏠', 'color'=>'#8B5CF6',
+             'total'=>$homeTotal, 'count'=>$homeCount, 'avg'=>$homeCount>0 ? round($homeTotal/$homeCount) : 0],
+        ];
+
+        // ── Trend harian ─────────────────────────────────────────────────────────
+        $days  = match ($period) { 'today' => 1, 'week' => 7, default => 30 };
+        $trend = collect(range($days - 1, 0))->map(function ($i) {
+            $d    = today()->subDays($i);
+            $zg   = (float) Order::where('status','completed')->whereDate('completed_at',$d)->sum('platform_commission');
+            $food = (float) (FoodOrder::where('status','completed')->whereDate('completed_at',$d)->sum('platform_commission_food')
+                           + FoodOrder::where('status','completed')->whereDate('completed_at',$d)->sum('platform_commission_delivery'));
+            $mart = (float) MartOrder::where('status','completed')->whereDate('completed_at',$d)->sum('platform_commission');
+            $home = (float) HomeOrder::where('status','completed')->whereDate('completed_at',$d)->sum('platform_commission');
+            return ['date'=>$d->format('Y-m-d'), 'label'=>$d->format('d/m'),
+                    'zasago'=>$zg, 'food'=>$food, 'mart'=>$mart, 'home'=>$home, 'total'=>$zg+$food+$mart+$home];
+        });
+
+        // ── Top mitra by commission ───────────────────────────────────────────────
+        $topMitra = User::whereIn('role', ['mitra_motor','mitra_mobil'])
+            ->select('id','name','role')
+            ->withSum(['orders as comm_sum' => fn($q) =>
+                $q->where('status','completed')->when($from, fn($q2) => $q2->where('completed_at','>=',$from))
+            ], 'platform_commission')
+            ->withCount(['orders as order_count' => fn($q) =>
+                $q->where('status','completed')->when($from, fn($q2) => $q2->where('completed_at','>=',$from))
+            ])
+            ->having('comm_sum', '>', 0)
+            ->orderByDesc('comm_sum')
+            ->limit(8)
+            ->get()
+            ->map(fn($u) => ['id'=>$u->id,'name'=>$u->name,'role'=>$u->role,
+                             'comm_sum'=>(float)$u->comm_sum,'order_count'=>(int)$u->order_count]);
+
+        // ── Ringkasan periode sebelumnya (untuk perbandingan) ─────────────────────
+        $prevFrom = match ($period) {
+            'today' => today()->subDay()->startOfDay(),
+            'week'  => now()->subWeek()->startOfWeek(),
+            'month' => now()->subMonth()->startOfMonth(),
+            default => null,
+        };
+        $prevTo = match ($period) {
+            'today' => today()->subDay()->endOfDay(),
+            'week'  => now()->subWeek()->endOfWeek(),
+            'month' => now()->subMonth()->endOfMonth(),
+            default => null,
+        };
+        $prevTotal = 0;
+        if ($prevFrom && $prevTo) {
+            $prevTotal = (float) (
+                Order::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission') +
+                FoodOrder::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission_food') +
+                FoodOrder::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission_delivery') +
+                MartOrder::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission') +
+                HomeOrder::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission')
+            );
+        }
+
+        return response()->json([
+            'period'      => $period,
+            'grand_total' => $grand,
+            'prev_total'  => $prevTotal,
+            'modules'     => $modules,
+            'trend'       => $trend,
+            'top_mitra'   => $topMitra,
+        ]);
     }
 
     public function topMitra(): JsonResponse

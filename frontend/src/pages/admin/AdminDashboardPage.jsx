@@ -3,7 +3,63 @@ import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import api from '../../services/api'
 
-function formatRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
+function formatRp(v) {
+  const n = Number(v || 0)
+  if (n >= 1_000_000) return 'Rp ' + (n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1) + ' jt'
+  if (n >= 1_000)     return 'Rp ' + (n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1) + ' rb'
+  return 'Rp ' + n.toLocaleString('id-ID')
+}
+function formatRpFull(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
+function pct(part, total) { return total > 0 ? Math.round((part / total) * 100) : 0 }
+function growthLabel(curr, prev) {
+  if (!prev) return null
+  const diff = curr - prev
+  const p    = Math.round(Math.abs(diff / prev) * 100)
+  return { up: diff >= 0, label: `${diff >= 0 ? '+' : '-'}${p}% vs periode lalu` }
+}
+
+// ── Bar chart trend komisi (stacked per modul) ───────────────────────────────
+const MODULE_COLORS = { zasago: '#00C896', food: '#F97316', mart: '#3B82F6', home: '#8B5CF6' }
+
+function CommissionTrendChart({ data }) {
+  if (!data?.length) return null
+  const max = Math.max(...data.map(d => d.total), 1)
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 100 }}>
+        {data.map((d, i) => (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+            {d.total > 0 && (
+              <span style={{ fontSize: 9, color: 'var(--k-accent)', fontWeight: 700 }}>
+                {formatRp(d.total)}
+              </span>
+            )}
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column-reverse', borderRadius: '3px 3px 0 0', overflow: 'hidden', minHeight: d.total > 0 ? 6 : 0 }}>
+              {['zasago','food','mart','home'].map(k => {
+                const h = (d[k] / max) * 90
+                return h > 0 ? (
+                  <div key={k} style={{ width: '100%', height: h, background: MODULE_COLORS[k], transition: 'height 0.4s' }}
+                    title={`${k}: ${formatRpFull(d[k])}`} />
+                ) : null
+              })}
+            </div>
+            <span style={{ fontSize: 9, color: 'var(--k-muted)', whiteSpace: 'nowrap' }}>{d.label}</span>
+          </div>
+        ))}
+      </div>
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+        {[['zasago','ZasaGo'],['food','ZasaFood'],['mart','ZasaMart'],['home','ZasaHome']].map(([k,l]) => (
+          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: MODULE_COLORS[k] }} />
+            <span style={{ fontSize: 10, color: 'var(--k-muted)' }}>{l}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 // ── Bar chart trend order ─────────────────────────────────────────────────────
 function TrendChart({ data }) {
@@ -107,10 +163,22 @@ export default function AdminDashboardPage() {
   const [stats,       setStats]       = useState(null)
   const [trend,       setTrend]       = useState([])
   const [topMitra,    setTopMitra]    = useState([])
+  const [commData,    setCommData]    = useState(null)
+  const [commPeriod,  setCommPeriod]  = useState('month')
+  const [commLoading, setCommLoading] = useState(false)
   const [loading,     setLoading]     = useState(true)
   const [refreshing,  setRefreshing]  = useState(false)
   const [error,       setError]       = useState(null)
   const [lastRefresh, setLastRefresh] = useState(null)
+
+  const loadCommission = useCallback(async (period) => {
+    setCommLoading(true)
+    try {
+      const r = await api.get(`/admin/stats/commission?period=${period}`)
+      setCommData(r.data)
+    } catch {}
+    finally { setCommLoading(false) }
+  }, [])
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -134,6 +202,7 @@ export default function AdminDashboardPage() {
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadCommission(commPeriod) }, [commPeriod, loadCommission])
 
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (loading) return (
@@ -273,6 +342,148 @@ export default function AdminDashboardPage() {
             </div>
           </section>
         </div>
+
+        {/* ── Komisi Detail ── */}
+        <section>
+          <SectionHeader title="💰 Komisi Platform" action={
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[['today','Hari ini'],['week','Minggu'],['month','Bulan'],['all','Semua']].map(([k,l]) => (
+                <button key={k} onClick={() => setCommPeriod(k)} style={{
+                  padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
+                  background: commPeriod === k ? 'var(--k-accent)' : 'var(--k-card)',
+                  color: commPeriod === k ? '#0C0C16' : 'var(--k-muted)',
+                  border: `1px solid ${commPeriod === k ? 'transparent' : 'var(--k-border)'}`,
+                }}>{l}</button>
+              ))}
+            </div>
+          } />
+
+          {commLoading || !commData ? (
+            <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: 32, display: 'flex', justifyContent: 'center' }}>
+              <div style={{ width: 22, height: 22, border: '2.5px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            </div>
+          ) : (() => {
+            const growth = growthLabel(commData.grand_total, commData.prev_total)
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                {/* Total + growth */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(0,200,150,0.12) 0%, rgba(0,200,150,0.04) 100%)',
+                  border: '1.5px solid rgba(0,200,150,0.25)', borderRadius: 18, padding: '20px 22px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+                }}>
+                  <div>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+                      Total Komisi {commPeriod === 'today' ? 'Hari Ini' : commPeriod === 'week' ? 'Minggu Ini' : commPeriod === 'month' ? 'Bulan Ini' : 'Semua Waktu'}
+                    </p>
+                    <p style={{ fontSize: 30, fontWeight: 900, color: 'var(--k-accent)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                      {formatRpFull(commData.grand_total)}
+                    </p>
+                    {growth && (
+                      <p style={{ fontSize: 11, color: growth.up ? 'var(--k-accent)' : 'var(--k-danger)', fontWeight: 600, marginTop: 4 }}>
+                        {growth.up ? '▲' : '▼'} {growth.label}
+                      </p>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 40, opacity: 0.5 }}>💰</div>
+                </div>
+
+                {/* Breakdown per modul */}
+                <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, overflow: 'hidden' }}>
+                  <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--k-border)' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Breakdown per Modul</p>
+                  </div>
+                  {commData.modules.map((mod) => {
+                    const p = pct(mod.total, commData.grand_total)
+                    return (
+                      <div key={mod.key} style={{ padding: '13px 16px', borderTop: '1px solid var(--k-border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                          <span style={{ fontSize: 18, flexShrink: 0 }}>{mod.emoji}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)' }}>{mod.label}</span>
+                              <div style={{ textAlign: 'right' }}>
+                                <span style={{ fontSize: 14, fontWeight: 800, color: mod.color }}>{formatRpFull(mod.total)}</span>
+                                <span style={{ fontSize: 10, color: 'var(--k-muted)', marginLeft: 6 }}>{p}%</span>
+                              </div>
+                            </div>
+                            {/* Progress bar */}
+                            <div style={{ height: 6, background: 'var(--k-border)', borderRadius: 3, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${p}%`, background: mod.color, borderRadius: 3, transition: 'width 0.6s ease' }} />
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 14, paddingLeft: 28 }}>
+                          <span style={{ fontSize: 11, color: 'var(--k-muted)' }}>📦 {mod.count} order</span>
+                          <span style={{ fontSize: 11, color: 'var(--k-muted)' }}>⌀ {formatRp(mod.avg)}/order</span>
+                          {mod.key === 'zasago' && mod.count > 0 && (
+                            <>
+                              <span style={{ fontSize: 11, color: '#3B82F6' }}>💳 Wallet {formatRp(mod.wallet)}</span>
+                              <span style={{ fontSize: 11, color: '#F97316' }}>💵 COD {formatRp(mod.cod)}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Trend chart */}
+                {commData.trend?.length > 1 && (
+                  <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '16px 18px' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>
+                      Trend Komisi Harian
+                    </p>
+                    <CommissionTrendChart data={commData.trend} />
+                  </div>
+                )}
+
+                {/* Top mitra by commission */}
+                {commData.top_mitra?.length > 0 && (
+                  <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, overflow: 'hidden' }}>
+                    <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--k-border)' }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                        🏆 Top Mitra — Kontribusi Komisi Terbesar
+                      </p>
+                    </div>
+                    {commData.top_mitra.map((m, i) => {
+                      const p = pct(m.comm_sum, commData.grand_total)
+                      return (
+                        <div key={m.id} style={{
+                          padding: '11px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--k-border)',
+                          display: 'flex', alignItems: 'center', gap: 12,
+                        }}>
+                          <span style={{ fontSize: i < 3 ? 16 : 12, width: 22, textAlign: 'center', flexShrink: 0,
+                            color: i===0?'#F6AD55':i===1?'#A0A0BC':i===2?'#CD7F32':'var(--k-muted)' }}>
+                            {i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}
+                          </span>
+                          <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                            background: 'rgba(0,200,150,0.12)', border: '1.5px solid rgba(0,200,150,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 13, fontWeight: 800, color: 'var(--k-accent)' }}>
+                            {m.name[0]?.toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{m.name}</p>
+                            <div style={{ height: 4, background: 'var(--k-border)', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${p}%`, background: 'var(--k-accent)', borderRadius: 2 }} />
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--k-accent)' }}>{formatRp(m.comm_sum)}</p>
+                            <p style={{ fontSize: 10, color: 'var(--k-muted)' }}>{m.order_count} order · {p}%</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+              </div>
+            )
+          })()}
+        </section>
 
         {/* ── Baris 4: Top Mitra (full width) ── */}
         <section>

@@ -258,9 +258,10 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
         // Statistik & analytics
         Route::prefix('stats')->group(function () {
-            Route::get('overview', [AdminStatController::class, 'overview']);
+            Route::get('overview',    [AdminStatController::class, 'overview']);
             Route::get('order-trend', [AdminStatController::class, 'orderTrend']);
-            Route::get('top-mitra', [AdminStatController::class, 'topMitra']);
+            Route::get('top-mitra',   [AdminStatController::class, 'topMitra']);
+            Route::get('commission',  [AdminStatController::class, 'commissionDetail']);
         });
 
         // Manajemen order
