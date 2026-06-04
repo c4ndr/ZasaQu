@@ -10,13 +10,16 @@ class TopUpRequest extends Model
         'user_id', 'amount', 'method', 'status',
         'proof_image', 'bank_account_id', 'confirmed_by', 'confirmed_at', 'notes',
         'midtrans_order_id',
+        'ipaymu_session_id', 'ipaymu_trx_id', 'ipaymu_reference_id',
+        'ipaymu_channel', 'ipaymu_va_number', 'ipaymu_expired_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'amount'       => 'decimal:2',
-            'confirmed_at' => 'datetime',
+            'amount'             => 'decimal:2',
+            'confirmed_at'       => 'datetime',
+            'ipaymu_expired_at'  => 'datetime',
         ];
     }
 

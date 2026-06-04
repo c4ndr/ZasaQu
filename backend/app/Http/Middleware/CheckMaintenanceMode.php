@@ -15,6 +15,7 @@ class CheckMaintenanceMode
         'api/login',
         'api/register',
         'api/topup/midtrans/callback',
+        'api/topup/ipaymu/callback',
         'api/forgot-password',
     ];
 

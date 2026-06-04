@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
 use App\Models\TopUpRequest;
+use App\Services\IpaymuService;
 use App\Services\MidtransService;
 use App\Services\PaymentService;
 use App\Services\WalletService;
@@ -19,6 +20,7 @@ class TopUpController extends Controller
         private PaymentService  $paymentService,
         private WalletService   $walletService,
         private MidtransService $midtransService,
+        private IpaymuService   $ipaymuService,
     ) {}
 
     public function bankAccounts(): JsonResponse
@@ -125,6 +127,147 @@ class TopUpController extends Controller
         $this->paymentService->confirmVirtualAccountPayment($va);
 
         return response()->json(['message' => 'Pembayaran virtual account berhasil dikonfirmasi.']);
+    }
+
+    // ── iPaymu ────────────────────────────────────────────────────────────────
+
+    public function createIpaymuVA(Request $request): JsonResponse
+    {
+        if (!$this->ipaymuService->isConfigured()) {
+            return response()->json(['message' => 'iPaymu belum dikonfigurasi.'], 422);
+        }
+
+        $data = $request->validate([
+            'amount'  => ['required', 'integer', 'min:10000', 'max:50000000'],
+            'channel' => ['sometimes', 'in:bni,bca,bri,mandiri,cimb'],
+        ]);
+
+        $channel     = $data['channel'] ?? 'bni';
+        $referenceId = 'IPAYMU-' . strtoupper(\Illuminate\Support\Str::random(8)) . '-' . time();
+
+        $result = $this->ipaymuService->createVA($request->user(), (float) $data['amount'], $referenceId, $channel);
+
+        if (($result['Status'] ?? null) !== 200) {
+            Log::warning('iPaymu VA failed', $result);
+            return response()->json(['message' => 'Gagal membuat Virtual Account: ' . ($result['Message'] ?? 'Unknown error')], 422);
+        }
+
+        $topUp = TopUpRequest::create([
+            'user_id'              => $request->user()->id,
+            'method'               => 'ipaymu_va',
+            'amount'               => $data['amount'],
+            'status'               => 'pending',
+            'ipaymu_session_id'    => $result['Data']['SessionId'] ?? null,
+            'ipaymu_trx_id'        => $result['Data']['TransactionId'] ?? null,
+            'ipaymu_reference_id'  => $referenceId,
+            'ipaymu_channel'       => $channel,
+            'ipaymu_va_number'     => $result['Data']['PaymentNo'] ?? null,
+            'ipaymu_expired_at'    => now()->addHours(24),
+        ]);
+
+        return response()->json([
+            'message'    => 'Virtual Account berhasil dibuat. Bayar dalam 24 jam.',
+            'data' => [
+                'id'         => $topUp->id,
+                'amount'     => $topUp->amount,
+                'channel'    => strtoupper($channel),
+                'va_number'  => $topUp->ipaymu_va_number,
+                'expired_at' => $topUp->ipaymu_expired_at,
+                'how_to_pay' => 'Transfer ke nomor VA ' . strtoupper($channel) . ': ' . ($topUp->ipaymu_va_number ?? '-'),
+            ],
+        ], 201);
+    }
+
+    public function createIpaymuQRIS(Request $request): JsonResponse
+    {
+        if (!$this->ipaymuService->isConfigured()) {
+            return response()->json(['message' => 'iPaymu belum dikonfigurasi.'], 422);
+        }
+
+        $data = $request->validate([
+            'amount' => ['required', 'integer', 'min:10000', 'max:10000000'],
+        ]);
+
+        $referenceId = 'QRIS-' . strtoupper(\Illuminate\Support\Str::random(8)) . '-' . time();
+
+        $result = $this->ipaymuService->createQRIS($request->user(), (float) $data['amount'], $referenceId);
+
+        if (($result['Status'] ?? null) !== 200) {
+            Log::warning('iPaymu QRIS failed', $result);
+            return response()->json(['message' => 'Gagal membuat QRIS: ' . ($result['Message'] ?? 'Unknown error')], 422);
+        }
+
+        $topUp = TopUpRequest::create([
+            'user_id'             => $request->user()->id,
+            'method'              => 'ipaymu_qris',
+            'amount'              => $data['amount'],
+            'status'              => 'pending',
+            'ipaymu_session_id'   => $result['Data']['SessionId'] ?? null,
+            'ipaymu_trx_id'       => $result['Data']['TransactionId'] ?? null,
+            'ipaymu_reference_id' => $referenceId,
+            'ipaymu_channel'      => 'qris',
+            'ipaymu_va_number'    => $result['Data']['PaymentNo'] ?? null,
+            'ipaymu_expired_at'   => now()->addHour(),
+        ]);
+
+        return response()->json([
+            'message' => 'QRIS berhasil dibuat. Scan dalam 1 jam.',
+            'data' => [
+                'id'         => $topUp->id,
+                'amount'     => $topUp->amount,
+                'qris_url'   => $result['Data']['QrImage'] ?? ($result['Data']['PaymentUrl'] ?? null),
+                'qris_string'=> $result['Data']['PaymentNo'] ?? null,
+                'expired_at' => $topUp->ipaymu_expired_at,
+            ],
+        ], 201);
+    }
+
+    // Callback / webhook dari iPaymu (tidak butuh auth)
+    public function ipaymuCallback(Request $request): \Illuminate\Http\Response
+    {
+        try {
+            // iPaymu kirim status pembayaran
+            $status      = $request->input('status', '');       // berhasil / pending / gagal
+            $sessionId   = $request->input('session_id', '');
+            $trxId       = $request->input('trx_id', '');
+            $referenceId = $request->input('reference_id', '');
+
+            Log::info('iPaymu callback', $request->all());
+
+            if (strtolower($status) !== 'berhasil') {
+                return response('OK', 200);
+            }
+
+            DB::transaction(function () use ($sessionId, $referenceId) {
+                $topUp = TopUpRequest::where(function ($q) use ($sessionId, $referenceId) {
+                        $q->where('ipaymu_session_id', $sessionId)
+                          ->orWhere('ipaymu_reference_id', $referenceId);
+                    })
+                    ->where('status', 'pending')
+                    ->whereIn('method', ['ipaymu_va', 'ipaymu_qris'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$topUp) return;
+
+                $topUp->update([
+                    'status'       => 'confirmed',
+                    'confirmed_at' => now(),
+                ]);
+
+                $this->walletService->credit(
+                    $topUp->user,
+                    (float) $topUp->amount,
+                    'top_up',
+                    'Top up via iPaymu (' . strtoupper($topUp->ipaymu_channel) . ')',
+                    $topUp
+                );
+            });
+        } catch (\Throwable $e) {
+            Log::error('iPaymu callback error', ['error' => $e->getMessage()]);
+        }
+
+        return response('OK', 200);
     }
 
     // ── Midtrans ──────────────────────────────────────────────────────────────

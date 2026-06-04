@@ -50,8 +50,9 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-// ─── Webhook Midtrans (publik, tanpa auth) ─────────────────────────────────
+// ─── Webhook Midtrans & iPaymu (publik, tanpa auth) ────────────────────────
 Route::post('topup/midtrans/callback', [TopUpController::class, 'midtransCallback']);
+Route::post('topup/ipaymu/callback',   [TopUpController::class, 'ipaymuCallback']);
 
 // ─── Promo publik (tanpa auth) ─────────────────────────────────────────────
 Route::get('promos', function () {
@@ -124,6 +125,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('virtual-account', [TopUpController::class, 'createVirtualAccount']);
         Route::post('qris', [TopUpController::class, 'createQris']);
         Route::post('midtrans',           [TopUpController::class, 'createMidtrans']);
+        Route::post('ipaymu/va',          [TopUpController::class, 'createIpaymuVA']);
+        Route::post('ipaymu/qris',        [TopUpController::class, 'createIpaymuQRIS']);
         if (!app()->isProduction()) {
             Route::post('{id}/simulate-qris', [TopUpController::class, 'simulateQrisCallback']);
             Route::post('{id}/simulate-va',   [TopUpController::class, 'simulateVaCallback']);
