@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import Map, { Marker, Source, Layer } from 'react-map-gl/maplibre'
 import { SATELLITE_STYLE } from '../utils/mapStyle'
-import { fitPoints, distanceMeter } from '../utils/geo'
+import { fitPoints, distanceMeter, circleGeoJson } from '../utils/geo'
 import RoadPolyline from '../components/RoadPolyline'
 import BottomNav from '../components/BottomNav'
 import api from '../services/api'
@@ -707,26 +707,42 @@ function getNavTarget(order) {
 }
 
 function NavMap({ order, gpsLocation, height = 300 }) {
-  const mapRef  = useRef(null)
-  const target  = getNavTarget(order)
-  const pickup  = [parseFloat(order.pickup_lat),  parseFloat(order.pickup_lng)]
-  const dropoff = [parseFloat(order.dropoff_lat), parseFloat(order.dropoff_lng)]
-  const fromPos = gpsLocation ? [gpsLocation.lat, gpsLocation.lng] : pickup
-  const toPos   = [target.lat, target.lng]
+  const mapRef    = useRef(null)
+  const mapLoaded = useRef(false)
+  const target    = getNavTarget(order)
+  const pickup    = [parseFloat(order.pickup_lat),  parseFloat(order.pickup_lng)]
+  const dropoff   = [parseFloat(order.dropoff_lat), parseFloat(order.dropoff_lng)]
+  const fromPos   = gpsLocation ? [gpsLocation.lat, gpsLocation.lng] : pickup
+  const toPos     = [target.lat, target.lng]
 
-  // Route dari posisi mitra ke target
   const { routePoints, distanceKm } = useRoadRoute(fromPos, toPos)
   const etaMin = distanceKm ? Math.ceil(distanceKm / 30 * 60) : null
 
-  // Auto-follow GPS
-  useEffect(() => {
-    if (!gpsLocation) return
-    mapRef.current?.getMap()?.easeTo({
-      center: [gpsLocation.lng, gpsLocation.lat], duration: 2000,
-    })
-  }, [gpsLocation])
+  // Fit peta agar mitra + target selalu terlihat
+  const refitMap = useCallback(() => {
+    const map = mapRef.current?.getMap()
+    if (!map || !mapLoaded.current) return
+    const pts = gpsLocation
+      ? [[gpsLocation.lat, gpsLocation.lng], toPos]
+      : [pickup, dropoff]
+    fitPoints(map, pts, 80)
+  }, [gpsLocation, toPos, pickup, dropoff]) // eslint-disable-line
 
-  // GeoJSON route line
+  // Refit saat status order berubah (misal: on_pickup → picked_up, target pindah ke dropoff)
+  useEffect(() => {
+    if (!mapLoaded.current) return
+    refitMap()
+  }, [order.status]) // eslint-disable-line
+
+  // Auto-follow GPS — fit mitra + target dalam satu view
+  useEffect(() => {
+    if (!gpsLocation || !mapLoaded.current) return
+    const map = mapRef.current?.getMap()
+    if (!map) return
+    fitPoints(map, [[gpsLocation.lat, gpsLocation.lng], toPos], 80)
+  }, [gpsLocation]) // eslint-disable-line
+
+  // GeoJSON route
   const routeGeoJson = {
     type: 'Feature',
     geometry: {
@@ -735,7 +751,13 @@ function NavMap({ order, gpsLocation, height = 300 }) {
     },
   }
 
+  // Lingkaran akurasi GPS (dari MitraGpsContext tidak expose accuracy — gunakan radius simbolik kecil)
+  const accuracyCircle = gpsLocation
+    ? circleGeoJson(gpsLocation.lat, gpsLocation.lng, 8)
+    : null
+
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}`
+  const toDropoff = ['picked_up', 'on_delivery', 'delivered'].includes(order.status)
 
   return (
     <div>
@@ -743,16 +765,25 @@ function NavMap({ order, gpsLocation, height = 300 }) {
       <div style={{ height, borderRadius: 16, overflow: 'hidden', position: 'relative', border: '1px solid var(--k-border)' }}>
         <Map
           ref={mapRef}
-          initialViewState={{
-            longitude: gpsLocation?.lng ?? fromPos[1],
-            latitude:  gpsLocation?.lat ?? fromPos[0],
-            zoom: 15,
-          }}
+          initialViewState={{ longitude: toPos[1], latitude: toPos[0], zoom: 14 }}
           mapStyle={SATELLITE_STYLE}
           style={{ width: '100%', height: '100%' }}
           attributionControl={false}
-          onLoad={() => { if (!gpsLocation) fitPoints(mapRef.current?.getMap(), [pickup, dropoff], 60) }}
+          onLoad={() => {
+            mapLoaded.current = true
+            refitMap()
+          }}
         >
+          {/* Lingkaran akurasi GPS */}
+          {accuracyCircle && (
+            <Source id={`acc-${order.id}`} type="geojson" data={accuracyCircle}>
+              <Layer id={`acc-fill-${order.id}`} type="fill"
+                paint={{ 'fill-color': '#3B82F6', 'fill-opacity': 0.12 }} />
+              <Layer id={`acc-line-${order.id}`} type="line"
+                paint={{ 'line-color': '#3B82F6', 'line-width': 1.5, 'line-opacity': 0.5 }} />
+            </Source>
+          )}
+
           {/* Route road */}
           <Source id={`nav-route-${order.id}`} type="geojson" data={routeGeoJson}>
             <Layer id={`nav-line-${order.id}`} type="line"
@@ -770,22 +801,27 @@ function NavMap({ order, gpsLocation, height = 300 }) {
             </Marker>
           )}
 
-          {/* Target marker */}
-          <Marker longitude={target.lng} latitude={target.lat} anchor="bottom">
-            <div style={{ position: 'relative', width: 32, height: 40, pointerEvents: 'none' }}>
-              <svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="40">
-                <path d="M16 0C8.268 0 2 6.268 2 14c0 9.6 14 26 14 26S30 23.6 30 14C30 6.268 23.732 0 16 0z" fill={target.color} stroke="white" strokeWidth="2" />
+          {/* Pickup marker — selalu tampil, besar jika sedang menuju pickup */}
+          <Marker longitude={pickup[1]} latitude={pickup[0]} anchor="bottom">
+            <div style={{ position: 'relative', width: toDropoff ? 20 : 32, height: toDropoff ? 26 : 40, pointerEvents: 'none', opacity: toDropoff ? 0.5 : 1, transition: 'all 0.4s' }}>
+              <svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                <path d="M16 0C8.268 0 2 6.268 2 14c0 9.6 14 26 14 26S30 23.6 30 14C30 6.268 23.732 0 16 0z"
+                  fill="#00C896" stroke="white" strokeWidth="2" />
                 <circle cx="16" cy="14" r="6" fill="white" />
               </svg>
             </div>
           </Marker>
 
-          {/* Pickup & dropoff (kecil, sebagai referensi) */}
-          {!['picked_up','on_delivery','delivered'].includes(order.status) && (
-            <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom">
-              <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#F56565', border: '2px solid #fff', opacity: 0.7 }} />
-            </Marker>
-          )}
+          {/* Dropoff marker — selalu tampil, besar jika sedang menuju dropoff */}
+          <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom">
+            <div style={{ position: 'relative', width: toDropoff ? 32 : 20, height: toDropoff ? 40 : 26, pointerEvents: 'none', opacity: toDropoff ? 1 : 0.5, transition: 'all 0.4s' }}>
+              <svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                <path d="M16 0C8.268 0 2 6.268 2 14c0 9.6 14 26 14 26S30 23.6 30 14C30 6.268 23.732 0 16 0z"
+                  fill="#F56565" stroke="white" strokeWidth="2" />
+                <circle cx="16" cy="14" r="6" fill="white" />
+              </svg>
+            </div>
+          </Marker>
         </Map>
 
         {/* Badge GPS off */}
