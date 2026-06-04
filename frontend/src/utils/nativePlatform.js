@@ -25,7 +25,7 @@ export async function initPushNotifications({ onToken, onForeground, onTap } = {
     onToken?.(token.value)
     // Kirim FCM token ke backend
     import('../services/api').then(({ default: api }) => {
-      api.post('/auth/fcm-token', { token: token.value }).catch(() => {})
+      api.post('/auth/fcm-token', { fcm_token: token.value }).catch(() => {})
     })
   })
 
