@@ -118,11 +118,12 @@ const PELANGGAN_ITEMS = (name) => [
 ]
 
 const MITRA_ITEMS = (name) => [
-  { to: '/dashboard',         Icon: IconHome, label: 'Beranda', exact: true },
-  { to: '/mitra/orders',      Icon: IconBox,  label: 'ZasaGo'  },
-  { to: '/mitra/gps',         Icon: IconPin,  label: 'GPS',     centerColor: 'linear-gradient(145deg, #00C896 0%, #00A87D 100%)', centerShadow: 'rgba(0,200,150,0.50)' },
-  { to: '/mitra/food/orders', Icon: IconFood, label: 'ZasaFood' },
-  { to: '/profile',           Icon: null,     label: 'Akun',   avatar: true },
+  { to: '/dashboard',         Icon: IconHome, label: 'Beranda',  exact: true },
+  { to: '/mitra/orders',      Icon: IconBox,  label: 'ZasaGo' },
+  { to: '/mitra/gps',         Icon: IconPin,  label: 'GPS',      isCenter: true, centerColor: 'linear-gradient(145deg, #00C896 0%, #00A87D 100%)', centerShadow: 'rgba(0,200,150,0.50)' },
+  { to: '/mitra/food/orders', Icon: IconFood, label: 'ZasaFood', featureKey: 'zasafood' },
+  { to: '/mitra/mart/orders', Icon: IconMart, label: 'ZasaMart', featureKey: 'zasamart' },
+  { to: '/profile',           Icon: null,     label: 'Akun',     avatar: true },
 ]
 
 export default function BottomNav() {
@@ -147,15 +148,17 @@ export default function BottomNav() {
   const allMitra = MITRA_ITEMS(user.name)
   const filteredMitra = allMitra.filter(item => {
     if (item.to === '/mitra/orders')      return feat.zasago   !== false
-    if (item.to === '/mitra/food/orders') return feat.zasafood !== false
+    if (item.featureKey)                  return feat[item.featureKey] !== false
     return true
   })
 
   const items = isMitra ? filteredMitra : filteredPelanggan
 
-  // Center item: ZasaShop untuk pelanggan (index 2 dari all), tapi hanya jika ada ≥3 item
-  // Fallback: item tengah (Math.floor)
-  const centerIdx = Math.floor(items.length / 2)
+  // Center: item yang di-mark isCenter, atau index tengah sebagai fallback
+  const centerIdx = (() => {
+    const explicit = items.findIndex(i => i.isCenter || i.centerColor)
+    return explicit >= 0 ? explicit : Math.floor(items.length / 2)
+  })()
 
   return (
     <nav style={{

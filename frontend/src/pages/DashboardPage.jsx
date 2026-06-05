@@ -2,9 +2,11 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import BottomNav from '../components/BottomNav'
+import ActiveOrdersCard from '../components/ActiveOrdersCard'
 import api from '../services/api'
 import { requestNotifPermission } from '../utils/systemNotif'
 import useNotifCount from '../hooks/useNotifCount'
+import useActiveOrders from '../hooks/useActiveOrders'
 import { useTheme } from '../hooks/useTheme'
 import useAppInfo from '../hooks/useAppInfo'
 
@@ -140,12 +142,14 @@ export default function DashboardPage() {
   const [promos,           setPromos]           = useState(DEFAULT_BANNERS)
   const [goOrderCount,     setGoOrderCount]     = useState(null)
   const [foodOrderCount,   setFoodOrderCount]   = useState(null)
+  const [martOrderCount,   setMartOrderCount]   = useState(null)
   const touchStartX = useRef(null)
   const { count: notifCount } = useNotifCount()
   const { isDark, toggle: toggleTheme } = useTheme()
   const { app_logo_url, app_name, features } = useAppInfo()
   const feat = features ?? {}
   const greeting = getGreeting()
+  const { orders: activeOrders } = useActiveOrders(!isMitra, feat)
 
   useEffect(() => {
     if (user?.role === 'admin') return
@@ -158,7 +162,10 @@ export default function DashboardPage() {
     if (feat.zasafood !== false) {
       api.get('/food/mitra/orders/available').then(r => setFoodOrderCount((r.data?.data ?? []).length)).catch(() => setFoodOrderCount(0))
     }
-  }, [isMitra, feat.zasafood])
+    if (feat.zasamart !== false) {
+      api.get('/mart/mitra/orders/available').then(r => setMartOrderCount((r.data?.data ?? []).length)).catch(() => setMartOrderCount(0))
+    }
+  }, [isMitra, feat.zasafood, feat.zasamart])
 
   useEffect(() => {
     if (user?.role === 'admin') navigate('/admin', { replace: true })
@@ -475,21 +482,43 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            {/* Baris 2: GPS Saya */}
-            <div style={{ marginBottom: 16 }}>
-              <Link to="/mitra/gps" style={{ textDecoration: 'none' }}>
-                <div style={{ background: 'var(--k-surface)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--k-shadow)' }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 13, background: 'rgba(0,200,150,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>📍</div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 1 }}>GPS Saya</p>
-                    <p style={{ fontSize: 12, color: 'var(--k-sub)' }}>Aktifkan tracking posisi</p>
+            {/* Baris 2: ZasaMart + GPS */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+              {feat.zasamart !== false && (
+                <Link to="/mitra/mart/orders" style={{ flex: 1, textDecoration: 'none' }}>
+                  <div style={{ background: 'linear-gradient(135deg, #F5F3FF 0%, #FAF8FF 100%)', border: `1.5px solid ${martOrderCount > 0 ? 'rgba(124,58,237,0.45)' : 'rgba(124,58,237,0.2)'}`, borderRadius: 18, padding: '16px 14px', position: 'relative', overflow: 'hidden', minHeight: 110 }}>
+                    <div style={{ position: 'absolute', right: -6, top: -4, fontSize: 60, opacity: 0.12, transform: 'rotate(12deg)', pointerEvents: 'none' }}>🛒</div>
+                    {martOrderCount > 0 && (
+                      <div style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: '50%', background: '#7C3AED', animation: 'dashPulse 1.5s infinite' }} />
+                    )}
+                    <div style={{ fontSize: 26, marginBottom: 6 }}>🛒</div>
+                    <p style={{ fontWeight: 800, fontSize: 13, color: '#7C3AED', marginBottom: 2 }}>ZasaMart</p>
+                    <p style={{ fontSize: 11, color: 'var(--k-sub)', marginBottom: 6 }}>Antar produk UMKM</p>
+                    {martOrderCount !== null && (
+                      <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: martOrderCount > 0 ? '#7C3AED' : 'rgba(124,58,237,0.12)', color: martOrderCount > 0 ? '#fff' : '#6B7280' }}>
+                        {martOrderCount > 0 ? `${martOrderCount} order` : 'Kosong'}
+                      </span>
+                    )}
                   </div>
-                  <span style={{ color: 'var(--k-muted)' }}><IconArrowRight /></span>
+                </Link>
+              )}
+              <Link to="/mitra/gps" style={{ flex: 1, textDecoration: 'none' }}>
+                <div style={{ background: 'linear-gradient(135deg, #ECFDF5 0%, #F7FFFE 100%)', border: '1.5px solid rgba(0,200,150,0.2)', borderRadius: 18, padding: '16px 14px', position: 'relative', overflow: 'hidden', minHeight: 110 }}>
+                  <div style={{ position: 'absolute', right: -6, top: -4, fontSize: 60, opacity: 0.12, transform: 'rotate(12deg)', pointerEvents: 'none' }}>🗺️</div>
+                  <div style={{ fontSize: 26, marginBottom: 6 }}>📍</div>
+                  <p style={{ fontWeight: 800, fontSize: 13, color: '#059669', marginBottom: 2 }}>GPS Saya</p>
+                  <p style={{ fontSize: 11, color: 'var(--k-sub)', marginBottom: 6 }}>Tracking posisi live</p>
+                  <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: 'rgba(0,200,150,0.12)', color: '#6B7280' }}>
+                    Aktifkan
+                  </span>
                 </div>
               </Link>
             </div>
           </>
         )}
+
+        {/* ── Pesanan Aktif Pelanggan ──────────────── */}
+        {!isMitra && <ActiveOrdersCard orders={activeOrders} />}
 
         {/* ── Aksi Utama Pelanggan ─────────────────── */}
         {!isMitra && (
