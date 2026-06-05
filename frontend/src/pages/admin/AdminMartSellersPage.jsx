@@ -66,30 +66,48 @@ export default function AdminMartSellersPage() {
 
   return (
     <AdminLayout>
-      <div style={{ padding: '0 0 80px' }}>
-        {/* Tabs */}
-        <div style={{ display: 'flex', overflowX: 'auto', background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)', scrollbarWidth: 'none' }}>
-          {[{ v: '', l: 'Semua' }, { v: 'pending', l: 'Pending' }, { v: 'active', l: 'Aktif' }, { v: 'suspended', l: 'Suspended' }].map(t => (
-            <button key={t.v} onClick={() => setTab(t.v)}
-              style={{ padding: '10px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.v ? 700 : 500, color: tab === t.v ? 'var(--k-accent)' : 'var(--k-muted)', borderBottom: tab === t.v ? '2px solid var(--k-accent)' : '2px solid transparent', whiteSpace: 'nowrap' }}>
-              {t.l}
-            </button>
-          ))}
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Penjual ZasaMart</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Kelola toko dan penjual di marketplace lokal</p>
         </div>
+        <button onClick={() => setShowCreate(true)}
+          style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: 'var(--k-accent)', color: '#0C0C16', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+          + Tambah Seller
+        </button>
+      </div>
 
-        <div style={{ padding: '14px 16px' }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama toko / email..."
-              style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: '1px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-text)', fontSize: 13, outline: 'none' }} />
-            <button onClick={() => setShowCreate(true)}
-              style={{ padding: '10px 14px', borderRadius: 12, border: 'none', background: 'var(--k-accent)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              + Buat Seller
-            </button>
-          </div>
+      {/* Tabs + Search */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        {[{ v: '', l: 'Semua', color: 'var(--k-sub)' }, { v: 'pending', l: 'Pending', color: '#F59E0B' }, { v: 'active', l: 'Aktif', color: '#22C55E' }, { v: 'suspended', l: 'Suspended', color: '#EF4444' }].map(t => (
+          <button key={t.v} onClick={() => setTab(t.v)}
+            style={{
+              padding: '8px 18px', borderRadius: 20, fontSize: 13, fontWeight: tab === t.v ? 700 : 500,
+              border: `1px solid ${tab === t.v ? t.color + '40' : 'var(--k-border)'}`,
+              cursor: 'pointer', background: tab === t.v ? `${t.color}22` : 'var(--k-card)',
+              color: tab === t.v ? t.color : 'var(--k-sub)',
+            }}>
+            {t.l}
+          </button>
+        ))}
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama toko / email..."
+          style={{ marginLeft: 'auto', padding: '9px 14px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 13, outline: 'none', width: 240 }} />
+      </div>
 
-          {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div style={{ width: 24, height: 24, border: '3px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>
-          : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+          <div style={{ width: 24, height: 24, border: '3px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      ) : sellers.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <p style={{ fontSize: 36, marginBottom: 10 }}>🛒</p>
+          <p style={{ color: 'var(--k-text)', fontWeight: 700, marginBottom: 4 }}>Tidak ada seller</p>
+          <p style={{ color: 'var(--k-muted)', fontSize: 13 }}>Coba ubah filter atau tambahkan seller baru</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {sellers.map(s => {
                 const sm = STATUS_META[s.status]
                 return (
@@ -172,10 +190,8 @@ export default function AdminMartSellersPage() {
                   </div>
                 )
               })}
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
       {/* Suspend reason modal */}
       {suspendId && (

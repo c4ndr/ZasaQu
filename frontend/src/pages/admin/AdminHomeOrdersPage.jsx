@@ -131,60 +131,69 @@ export default function AdminHomeOrdersPage() {
       {toast && <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, padding: '12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: toast.type === 'success' ? '#00C896' : '#F56565', color: '#fff' }}>{toast.msg}</div>}
       {selected && <OrderDetail order={selected} onCancel={handleCancel} onClose={() => setSelected(null)} />}
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nomor order, provider, atau pelanggan..."
-          style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 13, width: 280, outline: 'none' }} />
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Pesanan ZasaHome</h2>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Monitor dan kelola pesanan layanan rumah</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      {/* Tabs + Search */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, alignItems: 'center', flexWrap: 'wrap' }}>
         {STATUS_TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            style={{ padding: '7px 16px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
-              background: tab === t.key ? 'linear-gradient(135deg,#6366F1,#8B5CF6)' : 'var(--k-card)',
-              color: tab === t.key ? '#fff' : 'var(--k-sub)',
+            style={{ padding: '8px 18px', borderRadius: 20, fontSize: 13, fontWeight: tab === t.key ? 700 : 500,
+              border: `1px solid ${tab === t.key ? '#6366F140' : 'var(--k-border)'}`,
+              cursor: 'pointer', background: tab === t.key ? 'rgba(99,102,241,0.12)' : 'var(--k-card)',
+              color: tab === t.key ? '#6366F1' : 'var(--k-sub)',
             }}>
             {t.label}
           </button>
         ))}
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nomor order, provider, atau pelanggan..."
+          style={{ marginLeft: 'auto', padding: '9px 14px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 13, width: 300, outline: 'none' }} />
       </div>
 
       {loading ? (
         <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Memuat...</p>
       ) : orders.length === 0 ? (
-        <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Tidak ada pesanan.</p>
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <p style={{ fontSize: 36, marginBottom: 10 }}>🏠</p>
+          <p style={{ color: 'var(--k-text)', fontWeight: 700, marginBottom: 4 }}>Tidak ada pesanan</p>
+          <p style={{ color: 'var(--k-muted)', fontSize: 13 }}>Pesanan ZasaHome akan tampil di sini</p>
+        </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--k-border)', textAlign: 'left' }}>
-                {['No. Order', 'Provider', 'Pelanggan', 'Status', 'Total', 'Dibuat', ''].map(h => (
-                  <th key={h} style={{ padding: '10px 12px', color: 'var(--k-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map(o => {
-                const s = sm(o.status)
-                return (
-                  <tr key={o.id} onClick={() => setSelected(o)} style={{ borderBottom: '1px solid var(--k-border)', cursor: 'pointer' }}>
-                    <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: 12, color: 'var(--k-muted)' }}>{o.order_number}</td>
-                    <td style={{ padding: '12px', fontWeight: 600 }}>{o.provider?.name}</td>
-                    <td style={{ padding: '12px', color: 'var(--k-muted)' }}>{o.customer?.name}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color }}>{s.label}</span>
-                    </td>
-                    <td style={{ padding: '12px', fontWeight: 700, color: '#6366F1' }}>{fmtRp(o.total_price)}</td>
-                    <td style={{ padding: '12px', color: 'var(--k-muted)', fontSize: 11 }}>{fmtDate(o.created_at)}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.1)', color: '#6366F1', fontWeight: 700, fontSize: 12 }}>
-                        Detail ›
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--k-border)', textAlign: 'left', background: 'var(--k-surface)' }}>
+                  {['No. Order', 'Provider', 'Pelanggan', 'Status', 'Total', 'Dibuat'].map(h => (
+                    <th key={h} style={{ padding: '12px 14px', color: 'var(--k-muted)', fontWeight: 600, whiteSpace: 'nowrap', fontSize: 12 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o, i) => {
+                  const s = sm(o.status)
+                  return (
+                    <tr key={o.id} onClick={() => setSelected(o)}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--k-surface)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      style={{ borderTop: i === 0 ? 'none' : '1px solid var(--k-border)', cursor: 'pointer', transition: 'background .1s' }}>
+                      <td style={{ padding: '13px 14px', fontFamily: 'monospace', fontSize: 12, color: 'var(--k-muted)' }}>{o.order_number}</td>
+                      <td style={{ padding: '13px 14px', fontWeight: 600, color: 'var(--k-text)' }}>{o.provider?.name}</td>
+                      <td style={{ padding: '13px 14px', color: 'var(--k-muted)' }}>{o.customer?.name}</td>
+                      <td style={{ padding: '13px 14px' }}>
+                        <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color }}>{s.label}</span>
+                      </td>
+                      <td style={{ padding: '13px 14px', fontWeight: 700, color: '#6366F1' }}>{fmtRp(o.total_price)}</td>
+                      <td style={{ padding: '13px 14px', color: 'var(--k-muted)', fontSize: 11 }}>{fmtDate(o.created_at)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </AdminLayout>

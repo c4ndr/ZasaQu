@@ -347,106 +347,114 @@ export default function AdminFoodMerchantsPage() {
         />
       )}
 
-      <div style={{ padding: '28px', maxWidth: 900 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Merchant ZasaFood</h1>
-          <button onClick={() => setShowCreate(true)} style={{
-            padding: '10px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
-            background: '#00C896', color: '#0C0C16', fontWeight: 700, fontSize: 13,
-          }}>+ Tambah Merchant</button>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Merchant ZasaFood</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Kelola restoran dan toko makanan yang terdaftar</p>
         </div>
+        <button onClick={() => setShowCreate(true)} style={{
+          padding: '10px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
+          background: 'var(--k-accent)', color: '#0C0C16', fontWeight: 700, fontSize: 13,
+        }}>+ Tambah Merchant</button>
+      </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-          {STATUS_TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{
-              padding: '8px 18px', borderRadius: 20, border: 'none', cursor: 'pointer',
-              fontWeight: tab === t.key ? 700 : 400, fontSize: 13,
-              background: tab === t.key ? `${t.color}22` : 'var(--k-input)',
-              color: tab === t.key ? t.color : 'var(--k-sub)',
-            }}>{t.label}</button>
-          ))}
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+        {STATUS_TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            padding: '8px 18px', borderRadius: 20, border: `1px solid ${tab === t.key ? t.color + '40' : 'var(--k-border)'}`,
+            cursor: 'pointer', fontWeight: tab === t.key ? 700 : 500, fontSize: 13,
+            background: tab === t.key ? `${t.color}22` : 'var(--k-card)',
+            color: tab === t.key ? t.color : 'var(--k-sub)',
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <input
+        type="text" value={search} onChange={e => setSearch(e.target.value)}
+        placeholder="Cari nama toko atau alamat..."
+        style={{
+          width: '100%', maxWidth: 380, padding: '10px 16px', borderRadius: 10, fontSize: 13,
+          border: '1.5px solid var(--k-border)', background: 'var(--k-input)',
+          color: 'var(--k-text)', marginBottom: 20, boxSizing: 'border-box', outline: 'none',
+        }}
+      />
+
+      {/* List */}
+      {loading ? (
+        <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Memuat...</p>
+      ) : merchants.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <p style={{ fontSize: 36, marginBottom: 10 }}>🏪</p>
+          <p style={{ color: 'var(--k-text)', fontWeight: 700, marginBottom: 4 }}>Tidak ada merchant</p>
+          <p style={{ color: 'var(--k-muted)', fontSize: 13 }}>Coba ubah filter atau tambahkan merchant baru</p>
         </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 860 }}>
+          {merchants.map(m => {
+            const sm = STATUS_META[m.status] ?? STATUS_META.pending
+            return (
+              <div key={m.id}
+                onClick={() => setSelected(m)}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--k-accent)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--k-border)'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 16,
+                  padding: '16px 20px', borderRadius: 14, background: 'var(--k-card)',
+                  border: '1.5px solid var(--k-border)', cursor: 'pointer',
+                  transition: 'border-color .15s',
+                }}
+              >
+                <div style={{
+                  width: 48, height: 48, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                  background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+                }}>
+                  {m.logo_path ? <img src={storageUrl(m.logo_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
+                </div>
 
-        {/* Search */}
-        <input
-          type="text" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Cari nama toko atau alamat..."
-          style={{
-            width: '100%', maxWidth: 360, padding: '10px 16px', borderRadius: 10, fontSize: 14,
-            border: '1.5px solid var(--k-border)', background: 'var(--k-input)',
-            color: 'var(--k-text)', marginBottom: 20, boxSizing: 'border-box',
-          }}
-        />
-
-        {/* List */}
-        {loading ? (
-          <p style={{ color: 'var(--k-sub)' }}>Memuat...</p>
-        ) : merchants.length === 0 ? (
-          <p style={{ color: 'var(--k-sub)', textAlign: 'center', padding: '40px 0' }}>Tidak ada merchant.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {merchants.map(m => {
-              const sm = STATUS_META[m.status] ?? STATUS_META.pending
-              return (
-                <div key={m.id}
-                  onClick={() => setSelected(m)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 16,
-                    padding: '16px 20px', borderRadius: 14, background: 'var(--k-card)',
-                    border: '1.5px solid var(--k-border)', cursor: 'pointer',
-                    transition: 'border-color .15s',
-                  }}
-                >
-                  <div style={{
-                    width: 48, height: 48, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-                    background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
-                  }}>
-                    {m.logo_path ? <img src={storageUrl(m.logo_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{m.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--k-sub)' }}>{m.user?.name} · {CAT_LABEL[m.category] ?? m.category}</div>
-                    <div style={{ fontSize: 12, color: 'var(--k-sub)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {m.address}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                    <span style={{
-                      padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                      color: sm.color, background: sm.bg,
-                    }}>{sm.label}</span>
-                    <span style={{ fontSize: 11, color: 'var(--k-sub)' }}>
-                      {m.menu_items_count ?? 0} item menu
-                    </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2, color: 'var(--k-text)' }}>{m.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--k-muted)' }}>{m.user?.name} · {CAT_LABEL[m.category] ?? m.category}</div>
+                  <div style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {m.address}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
 
-        {/* Pagination */}
-        {meta.last_page > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24 }}>
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{
-              padding: '8px 16px', borderRadius: 10, border: '1.5px solid var(--k-border)',
-              background: 'transparent', color: page === 1 ? 'var(--k-sub)' : 'var(--k-text)',
-              cursor: page === 1 ? 'default' : 'pointer',
-            }}>‹ Sebelumnya</button>
-            <span style={{ padding: '8px 14px', fontSize: 13, color: 'var(--k-sub)' }}>
-              {page} / {meta.last_page}
-            </span>
-            <button onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} disabled={page === meta.last_page} style={{
-              padding: '8px 16px', borderRadius: 10, border: '1.5px solid var(--k-border)',
-              background: 'transparent', color: page === meta.last_page ? 'var(--k-sub)' : 'var(--k-text)',
-              cursor: page === meta.last_page ? 'default' : 'pointer',
-            }}>Berikutnya ›</button>
-          </div>
-        )}
-      </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                  <span style={{
+                    padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                    color: sm.color, background: sm.bg,
+                  }}>{sm.label}</span>
+                  <span style={{ fontSize: 11, color: 'var(--k-muted)' }}>
+                    {m.menu_items_count ?? 0} item menu
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {meta.last_page > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24 }}>
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{
+            padding: '8px 16px', borderRadius: 10, border: '1.5px solid var(--k-border)',
+            background: 'transparent', color: page === 1 ? 'var(--k-sub)' : 'var(--k-text)',
+            cursor: page === 1 ? 'default' : 'pointer', fontWeight: 600,
+          }}>‹ Sebelumnya</button>
+          <span style={{ padding: '8px 14px', fontSize: 13, color: 'var(--k-sub)' }}>
+            {page} / {meta.last_page}
+          </span>
+          <button onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} disabled={page === meta.last_page} style={{
+            padding: '8px 16px', borderRadius: 10, border: '1.5px solid var(--k-border)',
+            background: 'transparent', color: page === meta.last_page ? 'var(--k-sub)' : 'var(--k-text)',
+            cursor: page === meta.last_page ? 'default' : 'pointer', fontWeight: 600,
+          }}>Berikutnya ›</button>
+        </div>
+      )}
     </AdminLayout>
   )
 }

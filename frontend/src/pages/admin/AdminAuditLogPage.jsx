@@ -67,10 +67,11 @@ export default function AdminAuditLogPage() {
     <AdminLayout>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      {/* Sub-judul */}
-      <p style={{ color: 'var(--k-muted)', fontSize: 14, marginBottom: 24 }}>
-        Semua aksi admin tercatat di sini
-      </p>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Log Audit</h2>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Semua aksi admin tercatat dan dapat ditelusuri di sini</p>
+      </div>
 
       {/* Card container */}
       <div style={{

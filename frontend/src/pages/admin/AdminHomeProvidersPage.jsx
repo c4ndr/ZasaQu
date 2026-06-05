@@ -203,67 +203,78 @@ export default function AdminHomeProvidersPage() {
       {showCreate && <CreateModal onClose={() => setShowCreate(false)} onCreated={p => { setProviders(ps => [p, ...ps]); showToast('success', 'Provider dibuat.') }} />}
       {selected && <ProviderDetail provider={selected} stats={selStats} onApprove={handleApprove} onSuspend={handleSuspend} onClose={() => setSelected(null)} />}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama atau alamat..."
-          style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 13, width: 240, outline: 'none' }} />
-        <button onClick={() => setShowCreate(true)} style={{ padding: '9px 18px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontWeight: 700, fontSize: 13 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Provider ZasaHome</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Kelola penyedia jasa rumah: laundry, bersih-bersih, dan lainnya</p>
+        </div>
+        <button onClick={() => setShowCreate(true)} style={{ padding: '10px 20px', borderRadius: 12, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontWeight: 700, fontSize: 13 }}>
           + Tambah Provider
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      {/* Tabs + Search */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {STATUS_TABS.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: '7px 16px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', background: tab === t.key ? t.color : 'var(--k-card)', color: tab === t.key ? '#fff' : 'var(--k-sub)' }}>
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            padding: '8px 18px', borderRadius: 20, fontSize: 13, fontWeight: tab === t.key ? 700 : 500,
+            border: `1px solid ${tab === t.key ? t.color + '40' : 'var(--k-border)'}`,
+            cursor: 'pointer', background: tab === t.key ? `${t.color}22` : 'var(--k-card)',
+            color: tab === t.key ? t.color : 'var(--k-sub)',
+          }}>
             {t.label}
           </button>
         ))}
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama atau alamat..."
+          style={{ marginLeft: 'auto', padding: '9px 14px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 13, width: 240, outline: 'none' }} />
       </div>
 
       {loading ? (
         <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Memuat...</p>
       ) : providers.length === 0 ? (
-        <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Tidak ada provider.</p>
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <p style={{ fontSize: 36, marginBottom: 10 }}>🏠</p>
+          <p style={{ color: 'var(--k-text)', fontWeight: 700, marginBottom: 4 }}>Tidak ada provider</p>
+          <p style={{ color: 'var(--k-muted)', fontSize: 13 }}>Coba ubah filter atau tambahkan provider baru</p>
+        </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--k-border)', textAlign: 'left' }}>
-                {['Nama', 'Kategori', 'Status', 'Buka', 'Order', 'Rating', 'Dibuat', ''].map(h => (
-                  <th key={h} style={{ padding: '10px 12px', color: 'var(--k-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {providers.map(p => {
-                const s = sm(p.status)
-                return (
-                  <tr key={p.id} style={{ borderBottom: '1px solid var(--k-border)' }}>
-                    <td style={{ padding: '12px', fontWeight: 600 }}>
-                      <p>{p.name}</p>
-                      <p style={{ fontSize: 11, color: 'var(--k-muted)', marginTop: 2 }}>{p.user?.email}</p>
-                    </td>
-                    <td style={{ padding: '12px', color: 'var(--k-muted)' }}>{CAT_LABEL[p.category] ?? p.category}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color }}>{s.label}</span>
-                    </td>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: p.is_open ? 'rgba(0,200,150,0.1)' : 'var(--k-input)', color: p.is_open ? '#00C896' : 'var(--k-muted)' }}>
-                        {p.is_open ? 'Buka' : 'Tutup'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>{p.orders_count ?? 0}</td>
-                    <td style={{ padding: '12px' }}>{p.average_rating > 0 ? `⭐ ${p.average_rating.toFixed(1)}` : '—'}</td>
-                    <td style={{ padding: '12px', color: 'var(--k-muted)', fontSize: 11 }}>{fmtDate(p.created_at)}</td>
-                    <td style={{ padding: '12px' }}>
-                      <button onClick={() => openDetail(p)} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'rgba(99,102,241,0.1)', color: '#6366F1', fontWeight: 700, fontSize: 12 }}>
-                        Detail
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {providers.map(p => {
+            const s = sm(p.status)
+            return (
+              <div key={p.id}
+                onClick={() => openDetail(p)}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#6366F1'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--k-border)'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px',
+                  borderRadius: 14, background: 'var(--k-card)', border: '1.5px solid var(--k-border)',
+                  cursor: 'pointer', transition: 'border-color .15s',
+                }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                  background: 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+                }}>
+                  {CAT_LABEL[p.category]?.charAt(0) === 'L' ? '🧺' : CAT_LABEL[p.category]?.charAt(0) === 'P' ? '💆' : CAT_LABEL[p.category]?.charAt(0) === 'C' ? '🧹' : CAT_LABEL[p.category]?.charAt(0) === 'T' ? '🔨' : '🏠'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 2 }}>{p.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--k-muted)' }}>{p.user?.email} · {CAT_LABEL[p.category] ?? p.category}</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                  <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color }}>{s.label}</span>
+                  <div style={{ display: 'flex', gap: 8, fontSize: 11, color: 'var(--k-muted)' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: 10, background: p.is_open ? 'rgba(0,200,150,0.1)' : 'var(--k-input)', color: p.is_open ? '#00C896' : 'var(--k-muted)' }}>
+                      {p.is_open ? 'Buka' : 'Tutup'}
+                    </span>
+                    <span>{p.orders_count ?? 0} order</span>
+                    {p.average_rating > 0 && <span>⭐ {p.average_rating.toFixed(1)}</span>}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </AdminLayout>

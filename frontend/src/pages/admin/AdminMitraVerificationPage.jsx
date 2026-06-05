@@ -207,82 +207,89 @@ export default function AdminMitraVerificationPage() {
     <AdminLayout>
       {selected && <MitraDrawer mitra={selected} onClose={() => setSelected(null)} onUpdated={handleUpdated} />}
 
-      <div style={{ padding: '28px', maxWidth: 800 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Verifikasi Mitra Baru</h1>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-sub)' }}>
-              Review dokumen dan setujui/tolak permohonan mitra
-            </p>
-          </div>
-          {mitras.length > 0 && (
-            <span style={{
-              padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700,
-              background: 'rgba(246,173,85,0.15)', color: '#F6AD55',
-            }}>{meta.total ?? mitras.length} menunggu</span>
-          )}
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Verifikasi Mitra Baru</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>
+            Review dokumen dan setujui/tolak permohonan mitra
+          </p>
         </div>
-
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Cari nama atau email mitra..."
-          style={{
-            width: '100%', maxWidth: 360, padding: '10px 16px', borderRadius: 10, fontSize: 14,
-            border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)',
-            marginBottom: 20, boxSizing: 'border-box',
-          }} />
-
-        {loading ? (
-          <p style={{ color: 'var(--k-sub)' }}>Memuat...</p>
-        ) : mitras.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-sub)' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-            <div style={{ fontWeight: 700 }}>Semua permohonan sudah ditinjau</div>
-            <div style={{ fontSize: 13, marginTop: 4 }}>Tidak ada mitra yang menunggu verifikasi.</div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {mitras.map(mitra => {
-              const docs = mitra.mitra_documents ?? []
-              const uploaded = docs.length
-              return (
-                <div key={mitra.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px',
-                  borderRadius: 14, background: 'var(--k-card)', border: '1.5px solid var(--k-border)',
-                  cursor: 'pointer',
-                }} onClick={() => setSelected(mitra)}>
-                  <Avatar name={mitra.name} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{mitra.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--k-sub)' }}>
-                      {mitra.role === 'mitra_motor' ? '🏍️' : '🚗'} {mitra.email}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--k-sub)', marginTop: 2 }}>
-                      Daftar {fmtDate(mitra.created_at)} · {mitra.mitra_detail?.vehicle_plate ?? '—'}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{
-                      padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-                      background: uploaded >= 4 ? 'rgba(0,200,150,0.12)' : 'rgba(246,173,85,0.12)',
-                      color: uploaded >= 4 ? '#00C896' : '#F6AD55',
-                      marginBottom: 4,
-                    }}>{uploaded}/4 dokumen</div>
-                    <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>Klik untuk review</div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {meta.last_page > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24 }}>
-            <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1} style={{ padding:'8px 16px',borderRadius:10,border:'1.5px solid var(--k-border)',background:'transparent',cursor:page===1?'default':'pointer',color:page===1?'var(--k-sub)':'var(--k-text)' }}>‹</button>
-            <span style={{padding:'8px 14px',fontSize:13,color:'var(--k-sub)'}}>{page}/{meta.last_page}</span>
-            <button onClick={() => setPage(p => Math.min(meta.last_page,p+1))} disabled={page===meta.last_page} style={{ padding:'8px 16px',borderRadius:10,border:'1.5px solid var(--k-border)',background:'transparent',cursor:page===meta.last_page?'default':'pointer',color:page===meta.last_page?'var(--k-sub)':'var(--k-text)' }}>›</button>
-          </div>
+        {mitras.length > 0 && (
+          <span style={{
+            padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700,
+            background: 'rgba(246,173,85,0.15)', color: '#F6AD55',
+            border: '1px solid rgba(246,173,85,0.3)',
+          }}>{meta.total ?? mitras.length} menunggu</span>
         )}
       </div>
+
+      {/* Search */}
+      <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+        placeholder="Cari nama atau email mitra..."
+        style={{
+          width: '100%', maxWidth: 380, padding: '10px 16px', borderRadius: 10, fontSize: 13,
+          border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)',
+          marginBottom: 20, boxSizing: 'border-box', outline: 'none',
+        }} />
+
+      {loading ? (
+        <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Memuat...</p>
+      ) : mitras.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+          <div style={{ fontWeight: 700, color: 'var(--k-text)', marginBottom: 4 }}>Semua permohonan sudah ditinjau</div>
+          <div style={{ fontSize: 13, color: 'var(--k-muted)' }}>Tidak ada mitra yang menunggu verifikasi.</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 760 }}>
+          {mitras.map(mitra => {
+            const docs = mitra.mitra_documents ?? []
+            const uploaded = docs.length
+            return (
+              <div key={mitra.id}
+                onClick={() => setSelected(mitra)}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--k-accent)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--k-border)'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px',
+                  borderRadius: 14, background: 'var(--k-card)', border: '1.5px solid var(--k-border)',
+                  cursor: 'pointer', transition: 'border-color .15s',
+                }}>
+                <Avatar name={mitra.name} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 2 }}>{mitra.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--k-muted)' }}>
+                    {mitra.role === 'mitra_motor' ? '🏍️' : '🚗'} {mitra.email}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 2 }}>
+                    Daftar {fmtDate(mitra.created_at)} · {mitra.mitra_detail?.vehicle_plate ?? '—'}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{
+                    padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                    background: uploaded >= 4 ? 'rgba(0,200,150,0.12)' : 'rgba(246,173,85,0.12)',
+                    color: uploaded >= 4 ? '#00C896' : '#F6AD55',
+                    marginBottom: 4,
+                  }}>{uploaded}/4 dokumen</div>
+                  <div style={{ fontSize: 11, color: 'var(--k-muted)' }}>Klik untuk review →</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {meta.last_page > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24 }}>
+          <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1}
+            style={{ padding:'8px 16px', borderRadius:10, border:'1.5px solid var(--k-border)', background:'transparent', cursor:page===1?'default':'pointer', color:page===1?'var(--k-sub)':'var(--k-text)', fontWeight:600 }}>‹ Sebelumnya</button>
+          <span style={{padding:'8px 14px',fontSize:13,color:'var(--k-sub)'}}>{page} / {meta.last_page}</span>
+          <button onClick={() => setPage(p => Math.min(meta.last_page,p+1))} disabled={page===meta.last_page}
+            style={{ padding:'8px 16px', borderRadius:10, border:'1.5px solid var(--k-border)', background:'transparent', cursor:page===meta.last_page?'default':'pointer', color:page===meta.last_page?'var(--k-sub)':'var(--k-text)', fontWeight:600 }}>Berikutnya ›</button>
+        </div>
+      )}
     </AdminLayout>
   )
 }

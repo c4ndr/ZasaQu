@@ -104,11 +104,16 @@ export default function AdminModulesPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 0 40px' }}>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Modul & Fitur</h2>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Aktifkan atau nonaktifkan layanan yang tersedia di aplikasi</p>
+      </div>
 
-        {/* Header info */}
+      <div style={{ maxWidth: 640 }}>
+        {/* Info banner */}
         <div style={{
-          background: 'var(--k-surface)', border: '1px solid var(--k-border)',
+          background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)',
           borderRadius: 14, padding: '14px 16px', marginBottom: 20,
           display: 'flex', gap: 12, alignItems: 'flex-start',
         }}>

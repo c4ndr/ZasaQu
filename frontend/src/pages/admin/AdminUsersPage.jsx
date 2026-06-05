@@ -325,6 +325,12 @@ export default function AdminUsersPage() {
         />
       )}
 
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Pengguna</h2>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Kelola akun pelanggan, mitra, merchant, dan admin</p>
+      </div>
+
       {/* Stats row */}
       {!loading && data && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
