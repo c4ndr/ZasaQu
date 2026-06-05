@@ -1,65 +1,227 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import Map, { Marker } from 'react-map-gl/maplibre'
+import { SATELLITE_STYLE } from '../../utils/mapStyle'
+import { fitPoints, distanceMeter } from '../../utils/geo'
+import RoadPolyline from '../../components/RoadPolyline'
 import BottomNav from '../../components/BottomNav'
 import api from '../../services/api'
+import { useMitraGps } from '../../context/MitraGpsContext'
 
 const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const fmtTime = (d) => new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-const STORAGE  = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
+const fmtDist = (m) => !m && m !== 0 ? null : m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m'
+const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
-const STATUS_META = {
-  packed:      { label: 'Siap Diambil',    color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
-  picking_up:  { label: 'Menuju Toko',     color: '#F97316', bg: 'rgba(249,115,22,0.12)' },
-  on_delivery: { label: 'Sedang Antar',    color: '#6366F1', bg: 'rgba(99,102,241,0.12)' },
-  delivered:   { label: 'Terkirim',        color: '#22C55E', bg: 'rgba(34,197,94,0.12)'  },
-  completed:   { label: 'Selesai',         color: '#22C55E', bg: 'rgba(34,197,94,0.12)'  },
-  cancelled:   { label: 'Dibatalkan',      color: '#EF4444', bg: 'rgba(239,68,68,0.12)'  },
-}
-
-const NEXT_STATUS = {
-  picking_up:  { label: '✅ Sudah di Toko — Ambil Pesanan', value: 'on_delivery', color: '#6366F1' },
-  on_delivery: { label: '🏁 Sudah Diantar ke Customer',     value: 'delivered',   color: '#22C55E' },
-}
-
-function MapsLink({ label, lat, lng }) {
-  if (!lat || !lng) return <span style={{ fontSize: 12, color: 'var(--k-sub)' }}>{label}</span>
+// ── Pin marker ────────────────────────────────────────────────────────────────
+function PinMarker({ color, emoji, size = 34 }) {
   return (
-    <a href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`}
-       target="_blank" rel="noopener noreferrer"
-       style={{ fontSize: 12, color: '#6366F1', textDecoration: 'none' }}>
-      📍 {label}
-    </a>
+    <div style={{ position: 'relative', width: size, height: size * 1.25, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ width: size, height: size, borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', background: color, border: '2.5px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ transform: 'rotate(45deg)', fontSize: size * 0.45, lineHeight: 1 }}>{emoji}</span>
+      </div>
+    </div>
+  )
+}
+function MitraDot() {
+  return <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#3B82F6', border: '3px solid #fff', boxShadow: '0 0 0 4px rgba(59,130,246,0.25)' }} />
+}
+
+// ── Ambil koordinat pickup dari order ────────────────────────────────────────
+function getPickup(order) {
+  return {
+    lat: parseFloat(order.seller_lat || order.seller?.lat),
+    lng: parseFloat(order.seller_lng || order.seller?.lng),
+  }
+}
+function getDrop(order) {
+  return { lat: parseFloat(order.delivery_lat), lng: parseFloat(order.delivery_lng) }
+}
+
+// ── Peta embedded aktif ───────────────────────────────────────────────────────
+function MartActiveMap({ order, mitraLat, mitraLng, height = 210, onExpand }) {
+  const mapRef = useRef(null)
+  const pick = getPickup(order)
+  const drop = getDrop(order)
+  const goingToSeller = order.status === 'picking_up'
+  const routeFrom = goingToSeller && mitraLat ? [mitraLat, mitraLng] : [pick.lat, pick.lng]
+  const routeTo   = goingToSeller ? [pick.lat, pick.lng] : [drop.lat, drop.lng]
+  const hasCoords = pick.lat && pick.lng && drop.lat && drop.lng && !isNaN(pick.lat) && !isNaN(drop.lat)
+
+  if (!hasCoords) return (
+    <div style={{ height, borderRadius: 14, background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--k-sub)', fontSize: 12 }}>
+      📍 Koordinat tidak tersedia
+    </div>
+  )
+  return (
+    <div style={{ position: 'relative', height, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--k-border)', cursor: 'pointer' }} onClick={onExpand}>
+      <Map ref={mapRef} initialViewState={{ longitude: pick.lng, latitude: pick.lat, zoom: 13 }} mapStyle={SATELLITE_STYLE}
+        style={{ width: '100%', height: '100%' }} interactive={false} attributionControl={false}
+        onLoad={() => {
+          const pts = [[pick.lat, pick.lng], [drop.lat, drop.lng]]
+          if (mitraLat) pts.push([mitraLat, mitraLng])
+          fitPoints(mapRef.current?.getMap(), pts, 52)
+        }}>
+        <RoadPolyline pickup={routeFrom} dropoff={routeTo} color={goingToSeller ? '#8B5CF6' : '#6366F1'} weight={4} opacity={0.9} id={`mart-active-${order.id}`} />
+        {!goingToSeller && <RoadPolyline pickup={[pick.lat, pick.lng]} dropoff={[drop.lat, drop.lng]} color="#6366F1" weight={3} opacity={0.45} dashArray={[3, 3]} id={`mart-rest-${order.id}`} />}
+        <Marker longitude={pick.lng} latitude={pick.lat} anchor="bottom"><PinMarker color="#8B5CF6" emoji="🏪" size={goingToSeller ? 36 : 28} /></Marker>
+        <Marker longitude={drop.lng} latitude={drop.lat} anchor="bottom"><PinMarker color="#6366F1" emoji="🏠" size={!goingToSeller ? 36 : 28} /></Marker>
+        {mitraLat && mitraLng && <Marker longitude={mitraLng} latitude={mitraLat} anchor="center"><MitraDot /></Marker>}
+      </Map>
+      <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,0.55)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#fff', fontWeight: 600, backdropFilter: 'blur(4px)', pointerEvents: 'none' }}>
+        Tap untuk perbesar ↗
+      </div>
+    </div>
   )
 }
 
-export default function MitraMartOrdersPage() {
-  const navigate    = useNavigate()
-  const [tab,       setTab]       = useState('available') // available | active
-  const [available, setAvailable] = useState([])
-  const [myOrders,  setMyOrders]  = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [accepting, setAccepting] = useState(null)
-  const [updating,  setUpdating]  = useState(null)
-  const [toast,     setToast]     = useState(null)
+// ── Modal peta fullscreen ─────────────────────────────────────────────────────
+function MartMapModal({ order, mitraLat, mitraLng, onClose }) {
+  const mapRef = useRef(null)
+  const pick = getPickup(order)
+  const drop = getDrop(order)
+  const goingToSeller = order.status === 'picking_up'
+  const routeFrom = goingToSeller && mitraLat ? [mitraLat, mitraLng] : [pick.lat, pick.lng]
+  const routeTo   = goingToSeller ? [pick.lat, pick.lng] : [drop.lat, drop.lng]
+  const gmapsUrl  = (lat, lng) => lat && lng ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving` : '#'
 
-  const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3000) }
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', background: 'var(--k-bg)' }}>
+      <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, zIndex: 10001, width: 40, height: 40, borderRadius: 12, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>✕</button>
+      <div style={{ position: 'absolute', top: 14, left: 14, zIndex: 10001, padding: '8px 14px', borderRadius: 12, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+        <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>{order.order_number}</p>
+        <p style={{ fontSize: 13, fontWeight: 800, color: '#8B5CF6' }}>{fmtRp(order.shipping_fee ?? 0)} pendapatan</p>
+      </div>
+      <div style={{ flex: 1 }}>
+        <Map ref={mapRef} initialViewState={{ longitude: pick.lng, latitude: pick.lat, zoom: 13 }} mapStyle={SATELLITE_STYLE}
+          style={{ width: '100%', height: '100%' }} attributionControl={false}
+          onLoad={() => {
+            const pts = [[pick.lat, pick.lng], [drop.lat, drop.lng]]
+            if (mitraLat) pts.push([mitraLat, mitraLng])
+            fitPoints(mapRef.current?.getMap(), pts, 60)
+          }}>
+          <RoadPolyline pickup={routeFrom} dropoff={routeTo} color={goingToSeller ? '#8B5CF6' : '#6366F1'} weight={5} opacity={0.92} id={`modal-mart-${order.id}`} />
+          {!goingToSeller && <RoadPolyline pickup={[pick.lat, pick.lng]} dropoff={[drop.lat, drop.lng]} color="#6366F1" weight={4} opacity={0.5} dashArray={[4, 4]} id={`modal-mart-rest-${order.id}`} />}
+          <Marker longitude={pick.lng} latitude={pick.lat} anchor="bottom"><PinMarker color="#8B5CF6" emoji="🏪" size={40} /></Marker>
+          <Marker longitude={drop.lng} latitude={drop.lat} anchor="bottom"><PinMarker color="#6366F1" emoji="🏠" size={40} /></Marker>
+          {mitraLat && mitraLng && <Marker longitude={mitraLng} latitude={mitraLat} anchor="center"><MitraDot /></Marker>}
+        </Map>
+      </div>
+      <div style={{ background: 'var(--k-surface)', borderTop: '1px solid var(--k-border)', padding: '14px 16px', paddingBottom: 'calc(14px + env(safe-area-inset-bottom,0px))', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#8B5CF6', flexShrink: 0, marginTop: 4 }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 11, color: 'var(--k-sub)', fontWeight: 600 }}>PICKUP — {order.seller?.name}</p>
+            <p style={{ fontSize: 13, color: 'var(--k-text)', lineHeight: 1.4 }}>{order.seller?.address || order.seller_address_snapshot || '—'}</p>
+          </div>
+          <a href={gmapsUrl(pick.lat, pick.lng)} target="_blank" rel="noopener noreferrer"
+            style={{ padding: '7px 12px', borderRadius: 9, background: 'rgba(139,92,246,0.12)', color: '#8B5CF6', fontSize: 12, fontWeight: 700, textDecoration: 'none', flexShrink: 0, border: '1px solid rgba(139,92,246,0.2)' }}>Navigasi</a>
+        </div>
+        <div style={{ height: 1, background: 'var(--k-border)' }} />
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#6366F1', flexShrink: 0, marginTop: 4 }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 11, color: 'var(--k-sub)', fontWeight: 600 }}>ANTAR — {order.delivery_name || order.customer?.name}</p>
+            <p style={{ fontSize: 13, color: 'var(--k-text)', lineHeight: 1.4 }}>{order.delivery_address || '—'}</p>
+          </div>
+          <a href={gmapsUrl(drop.lat, drop.lng)} target="_blank" rel="noopener noreferrer"
+            style={{ padding: '7px 12px', borderRadius: 9, background: 'rgba(99,102,241,0.12)', color: '#6366F1', fontSize: 12, fontWeight: 700, textDecoration: 'none', flexShrink: 0, border: '1px solid rgba(99,102,241,0.2)' }}>Navigasi</a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Mini peta order tersedia ──────────────────────────────────────────────────
+function MartAvailableMap({ order, mitraLat, mitraLng }) {
+  const mapRef = useRef(null)
+  const pick = getPickup(order)
+  const drop = getDrop(order)
+  if (!pick.lat || !pick.lng || !drop.lat || !drop.lng || isNaN(pick.lat) || isNaN(drop.lat)) return null
+  return (
+    <div style={{ height: 150, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--k-border)', marginBottom: 12 }}>
+      <Map ref={mapRef} initialViewState={{ longitude: pick.lng, latitude: pick.lat, zoom: 13 }} mapStyle={SATELLITE_STYLE}
+        style={{ width: '100%', height: '100%' }} interactive={false} attributionControl={false}
+        onLoad={() => {
+          const pts = [[pick.lat, pick.lng], [drop.lat, drop.lng]]
+          if (mitraLat) pts.push([mitraLat, mitraLng])
+          fitPoints(mapRef.current?.getMap(), pts, 44)
+        }}>
+        <RoadPolyline pickup={[pick.lat, pick.lng]} dropoff={[drop.lat, drop.lng]} color="#8B5CF6" weight={3} opacity={0.8} id={`avail-mart-${order.id}`} />
+        <Marker longitude={pick.lng} latitude={pick.lat} anchor="bottom"><PinMarker color="#8B5CF6" emoji="🏪" size={28} /></Marker>
+        <Marker longitude={drop.lng} latitude={drop.lat} anchor="bottom"><PinMarker color="#6366F1" emoji="🏠" size={28} /></Marker>
+        {mitraLat && mitraLng && <Marker longitude={mitraLng} latitude={mitraLat} anchor="center"><MitraDot /></Marker>}
+      </Map>
+    </div>
+  )
+}
+
+// ── Status & step ─────────────────────────────────────────────────────────────
+const STATUS_META = {
+  picking_up:  { label: 'Menuju Toko',  color: '#8B5CF6', bg: '#FAF5FF', border: '#8B5CF655', icon: '🛵' },
+  on_delivery: { label: 'Mengantar',    color: '#6366F1', bg: '#EEF2FF', border: '#6366F155', icon: '🚀' },
+  delivered:   { label: 'Terkirim',     color: '#22C55E', bg: '#F0FDF4', border: '#22C55E55', icon: '✓'  },
+  completed:   { label: 'Selesai',      color: '#374151', bg: '#F9FAFB', border: '#E5E7EB',   icon: '⭐' },
+}
+const NEXT_STATUS = {
+  picking_up:  { label: '✅ Sudah di Toko — Ambil Barang', value: 'on_delivery', color: '#6366F1' },
+  on_delivery: { label: '🏁 Pesanan Sudah Diantar ke Customer', value: 'delivered', color: '#22C55E' },
+}
+const STEPS = ['Menuju Toko', 'Ambil', 'Antar', 'Selesai']
+function stepIndex(s) { return { picking_up: 0, on_delivery: 2, delivered: 3 }[s] ?? 0 }
+function DeliverySteps({ status }) {
+  const idx = stepIndex(status)
+  const sm  = STATUS_META[status] ?? STATUS_META.picking_up
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 3, marginBottom: 4 }}>
+        {[0,1,2,3].map(i => <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= idx ? sm.color : '#E5E7EB' }} />)}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        {STEPS.map((l, i) => <span key={i} style={{ fontSize: 9, color: i <= idx ? sm.color : '#9CA3AF', fontWeight: i === idx ? 700 : 400 }}>{l}</span>)}
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+export default function MitraMartOrdersPage() {
+  const [tab,         setTab]         = useState('active')
+  const [available,   setAvailable]   = useState([])
+  const [myOrders,    setMyOrders]    = useState([])
+  const [history,     setHistory]     = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [accepting,   setAccepting]   = useState(null)
+  const [updating,    setUpdating]    = useState(null)
+  const [toast,       setToast]       = useState(null)
+  const [mapModal,    setMapModal]    = useState(null)
+  const [showMapAvail,setShowMapAvail]= useState({})
+  const pollRef = useRef(null)
+  const { gps: mitraGps } = useMitraGps()
+  const mitraLat = mitraGps?.lat ?? null
+  const mitraLng = mitraGps?.lng ?? null
+
+  const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3200) }
 
   const load = useCallback(async () => {
-    setLoading(true)
     try {
-      const [avRes, myRes] = await Promise.all([
+      const [avRes, myRes, histRes] = await Promise.all([
         api.get('/mart/mitra/orders/available'),
         api.get('/mart/mitra/orders/my'),
+        api.get('/mart/mitra/orders/history').catch(() => ({ data: [] })),
       ])
       setAvailable(avRes.data ?? [])
       setMyOrders(myRes.data ?? [])
+      setHistory(histRes.data ?? [])
     } catch {}
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    pollRef.current = setInterval(load, 30000)
+    return () => clearInterval(pollRef.current)
+  }, [load])
 
-  // Auto-switch ke active jika ada order aktif
   useEffect(() => {
     if (myOrders.length > 0) setTab('active')
   }, [myOrders.length])
@@ -68,12 +230,11 @@ export default function MitraMartOrdersPage() {
     setAccepting(id)
     try {
       await api.post(`/mart/mitra/orders/${id}/accept`)
-      showToast('success', 'Pesanan diterima! Segera menuju toko.')
-      await load()
+      showToast('success', 'Pesanan diterima! Menuju toko sekarang.')
       setTab('active')
-    } catch (e) {
-      showToast('error', e.response?.data?.message || 'Gagal menerima pesanan.')
-    } finally { setAccepting(null) }
+      load()
+    } catch (e) { showToast('error', e.response?.data?.message || 'Gagal menerima pesanan.') }
+    finally { setAccepting(null) }
   }
 
   const updateStatus = async (id, status) => {
@@ -81,171 +242,325 @@ export default function MitraMartOrdersPage() {
     try {
       await api.patch(`/mart/mitra/orders/${id}/status`, { status })
       showToast('success', status === 'delivered' ? 'Pesanan berhasil diantar! 🎉' : 'Status diperbarui.')
-      await load()
-    } catch (e) {
-      showToast('error', e.response?.data?.message || 'Gagal update status.')
-    } finally { setUpdating(null) }
+      load()
+    } catch (e) { showToast('error', e.response?.data?.message || 'Gagal update status.') }
+    finally { setUpdating(null) }
   }
 
-  const hasActive = myOrders.length > 0
+  const todayEarning = history.filter(o => o.status === 'completed').reduce((s, o) => s + (o.shipping_fee ?? 0), 0)
 
   return (
     <div style={{ background: 'var(--k-bg)', minHeight: '100dvh', paddingBottom: 80 }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}} @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
+
+      {mapModal && <MartMapModal order={mapModal} mitraLat={mitraLat} mitraLng={mitraLng} onClose={() => setMapModal(null)} />}
+
       {toast && (
-        <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, padding: '12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: toast.type === 'success' ? '#00C896' : '#F56565', color: '#fff', whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
+        <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, padding: '11px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, background: toast.type === 'success' ? '#00C896' : '#F56565', color: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.15)', whiteSpace: 'nowrap' }}>
           {toast.msg}
         </div>
       )}
 
       {/* Header */}
-      <div style={{ padding: '52px 16px 0', background: 'linear-gradient(160deg,#1a1a2e 0%,var(--k-bg) 100%)' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--k-text)', marginBottom: 4 }}>ZasaShop Kurir</h1>
-        <p style={{ fontSize: 13, color: 'var(--k-muted)', marginBottom: 16 }}>Antar pesanan belanja ke customer</p>
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)' }}>
-        {[
-          { key: 'available', label: `Tersedia (${available.length})` },
-          { key: 'active',    label: `Aktif${hasActive ? ` (${myOrders.length})` : ''}` },
-        ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            style={{ flex: 1, padding: '12px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.key ? 700 : 500, color: tab === t.key ? '#6366F1' : 'var(--k-muted)', borderBottom: tab === t.key ? '2px solid #6366F1' : '2px solid transparent' }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ padding: '14px 16px' }}>
-        {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-            <div style={{ width: 24, height: 24, border: '3px solid #6366F1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <div style={{ background: 'var(--k-card)', borderBottom: '1px solid var(--k-border)', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ padding: '14px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--k-text)' }}>ZasaShop Kurir 🛵</div>
+            {todayEarning > 0 && <div style={{ fontSize: 12, color: '#027A48', fontWeight: 600 }}>Hari ini: +{fmtRp(todayEarning)}</div>}
           </div>
-        ) : tab === 'available' ? (
-          available.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-muted)' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
-              <p style={{ fontWeight: 600, marginBottom: 6 }}>Tidak ada pesanan tersedia</p>
-              <p style={{ fontSize: 12 }}>Pesanan akan muncul ketika seller sudah mengemas barang</p>
-              <button onClick={load} style={{ marginTop: 16, padding: '10px 24px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-text)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>🔄 Refresh</button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {available.map(order => {
-                const sm = STATUS_META[order.status] ?? { label: order.status, color: '#888', bg: 'transparent' }
-                return (
-                  <div key={order.id} style={{ background: 'var(--k-card)', borderRadius: 16, border: '1px solid var(--k-border)', overflow: 'hidden' }}>
-                    <div style={{ padding: '14px 14px 10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          {order.seller?.logo_path
-                            ? <img src={`${STORAGE}/${order.seller.logo_path}`} style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover' }} />
-                            : <div style={{ width: 32, height: 32, borderRadius: 8, background: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🏪</div>
-                          }
-                          <div>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)' }}>{order.seller?.name}</p>
-                            <p style={{ fontSize: 10, color: 'var(--k-muted)' }}>{order.order_number}</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {mitraLat && <span style={{ fontSize: 10, color: '#3B82F6', fontWeight: 700, background: 'rgba(59,130,246,0.1)', padding: '3px 8px', borderRadius: 20 }}>📡 GPS aktif</span>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', borderTop: '1px solid var(--k-border)' }}>
+          {[
+            ['active',    '🚚', 'Aktif',    myOrders.length    ],
+            ['available', '📦', 'Tersedia', available.length   ],
+            ['history',   '📜', 'Riwayat',  0                  ],
+          ].map(([k, emoji, l, count]) => (
+            <button key={k} onClick={() => setTab(k)} style={{
+              flex: 1, padding: '10px 4px 8px', border: 'none', cursor: 'pointer', background: 'transparent',
+              color: tab === k ? '#8B5CF6' : 'var(--k-sub)',
+              borderBottom: tab === k ? '2.5px solid #8B5CF6' : '2.5px solid transparent',
+              fontWeight: tab === k ? 700 : 400, fontSize: 11,
+            }}>
+              <div style={{ fontSize: 18, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
+                {emoji}
+                {count > 0 && (
+                  <span style={{ position: 'absolute', top: -5, right: -8, background: k === 'available' ? '#DC2626' : '#8B5CF6', color: '#fff', fontSize: 9, fontWeight: 800, padding: '1px 4px', borderRadius: 20, lineHeight: 1.4, animation: k === 'available' ? 'blink 2s infinite' : 'none' }}>{count}</span>
+                )}
+              </div>
+              <div style={{ marginTop: 2 }}>{l}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: 14 }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-sub)' }}>
+            <div style={{ width: 28, height: 28, border: '3px solid #8B5CF6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+            <p style={{ fontSize: 13 }}>Memuat data...</p>
+          </div>
+        ) : (
+          <>
+            {/* ══ Tab AKTIF ══════════════════════════════════════════════════════ */}
+            {tab === 'active' && (
+              myOrders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-sub)' }}>
+                  <div style={{ fontSize: 52, marginBottom: 12 }}>🛵</div>
+                  <p style={{ fontWeight: 600, color: 'var(--k-text)', marginBottom: 6 }}>Tidak ada pengiriman aktif</p>
+                  <p style={{ fontSize: 13, marginBottom: 20 }}>Ambil pesanan dari tab Tersedia.</p>
+                  <button onClick={() => setTab('available')} style={{ padding: '11px 24px', borderRadius: 20, border: 'none', background: '#8B5CF6', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Lihat Tersedia</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {myOrders.map(order => {
+                    const sm = STATUS_META[order.status] ?? STATUS_META.picking_up
+                    const nx = NEXT_STATUS[order.status]
+                    const pick = getPickup(order)
+                    const drop = getDrop(order)
+                    const goingToSeller = order.status === 'picking_up'
+                    const targetLat = goingToSeller ? pick.lat : drop.lat
+                    const targetLng = goingToSeller ? pick.lng : drop.lng
+                    const distM = mitraLat && targetLat && !isNaN(targetLat)
+                      ? distanceMeter(mitraLat, mitraLng, targetLat, targetLng) : null
+                    const isCOD = order.payment_method === 'cod'
+                    const gmapsUrl = (lat, lng) => lat && lng ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving` : '#'
+
+                    return (
+                      <div key={order.id} style={{ borderRadius: 18, background: 'var(--k-card)', border: `2px solid ${sm.border}`, overflow: 'hidden' }}>
+                        {/* Status banner */}
+                        <div style={{ background: sm.bg, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 800, fontSize: 14, color: sm.color }}>{sm.icon} {sm.label}</span>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {isCOD && <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: 'rgba(220,38,38,0.1)', color: '#DC2626' }}>💵 COD</span>}
+                            <span style={{ fontSize: 11, color: 'var(--k-sub)', fontFamily: 'monospace' }}>#{order.order_number}</span>
                           </div>
                         </div>
-                        <p style={{ fontSize: 15, fontWeight: 800, color: '#6366F1' }}>{fmtRp(order.total)}</p>
+
+                        <div style={{ padding: 14 }}>
+                          <DeliverySteps status={order.status} />
+
+                          {/* Peta embedded */}
+                          <div style={{ marginBottom: 14 }}>
+                            <MartActiveMap order={order} mitraLat={mitraLat} mitraLng={mitraLng} height={200} onExpand={() => setMapModal(order)} />
+                          </div>
+
+                          {/* Jarak real-time */}
+                          {distM !== null && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: goingToSeller ? 'rgba(139,92,246,0.08)' : 'rgba(99,102,241,0.08)', border: `1px solid ${goingToSeller ? 'rgba(139,92,246,0.2)' : 'rgba(99,102,241,0.2)'}`, marginBottom: 14 }}>
+                              <span style={{ fontSize: 20 }}>{goingToSeller ? '🏪' : '🏠'}</span>
+                              <div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: goingToSeller ? '#8B5CF6' : '#6366F1' }}>{goingToSeller ? 'Menuju toko' : 'Menuju pelanggan'}</div>
+                                <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>Jarak: <b>{fmtDist(distM)}</b>{distM < 300 ? ' · Hampir sampai!' : ''}</div>
+                              </div>
+                              <a href={gmapsUrl(targetLat, targetLng)} target="_blank" rel="noopener noreferrer"
+                                style={{ marginLeft: 'auto', padding: '7px 12px', borderRadius: 9, background: goingToSeller ? 'rgba(139,92,246,0.12)' : 'rgba(99,102,241,0.12)', color: goingToSeller ? '#8B5CF6' : '#6366F1', fontSize: 12, fontWeight: 700, textDecoration: 'none', border: `1px solid ${goingToSeller ? 'rgba(139,92,246,0.2)' : 'rgba(99,102,241,0.2)'}` }}>
+                                Navigasi ↗
+                              </a>
+                            </div>
+                          )}
+
+                          {/* Rute teks */}
+                          <div style={{ display: 'flex', gap: 0, marginBottom: 14 }}>
+                            <div style={{ flex: 1, padding: '10px 12px', borderRadius: '10px 0 0 10px', background: goingToSeller ? 'rgba(139,92,246,0.07)' : 'var(--k-input)', border: `1.5px solid ${goingToSeller ? '#8B5CF6' : 'var(--k-border)'}`, borderRight: 'none' }}>
+                              <div style={{ fontSize: 9, color: 'var(--k-sub)', fontWeight: 700, marginBottom: 2 }}>🏪 PICKUP</div>
+                              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 1 }}>{order.seller?.name || order.seller_name_snapshot}</div>
+                              <div style={{ fontSize: 11, color: 'var(--k-sub)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.seller?.address || order.seller_address_snapshot || '—'}</div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--k-input)', padding: '0 6px', fontSize: 14, color: 'var(--k-sub)' }}>›</div>
+                            <div style={{ flex: 1, padding: '10px 12px', borderRadius: '0 10px 10px 0', background: !goingToSeller ? 'rgba(99,102,241,0.07)' : 'var(--k-input)', border: `1.5px solid ${!goingToSeller ? '#6366F1' : 'var(--k-border)'}`, borderLeft: 'none' }}>
+                              <div style={{ fontSize: 9, color: 'var(--k-sub)', fontWeight: 700, marginBottom: 2 }}>🏠 ANTAR</div>
+                              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 1 }}>{order.delivery_name || order.customer?.name || '—'}</div>
+                              <div style={{ fontSize: 11, color: 'var(--k-sub)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.delivery_address || '—'}</div>
+                            </div>
+                          </div>
+
+                          {/* Info customer + telepon */}
+                          {(order.delivery_phone || order.customer?.phone) && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'var(--k-input)', border: '1px solid var(--k-border)', marginBottom: 14 }}>
+                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>👤</div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, fontSize: 13 }}>{order.delivery_name || order.customer?.name || 'Customer'}</div>
+                                <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>{order.delivery_phone || order.customer?.phone}</div>
+                              </div>
+                              <a href={`tel:${order.delivery_phone || order.customer?.phone}`}
+                                style={{ padding: '8px 14px', borderRadius: 10, background: 'rgba(0,200,150,0.12)', color: '#027A48', fontSize: 13, fontWeight: 700, textDecoration: 'none', border: '1px solid rgba(0,200,150,0.25)', flexShrink: 0 }}>
+                                📞 Telepon
+                              </a>
+                            </div>
+                          )}
+
+                          {/* COD warning */}
+                          {isCOD && (
+                            <div style={{ fontSize: 12, padding: '8px 12px', borderRadius: 9, background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', fontWeight: 600, marginBottom: 12 }}>
+                              ⚠️ COD — tagih {fmtRp(order.total)} dari pelanggan saat tiba.
+                            </div>
+                          )}
+
+                          {/* Items */}
+                          <div style={{ fontSize: 12, color: 'var(--k-sub)', padding: '8px 10px', borderRadius: 8, background: 'var(--k-input)', marginBottom: 14, lineHeight: 1.6 }}>
+                            🛍 {order.items?.map(i => `${i.product_name} ×${i.quantity}`).join(' · ')}
+                          </div>
+
+                          {/* Pendapatan */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                            <div>
+                              <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>Pendapatanmu</div>
+                              <div style={{ fontWeight: 900, fontSize: 20, color: '#8B5CF6' }}>{fmtRp(order.shipping_fee ?? 0)}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>Total belanja</div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>{fmtRp(order.total)}</div>
+                            </div>
+                          </div>
+
+                          {nx && (
+                            <button onClick={() => updateStatus(order.id, nx.value)} disabled={updating === order.id}
+                              style={{ width: '100%', padding: 15, borderRadius: 14, border: 'none', cursor: updating === order.id ? 'default' : 'pointer', background: updating === order.id ? 'var(--k-border)' : nx.color, color: '#fff', fontWeight: 900, fontSize: 15, animation: updating !== order.id ? 'pulse 2s infinite' : 'none' }}>
+                              {updating === order.id ? 'Memperbarui...' : nx.label}
+                            </button>
+                          )}
+
+                          {order.status === 'delivered' && (
+                            <div style={{ padding: '12px', borderRadius: 12, background: 'rgba(34,197,94,0.09)', border: '1px solid rgba(34,197,94,0.3)', textAlign: 'center' }}>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: '#22C55E' }}>🎉 Terkirim! Menunggu konfirmasi customer.</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
+                    )
+                  })}
+                </div>
+              )
+            )}
 
-                      {/* Items summary */}
-                      <p style={{ fontSize: 12, color: 'var(--k-sub)', marginBottom: 8 }}>
-                        {order.items?.length ?? 0} produk · dikemas {fmtTime(order.packed_at || order.updated_at)}
-                      </p>
+            {/* ══ Tab TERSEDIA ═══════════════════════════════════════════════════ */}
+            {tab === 'available' && (
+              available.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-sub)' }}>
+                  <div style={{ fontSize: 52, marginBottom: 12 }}>📭</div>
+                  <p style={{ fontWeight: 600, color: 'var(--k-text)', marginBottom: 6 }}>Tidak ada pesanan tersedia</p>
+                  <p style={{ fontSize: 13 }}>Pesanan muncul saat seller selesai mengemas barang.</p>
+                  <button onClick={load} style={{ marginTop: 20, padding: '10px 24px', borderRadius: 20, border: '1.5px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-text)', fontWeight: 700, cursor: 'pointer' }}>🔄 Refresh</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {available.map(order => {
+                    const pick = getPickup(order)
+                    const drop = getDrop(order)
+                    const isCOD = order.payment_method === 'cod'
+                    const distToShop = mitraLat && pick.lat && !isNaN(pick.lat)
+                      ? distanceMeter(mitraLat, mitraLng, pick.lat, pick.lng) : null
+                    const showMap = showMapAvail[order.id]
 
-                      {/* Locations */}
-                      <div style={{ background: 'var(--k-card2)', borderRadius: 10, padding: '8px 10px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                          <span style={{ fontSize: 14, flexShrink: 0 }}>🏪</span>
-                          <MapsLink label={order.seller?.address || 'Alamat toko'} lat={order.seller_lat} lng={order.seller_lng} />
+                    return (
+                      <div key={order.id} style={{ borderRadius: 16, background: 'var(--k-card)', border: '2px solid rgba(139,92,246,0.3)', overflow: 'hidden' }}>
+                        <div style={{ background: 'rgba(139,92,246,0.06)', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(139,92,246,0.15)' }}>
+                          <span style={{ fontWeight: 800, fontSize: 13, color: '#8B5CF6' }}>📦 Siap Diambil</span>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {isCOD && <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: 'rgba(220,38,38,0.1)', color: '#DC2626' }}>💵 COD</span>}
+                            <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--k-sub)' }}>#{order.order_number}</span>
+                          </div>
                         </div>
-                        <div style={{ width: 1, height: 10, background: 'var(--k-border)', marginLeft: 10 }} />
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                          <span style={{ fontSize: 14, flexShrink: 0 }}>📦</span>
-                          <MapsLink label={order.delivery_address} lat={order.delivery_lat} lng={order.delivery_lng} />
+
+                        <div style={{ padding: '12px 14px' }}>
+                          {showMap && <MartAvailableMap order={order} mitraLat={mitraLat} mitraLng={mitraLng} />}
+
+                          {/* Rute visual */}
+                          <div style={{ display: 'flex', alignItems: 'stretch', gap: 10, marginBottom: 12 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3 }}>
+                              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#8B5CF6', border: '2px solid #fff', boxShadow: '0 0 0 2px #8B5CF6' }} />
+                              <div style={{ width: 2, flex: 1, background: '#E5E7EB', margin: '3px 0' }} />
+                              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#6366F1', border: '2px solid #fff', boxShadow: '0 0 0 2px #6366F1' }} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ marginBottom: 8 }}>
+                                <div style={{ fontSize: 10, color: 'var(--k-sub)', fontWeight: 600 }}>🏪 AMBIL DI</div>
+                                <div style={{ fontWeight: 700, fontSize: 14 }}>
+                                  {order.seller?.logo_path && (
+                                    <img src={`${STORAGE}/${order.seller.logo_path}`} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: 'cover', verticalAlign: 'middle', marginRight: 5 }} />
+                                  )}
+                                  {order.seller?.name || order.seller_name_snapshot}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>{order.seller?.address || order.seller_address_snapshot || '—'}</div>
+                                {distToShop !== null && <div style={{ fontSize: 11, color: '#8B5CF6', fontWeight: 600, marginTop: 2 }}>📍 {fmtDist(distToShop)} dari posisimu</div>}
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, color: 'var(--k-sub)', fontWeight: 600 }}>🏠 ANTAR KE</div>
+                                <div style={{ fontWeight: 600, fontSize: 13 }}>{order.delivery_name || order.customer?.name || '—'}</div>
+                                <div style={{ fontSize: 11, color: 'var(--k-sub)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.delivery_address}</div>
+                              </div>
+                            </div>
+                            <button onClick={() => setShowMapAvail(p => ({ ...p, [order.id]: !p[order.id] }))}
+                              style={{ alignSelf: 'flex-start', padding: '6px 10px', borderRadius: 9, border: '1.5px solid var(--k-border)', background: showMap ? 'rgba(139,92,246,0.1)' : 'var(--k-input)', color: showMap ? '#8B5CF6' : 'var(--k-sub)', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                              {showMap ? 'Tutup' : '🗺️ Peta'}
+                            </button>
+                          </div>
+
+                          {/* Items */}
+                          <div style={{ fontSize: 12, color: 'var(--k-sub)', padding: '7px 10px', borderRadius: 8, background: 'var(--k-input)', marginBottom: 12, lineHeight: 1.6 }}>
+                            🛍 {order.items?.map(i => `${i.product_name} ×${i.quantity}`).join(' · ')} · dikemas {fmtTime(order.packed_at || order.updated_at)}
+                          </div>
+
+                          {isCOD && (
+                            <div style={{ fontSize: 12, padding: '7px 12px', borderRadius: 9, background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', fontWeight: 600, marginBottom: 12 }}>
+                              ⚠️ COD — kamu tagih {fmtRp(order.total)} dari pelanggan.
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div>
+                              <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>Pendapatanmu</div>
+                              <div style={{ fontWeight: 800, fontSize: 20, color: '#8B5CF6' }}>{fmtRp(order.shipping_fee ?? 0)}</div>
+                            </div>
+                            <button onClick={() => accept(order.id)} disabled={accepting === order.id || myOrders.length > 0}
+                              style={{ padding: '13px 26px', borderRadius: 12, border: 'none', background: accepting === order.id || myOrders.length > 0 ? 'var(--k-border)' : '#8B5CF6', color: '#fff', fontWeight: 900, fontSize: 15, cursor: accepting === order.id || myOrders.length > 0 ? 'default' : 'pointer', animation: !accepting && myOrders.length === 0 ? 'pulse 1.5s infinite' : 'none' }}>
+                              {myOrders.length > 0 ? 'Ada order aktif' : accepting === order.id ? 'Memproses...' : 'Ambil Pesanan'}
+                            </button>
+                          </div>
                         </div>
                       </div>
+                    )
+                  })}
+                </div>
+              )
+            )}
 
-                      <button onClick={() => accept(order.id)} disabled={!!accepting || hasActive}
-                        style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: (accepting || hasActive) ? 'var(--k-border)' : 'linear-gradient(135deg,#6366F1,#7C3AED)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: (accepting || hasActive) ? 'not-allowed' : 'pointer' }}>
-                        {accepting === order.id ? '⏳ Memproses...' : hasActive ? '⚠️ Selesaikan order aktif dulu' : '✅ Terima Pesanan Ini'}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-              <button onClick={load} style={{ padding: '10px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'none', color: 'var(--k-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🔄 Refresh</button>
-            </div>
-          )
-        ) : (
-          // Active orders tab
-          myOrders.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-muted)' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🛵</div>
-              <p style={{ fontWeight: 600 }}>Tidak ada pengiriman aktif</p>
-              <p style={{ fontSize: 12, marginTop: 6 }}>Ambil pesanan dari tab Tersedia</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {myOrders.map(order => {
-                const sm   = STATUS_META[order.status] ?? { label: order.status, color: '#888', bg: 'transparent' }
-                const next = NEXT_STATUS[order.status]
-                return (
-                  <div key={order.id} style={{ background: 'var(--k-card)', borderRadius: 16, border: `2px solid ${sm.color}40`, overflow: 'hidden' }}>
-                    <div style={{ background: sm.bg, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: sm.color }}>{sm.label}</span>
-                      <span style={{ fontSize: 11, color: 'var(--k-muted)' }}>{order.order_number}</span>
-                    </div>
-
-                    <div style={{ padding: '12px 14px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                        <div>
-                          <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--k-text)' }}>{order.seller?.name}</p>
-                          <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>{order.items?.length ?? 0} produk</p>
+            {/* ══ Tab RIWAYAT ════════════════════════════════════════════════════ */}
+            {tab === 'history' && (
+              history.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-sub)' }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>📜</div>
+                  <p>Belum ada riwayat pengiriman.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {history.map(order => {
+                    const sm = STATUS_META[order.status] ?? STATUS_META.completed
+                    return (
+                      <div key={order.id} style={{ padding: 14, borderRadius: 14, background: 'var(--k-card)', border: '1.5px solid var(--k-border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>#{order.order_number}</div>
+                            <div style={{ fontSize: 11, color: 'var(--k-sub)', marginTop: 1 }}>{order.seller?.name} · {fmtTime(order.updated_at)}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ display: 'block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, color: sm.color, background: sm.bg }}>{sm.icon} {sm.label}</span>
+                            {order.status === 'completed' && order.shipping_fee > 0 && <div style={{ fontSize: 13, color: '#8B5CF6', fontWeight: 800, marginTop: 4 }}>+{fmtRp(order.shipping_fee)}</div>}
+                          </div>
                         </div>
-                        <p style={{ fontSize: 15, fontWeight: 800, color: '#6366F1' }}>{fmtRp(order.total)}</p>
+                        <div style={{ fontSize: 12, color: 'var(--k-sub)' }}>📍 {order.delivery_address}</div>
                       </div>
-
-                      <div style={{ background: 'var(--k-card2)', borderRadius: 10, padding: '10px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div>
-                          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', marginBottom: 2 }}>JEMPUT DI</p>
-                          <MapsLink label={order.seller?.address || 'Alamat toko'} lat={order.seller_lat} lng={order.seller_lng} />
-                        </div>
-                        <div style={{ borderTop: '1px solid var(--k-border)', paddingTop: 8 }}>
-                          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', marginBottom: 2 }}>ANTAR KE</p>
-                          <MapsLink label={order.delivery_address} lat={order.delivery_lat} lng={order.delivery_lng} />
-                          {order.customer?.name && <p style={{ fontSize: 11, color: 'var(--k-muted)', marginTop: 2 }}>👤 {order.customer.name} {order.delivery_phone ? `· ${order.delivery_phone}` : ''}</p>}
-                        </div>
-                      </div>
-
-                      {order.notes && (
-                        <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 10, fontStyle: 'italic' }}>📝 "{order.notes}"</p>
-                      )}
-
-                      {next && (
-                        <button onClick={() => updateStatus(order.id, next.value)} disabled={updating === order.id}
-                          style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: updating === order.id ? 'var(--k-border)' : next.color, color: '#fff', fontWeight: 800, fontSize: 14, cursor: updating === order.id ? 'not-allowed' : 'pointer' }}>
-                          {updating === order.id ? '⏳ Memproses...' : next.label}
-                        </button>
-                      )}
-
-                      {order.status === 'delivered' && (
-                        <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', textAlign: 'center' }}>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: '#22C55E' }}>🎉 Terkirim! Menunggu konfirmasi customer.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )
+                    )
+                  })}
+                </div>
+              )
+            )}
+          </>
         )}
       </div>
-
       <BottomNav />
     </div>
   )
