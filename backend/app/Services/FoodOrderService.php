@@ -257,8 +257,9 @@ class FoodOrderService
             }
 
             // Cek mitra tidak punya active food order lain
+            // 'delivered' dikecualikan: mitra sudah selesai antar, tinggal konfirmasi customer
             $active = FoodOrder::where('mitra_id', $mitra->id)
-                ->whereNotIn('status', ['completed', 'cancelled', 'rejected'])
+                ->whereNotIn('status', ['delivered', 'completed', 'cancelled', 'rejected'])
                 ->lockForUpdate()->first();
 
             if ($active) {
