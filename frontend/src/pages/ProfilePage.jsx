@@ -414,6 +414,22 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Alamat Saya */}
+        <button onClick={() => navigate('/addresses')} style={{
+          background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16,
+          padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', textAlign: 'left', width: '100%',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📍</div>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)', marginBottom: 1 }}>Alamat Saya</p>
+              <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>Kelola alamat pengiriman tersimpan</p>
+            </div>
+          </div>
+          <span style={{ fontSize: 18, color: 'var(--k-muted)' }}>›</span>
+        </button>
+
         {/* Link legal & info */}
         <div style={{ display: 'flex', gap: 8 }}>
           {[['ℹ️ Tentang', '/about'], ['📋 S&K', '/tos'], ['🔒 Privasi', '/privacy']].map(([l, to]) => (

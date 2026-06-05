@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import Map, { Marker } from 'react-map-gl/maplibre'
 import { SATELLITE_STYLE } from '../utils/mapStyle'
 import api from '../services/api'
+import useAddresses from '../hooks/useAddresses'
 
 // ── SVG Pin marker ───────────────────────────────────────────────────────────
 function PinMarker({ color }) {
@@ -194,6 +195,7 @@ function LocationPicker({ label, color, lat, lng, address, onchange }) {
 // ── Halaman utama ─────────────────────────────────────────────────────────────
 export default function CreateOrderPage() {
   const navigate = useNavigate()
+  const { addresses } = useAddresses()
   const [categories, setCategories] = useState([])
   const [catError,   setCatError]   = useState(false)
   const [form, setForm] = useState({
@@ -317,6 +319,40 @@ export default function CreateOrderPage() {
             lat={form.pickup_lat} lng={form.pickup_lng} address={form.pickup_address}
             onchange={onPickup}
           />
+
+          {/* Alamat tersimpan — shortcut isi lokasi tujuan */}
+          {addresses.length > 0 && (
+            <div>
+              <p style={{ color: 'var(--k-sub)', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
+                📒 Alamat Tersimpan
+              </p>
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                {addresses.map(addr => (
+                  <button
+                    key={addr.id}
+                    type="button"
+                    onClick={() => {
+                      onDropoff('lat', String(addr.lat))
+                      onDropoff('lng', String(addr.lng))
+                      onDropoff('address', addr.address)
+                    }}
+                    style={{
+                      flexShrink: 0,
+                      padding: '7px 14px',
+                      borderRadius: 20,
+                      border: '1.5px solid var(--k-border)',
+                      background: form.dropoff_address === addr.address ? 'rgba(99,102,241,0.12)' : 'var(--k-card)',
+                      color: form.dropoff_address === addr.address ? 'var(--k-primary)' : 'var(--k-text)',
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {addr.label === 'Rumah' ? '🏠' : addr.label === 'Kantor' ? '🏢' : '📌'} {addr.label}
+                    {addr.is_default ? ' ★' : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Lokasi Tujuan */}
           <LocationPicker

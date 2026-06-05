@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../../services/api'
+import AddressPicker from '../../components/AddressPicker'
 
 const fmtRp = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
@@ -22,18 +23,14 @@ export default function MartCheckoutPage() {
   const seller_id    = location.state?.seller_id
   const cartItemIds  = location.state?.cart_item_ids ?? null
 
-  const [items,     setItems]     = useState([])
-  const [seller,    setSeller]    = useState(null)
-  const [address,   setAddress]   = useState('')
-  const [phone,     setPhone]     = useState('')
-  const [notes,     setNotes]     = useState('')
-  const [lat,       setLat]       = useState(null)
-  const [lng,       setLng]       = useState(null)
-  const [locating,  setLocating]  = useState(false)
-  const [placing,   setPlacing]   = useState(false)
-  const [err,       setErr]       = useState('')
-  const [payMethod, setPayMethod] = useState('wallet')
-  const [balance,   setBalance]   = useState(null)
+  const [items,        setItems]        = useState([])
+  const [seller,       setSeller]       = useState(null)
+  const [deliveryInfo, setDeliveryInfo] = useState(null) // { address, lat, lng, recipient_name, recipient_phone, notes }
+  const [notes,        setNotes]        = useState('')
+  const [placing,      setPlacing]      = useState(false)
+  const [err,          setErr]          = useState('')
+  const [payMethod,    setPayMethod]    = useState('wallet')
+  const [balance,      setBalance]      = useState(null)
 
   useEffect(() => {
     if (!seller_id) { navigate('/mart/cart'); return }
@@ -46,34 +43,17 @@ export default function MartCheckoutPage() {
     api.get('/wallet').then(r => setBalance(r.data.available_balance ?? r.data.balance ?? null)).catch(() => {})
   }, [seller_id]) // eslint-disable-line
 
-  const getLocation = () => {
-    setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      async pos => {
-        const { latitude: la, longitude: lo } = pos.coords
-        setLat(la); setLng(lo)
-        try {
-          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${la}&lon=${lo}&format=json&accept-language=id`)
-          const d = await r.json()
-          setAddress(d.display_name || '')
-        } catch {}
-        setLocating(false)
-      },
-      () => setLocating(false)
-    )
-  }
-
   const subtotal = items.reduce((s, i) => s + (i.product?.price || 0) * i.quantity, 0)
   const sellerLat = parseFloat(seller?.lat)
   const sellerLng = parseFloat(seller?.lng)
   const hasSellerCoords = seller && !isNaN(sellerLat) && !isNaN(sellerLng) && sellerLat !== 0
-  const shippingFee = hasSellerCoords && lat && lng
-    ? Math.max(3000, Math.round(haversine(lat, lng, sellerLat, sellerLng) * 3000 / 1000) * 1000)
+  const shippingFee = hasSellerCoords && deliveryInfo?.lat && deliveryInfo?.lng
+    ? Math.max(3000, Math.round(haversine(deliveryInfo.lat, deliveryInfo.lng, sellerLat, sellerLng) * 3000 / 1000) * 1000)
     : 5000
   const total = subtotal + shippingFee
 
   const place = async () => {
-    if (!address.trim()) { setErr('Masukkan alamat pengiriman.'); return }
+    if (!deliveryInfo?.address?.trim()) { setErr('Pilih alamat pengiriman terlebih dahulu.'); return }
     if (payMethod === 'wallet' && balance !== null && balance < total) {
       setErr(`Saldo tidak cukup. Saldo kamu ${fmtRp(balance)}, dibutuhkan ${fmtRp(total)}. Pilih Bayar di Tempat atau top up dulu.`)
       return
@@ -82,11 +62,11 @@ export default function MartCheckoutPage() {
     try {
       const r = await api.post('/mart/checkout', {
         seller_id,
-        delivery_address: address,
-        delivery_lat: lat,
-        delivery_lng: lng,
-        delivery_phone: phone || undefined,
-        notes: notes || undefined,
+        delivery_address: deliveryInfo.address,
+        delivery_lat: deliveryInfo.lat,
+        delivery_lng: deliveryInfo.lng,
+        delivery_phone: deliveryInfo.recipient_phone || undefined,
+        notes: notes || deliveryInfo.notes || undefined,
         shipping_fee: shippingFee,
         payment_method: payMethod,
         cart_item_ids: cartItemIds ?? undefined,
@@ -148,17 +128,7 @@ export default function MartCheckoutPage() {
         {/* Delivery address */}
         <div style={{ ...card, padding: '14px' }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>📍 Alamat Pengiriman</p>
-          <textarea value={address} onChange={e => setAddress(e.target.value)} placeholder="Masukkan alamat lengkap..."
-            rows={3} style={{ width: '100%', background: 'var(--k-bg)', border: '1.5px solid var(--k-border)', borderRadius: 10, padding: '10px 12px', fontSize: 13, color: 'var(--k-text)', resize: 'none', outline: 'none', boxSizing: 'border-box' }} />
-          <button onClick={getLocation} disabled={locating}
-            style={{ marginTop: 8, padding: '8px 14px', borderRadius: 10, border: '1.5px solid #6366F1', background: 'none', color: '#6366F1', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {locating
-              ? <><div style={{ width: 12, height: 12, border: '2px solid #6366F1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Mendeteksi...</>
-              : '🎯 Gunakan Lokasi Saat Ini'
-            }
-          </button>
-          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="No. HP penerima (opsional)"
-            style={{ marginTop: 8, width: '100%', background: 'var(--k-bg)', border: '1.5px solid var(--k-border)', borderRadius: 10, padding: '10px 12px', fontSize: 13, color: 'var(--k-text)', outline: 'none', boxSizing: 'border-box' }} />
+          <AddressPicker value={deliveryInfo} onChange={setDeliveryInfo} />
         </div>
 
         {/* Payment method */}
@@ -207,7 +177,7 @@ export default function MartCheckoutPage() {
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Ringkasan Pembayaran</p>
           {[
             { label: 'Subtotal', value: fmtRp(subtotal) },
-            { label: lat ? 'Ongkir (estimasi jarak)' : 'Ongkir (estimasi)', value: fmtRp(shippingFee) },
+            { label: deliveryInfo?.lat ? 'Ongkir (estimasi jarak)' : 'Ongkir (estimasi)', value: fmtRp(shippingFee) },
           ].map((row, i) => (
             <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i === 0 ? '1px solid var(--k-border)' : 'none' }}>
               <p style={{ fontSize: 13, color: 'var(--k-muted)' }}>{row.label}</p>

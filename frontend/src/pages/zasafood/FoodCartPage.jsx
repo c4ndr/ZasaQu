@@ -1,152 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../../services/api'
+import AddressPicker from '../../components/AddressPicker'
 
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
-
-// ── Mini peta picker lokasi pengiriman ────────────────────────────────────────
-// Pakai nominatim untuk reverse geocoding, minta GPS atau search teks
-function LocationPicker({ lat, lng, address, onChange }) {
-  const [mode,    setMode]    = useState('gps')   // 'gps' | 'search'
-  const [query,   setQuery]   = useState('')
-  const [results, setResults] = useState([])
-  const [finding, setFinding] = useState(false)
-  const [gpsErr,  setGpsErr]  = useState('')
-  const timerRef = useRef(null)
-
-  // Auto-detect GPS saat komponen pertama mount
-  useEffect(() => {
-    detectGps()
-  }, []) // eslint-disable-line
-
-  function detectGps() {
-    if (!navigator.geolocation) {
-      setGpsErr('GPS tidak tersedia di browser ini.')
-      return
-    }
-    setFinding(true); setGpsErr('')
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const { latitude: la, longitude: lo } = pos.coords
-        // Reverse geocode ke nama jalan
-        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${la}&lon=${lo}&format=json&accept-language=id`)
-          .then(r => r.json())
-          .then(data => {
-            const addr = data.display_name || `${la.toFixed(5)}, ${lo.toFixed(5)}`
-            onChange(la, lo, addr)
-          })
-          .catch(() => onChange(la, lo, `Lokasi saat ini (${la.toFixed(4)}, ${lo.toFixed(4)})`))
-          .finally(() => setFinding(false))
-      },
-      err => {
-        setFinding(false)
-        setGpsErr(err.code === 1 ? 'Izin lokasi ditolak. Aktifkan di pengaturan browser atau cari alamat manual.' : 'GPS gagal. Cari alamat secara manual.')
-        setMode('search')
-      },
-      { timeout: 10000, maximumAge: 60000 }
-    )
-  }
-
-  function searchAddress(q) {
-    clearTimeout(timerRef.current)
-    setQuery(q)
-    if (!q.trim() || q.length < 4) { setResults([]); return }
-    timerRef.current = setTimeout(async () => {
-      setFinding(true)
-      try {
-        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&accept-language=id&countrycodes=id`)
-        const data = await r.json()
-        setResults(data)
-      } catch {} finally { setFinding(false) }
-    }, 600)
-  }
-
-  function pickResult(r) {
-    onChange(parseFloat(r.lat), parseFloat(r.lon), r.display_name)
-    setResults([])
-    setQuery(r.display_name)
-    setMode('gps') // kembali ke tampilan ringkas
-  }
-
-  return (
-    <div>
-      {/* Lokasi terpilih */}
-      {lat && lng && (
-        <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
-          borderRadius: 10, background: 'rgba(0,200,150,0.08)',
-          border: '1px solid rgba(0,200,150,0.3)', marginBottom: 10,
-        }}>
-          <span style={{ fontSize: 18, flexShrink: 0 }}>📍</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: '#027A48', fontWeight: 700, marginBottom: 2 }}>Lokasi terdeteksi</div>
-            <div style={{ fontSize: 12, color: 'var(--k-text)', lineHeight: 1.4, wordBreak: 'break-word' }}>{address}</div>
-          </div>
-          <button onClick={() => setMode('search')} style={{
-            background: 'none', border: 'none', cursor: 'pointer', color: '#F97316', fontSize: 12, fontWeight: 700, flexShrink: 0,
-          }}>Ganti</button>
-        </div>
-      )}
-
-      {/* GPS error */}
-      {gpsErr && (
-        <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)', fontSize: 12, color: '#C2410C', marginBottom: 10 }}>
-          ⚠ {gpsErr}
-        </div>
-      )}
-
-      {/* Tombol aksi */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: mode === 'search' ? 10 : 0 }}>
-        {(!lat || !lng || gpsErr) && (
-          <button onClick={detectGps} disabled={finding} style={{
-            flex: 1, padding: '9px 12px', borderRadius: 10, border: '1.5px solid var(--k-border)',
-            background: 'var(--k-input)', color: finding ? 'var(--k-sub)' : 'var(--k-text)',
-            cursor: finding ? 'default' : 'pointer', fontSize: 12, fontWeight: 600,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          }}>
-            {finding ? <><div style={{ width: 12, height: 12, border: '2px solid #F97316', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Mendeteksi...</> : '📍 Gunakan GPS'}
-          </button>
-        )}
-        <button onClick={() => setMode(m => m === 'search' ? 'gps' : 'search')} style={{
-          flex: lat && lng ? 0 : 1, padding: '9px 12px', borderRadius: 10, border: '1.5px solid var(--k-border)',
-          background: mode === 'search' ? 'rgba(249,115,22,0.1)' : 'var(--k-input)',
-          color: mode === 'search' ? '#F97316' : 'var(--k-text)',
-          cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-        }}>🔍 Cari Alamat</button>
-      </div>
-
-      {/* Search box */}
-      {mode === 'search' && (
-        <div>
-          <input
-            type="text" value={query} onChange={e => searchAddress(e.target.value)}
-            placeholder="Ketik nama jalan, desa, kecamatan..."
-            autoFocus
-            style={{
-              width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 13, boxSizing: 'border-box',
-              border: '1.5px solid #F97316', background: 'var(--k-input)', color: 'var(--k-text)', outline: 'none',
-            }}
-          />
-          {finding && <div style={{ fontSize: 12, color: 'var(--k-sub)', marginTop: 6, padding: '0 4px' }}>Mencari...</div>}
-          {results.length > 0 && (
-            <div style={{ border: '1px solid var(--k-border)', borderRadius: 10, overflow: 'hidden', marginTop: 4 }}>
-              {results.map(r => (
-                <div key={r.place_id} onClick={() => pickResult(r)} style={{
-                  padding: '10px 12px', cursor: 'pointer', fontSize: 12, color: 'var(--k-text)',
-                  borderBottom: '1px solid var(--k-border)', background: 'var(--k-card)',
-                  lineHeight: 1.4,
-                }}>
-                  📍 {r.display_name}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  )
-}
 
 // ── Halaman keranjang ─────────────────────────────────────────────────────────
 export default function FoodCartPage() {
@@ -154,9 +11,7 @@ export default function FoodCartPage() {
   const navigate   = useNavigate()
   const { merchant, cart, preSelectedSession } = state || {}
 
-  const [address,         setAddress]         = useState('')
-  const [lat,             setLat]             = useState(null)
-  const [lng,             setLng]             = useState(null)
+  const [deliveryInfo,    setDeliveryInfo]    = useState(null) // { address, lat, lng, recipient_name, recipient_phone, notes }
   const [payMethod,       setPayMethod]       = useState('wallet')
   const [notes,           setNotes]           = useState('')
   const [estimate,        setEstimate]        = useState(null)
@@ -174,29 +29,29 @@ export default function FoodCartPage() {
 
   // Hitung estimasi ongkir
   useEffect(() => {
-    if (!lat || !lng || !merchant?.id) return
+    if (!deliveryInfo?.lat || !deliveryInfo?.lng || !merchant?.id) return
     setLoadingEst(true)
     clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      api.get('/food/delivery-estimate', { params: { merchant_id: merchant.id, delivery_lat: lat, delivery_lng: lng } })
+      api.get('/food/delivery-estimate', { params: { merchant_id: merchant.id, delivery_lat: deliveryInfo.lat, delivery_lng: deliveryInfo.lng } })
         .then(r => setEstimate(r.data))
         .catch(() => {})
         .finally(() => setLoadingEst(false))
     }, 600)
-  }, [lat, lng, merchant?.id])
+  }, [deliveryInfo?.lat, deliveryInfo?.lng, merchant?.id])
 
   // Fetch sesi hemat ongkir — filter by merchant agar hanya yang koridor-nya cocok
   useEffect(() => {
     if (!merchant?.id) return
     setLoadingSessions(true)
     const params = { merchant_id: merchant.id }
-    if (lat) params.lat = lat
-    if (lng) params.lng = lng
+    if (deliveryInfo?.lat) params.lat = deliveryInfo.lat
+    if (deliveryInfo?.lng) params.lng = deliveryInfo.lng
     api.get('/food/jastip/sessions/available', { params })
       .then(r => setSessions(r.data.data || []))
       .catch(() => {})
       .finally(() => setLoadingSessions(false))
-  }, [merchant?.id, lat, lng])
+  }, [merchant?.id, deliveryInfo?.lat, deliveryInfo?.lng])
 
   if (!merchant || !cart?.length) return null
 
@@ -205,17 +60,17 @@ export default function FoodCartPage() {
   const total       = subtotal + deliveryFee
 
   async function handleOrder() {
-    if (!address.trim())  { setErr('Masukkan alamat pengiriman.'); return }
-    if (!lat || !lng)     { setErr('Lokasi pengiriman belum terdeteksi.'); return }
+    if (!deliveryInfo?.address?.trim()) { setErr('Pilih alamat pengiriman terlebih dahulu.'); return }
+    if (!deliveryInfo?.lat || !deliveryInfo?.lng) { setErr('Lokasi pengiriman belum terdeteksi.'); return }
     if (deliveryMode === 'jastip' && !selectedSession) { setErr('Pilih sesi hemat ongkir.'); return }
     setErr(''); setSubmitting(true)
     try {
       const res = await api.post('/food/orders', {
         merchant_id:      merchant.id,
         items:            cart.map(l => ({ menu_item_id: l.menu_item_id, quantity: l.quantity, notes: l.notes })),
-        delivery_address: address,
-        delivery_lat:     lat,
-        delivery_lng:     lng,
+        delivery_address: deliveryInfo.address,
+        delivery_lat:     deliveryInfo.lat,
+        delivery_lng:     deliveryInfo.lng,
         delivery_fee:     deliveryFee,
         payment_method:   payMethod,
         notes,
@@ -237,7 +92,7 @@ export default function FoodCartPage() {
   }
 
   const card = { padding: '16px', borderRadius: 14, background: 'var(--k-card)', border: '1.5px solid var(--k-border)', marginBottom: 12 }
-  const isReady = !submitting && !loadingEst && estimate && address.trim() && lat && lng
+  const isReady = !submitting && !loadingEst && estimate && deliveryInfo?.address?.trim() && deliveryInfo?.lat && deliveryInfo?.lng
     && (deliveryMode === 'regular' || (deliveryMode === 'jastip' && selectedSession))
 
   return (
@@ -281,19 +136,7 @@ export default function FoodCartPage() {
         {/* ── Lokasi pengiriman ── */}
         <div style={card}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>📍 Lokasi Pengiriman</div>
-          <LocationPicker
-            lat={lat} lng={lng} address={address}
-            onChange={(la, lo, addr) => { setLat(la); setLng(lo); setAddress(addr) }}
-          />
-          {lat && lng && (
-            <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--k-sub)', marginBottom: 6 }}>Nama/detail alamat</div>
-              <textarea rows={2} value={address} onChange={e => setAddress(e.target.value)}
-                placeholder="cth: Rumah depan warung Bu Sri, RT 04..."
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 13, boxSizing: 'border-box', border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', resize: 'none' }}
-              />
-            </div>
-          )}
+          <AddressPicker value={deliveryInfo} onChange={setDeliveryInfo} />
         </div>
 
         {/* ── Cara pengiriman ── */}
@@ -416,7 +259,7 @@ export default function FoodCartPage() {
         width: '100%', maxWidth: 520, padding: '10px 14px 14px', boxSizing: 'border-box',
         background: 'var(--k-card)', borderTop: '1px solid var(--k-border)',
       }}>
-        {!lat && (
+        {!deliveryInfo?.lat && (
           <div style={{ fontSize: 12, color: '#F59E0B', textAlign: 'center', marginBottom: 6 }}>
             ⚠ Tentukan lokasi pengiriman terlebih dahulu
           </div>
@@ -428,7 +271,7 @@ export default function FoodCartPage() {
           cursor: isReady ? 'pointer' : 'default', transition: 'background 0.2s',
         }}>
           {submitting ? 'Memproses...'
-            : !lat || !lng ? 'Tentukan lokasi dulu'
+            : !deliveryInfo?.lat || !deliveryInfo?.lng ? 'Tentukan lokasi dulu'
             : !estimate ? 'Menghitung ongkir...'
             : deliveryMode === 'jastip' && !selectedSession ? 'Pilih sesi hemat ongkir'
             : `Pesan Sekarang · ${fmtRp(total)}`}

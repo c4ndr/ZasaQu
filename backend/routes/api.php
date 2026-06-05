@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\Admin\PromoController as AdminPromoController;
 use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\AddressController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Health Check ──────────────────────────────────────────────────────────
@@ -113,6 +114,15 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     // Estimasi ongkir
     Route::get('shipping/estimate', [ShippingController::class, 'estimate']);
+
+    // Buku alamat pelanggan
+    Route::prefix('addresses')->group(function () {
+        Route::get('/', [AddressController::class, 'index']);
+        Route::post('/', [AddressController::class, 'store']);
+        Route::put('{id}', [AddressController::class, 'update']);
+        Route::delete('{id}', [AddressController::class, 'destroy']);
+        Route::post('{id}/set-default', [AddressController::class, 'setDefault']);
+    });
 
     // Wallet
     Route::prefix('wallet')->group(function () {

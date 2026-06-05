@@ -90,6 +90,7 @@ import NotFoundPage from './pages/NotFoundPage'
 import AboutPage from './pages/AboutPage'
 import TosPage from './pages/TosPage'
 import PrivacyPage from './pages/PrivacyPage'
+import AddressesPage from './pages/AddressesPage'
 
 function PrivateRoute({ children }) {
   const { user } = useAuth()
@@ -216,6 +217,7 @@ function AppRoutes() {
       <Route path="/mitra/jastip" element={<PrivateRoute><MitraJastipPage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
       <Route path="/notifications" element={<PrivateRoute><NotificationsPage /></PrivateRoute>} />
+      <Route path="/addresses" element={<PrivateRoute><AddressesPage /></PrivateRoute>} />
 
       {/* ZasaHome */}
       <Route path="/home" element={<ModuleRoute featureKey="zasahome"><ZasaHomePage /></ModuleRoute>} />
