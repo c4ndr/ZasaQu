@@ -138,6 +138,7 @@ class CustomerController extends Controller
         $user   = $request->user();
         $seller = MartSeller::findOrFail($data['seller_id']);
         abort_if(!$seller->isActive(), 422, 'Toko tidak aktif.');
+        abort_if(empty($seller->lat) || empty($seller->lng), 422, 'Toko belum mengatur lokasi. Hubungi penjual untuk melengkapi koordinat toko.');
 
         $cartQuery = MartCart::with('product')
             ->where('user_id', $user->id)

@@ -40,7 +40,7 @@ class MitraMartController extends Controller
     // ── Riwayat pengiriman selesai ───────────────────────────────────────────
     public function history(Request $request): JsonResponse
     {
-        $orders = MartOrder::with(['seller:id,name,logo_path,address', 'customer:id,name'])
+        $orders = MartOrder::with(['seller:id,name,logo_path,address,lat,lng', 'customer:id,name'])
             ->where('mitra_id', $request->user()->id)
             ->whereIn('status', ['completed', 'cancelled', 'delivered'])
             ->latest('delivered_at')

@@ -196,7 +196,18 @@ export default function SellerDashboardPage() {
           )}
         </div>
 
-        {/* ── Tips ──────────────────────────────────────────────────────── */}
+        {/* ── Warning: lokasi belum diset ──────────────────────────────── */}
+        {isActive && (!profile?.lat || !profile?.lng) && (
+          <div onClick={() => navigate('/seller/settings')} style={{ borderRadius: 14, padding: '14px 16px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', gap: 10, cursor: 'pointer' }}>
+            <span style={{ fontSize: 20 }}>📍</span>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#EF4444', marginBottom: 2 }}>Lokasi Toko Belum Diatur!</p>
+              <p style={{ fontSize: 12, color: 'var(--k-sub)', lineHeight: 1.5 }}>Pembeli tidak bisa checkout sebelum kamu mengatur koordinat toko. Tap untuk ke Pengaturan.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tips: toko tutup ──────────────────────────────────────────── */}
         {isActive && !isOpen && (
           <div style={{ borderRadius: 14, padding: '14px 16px', background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.2)', display: 'flex', gap: 10 }}>
             <span style={{ fontSize: 20 }}>💡</span>
