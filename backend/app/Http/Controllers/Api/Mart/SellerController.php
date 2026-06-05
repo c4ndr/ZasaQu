@@ -235,6 +235,10 @@ class SellerController extends Controller
             ->findOrFail($id);
 
         $order->update(['status' => 'packed', 'packed_at' => now()]);
+
+        // Broadcast ke semua mitra — sama seperti ZasaGo & ZasaFood
+        broadcast(new \App\Events\NewMartOrderAvailable($order->load('seller')))->toOthers();
+
         return response()->json(['message' => 'Pesanan ditandai siap diambil.']);
     }
 

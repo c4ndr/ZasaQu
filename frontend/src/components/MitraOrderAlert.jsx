@@ -72,10 +72,10 @@ export default function MitraOrderAlert() {
     return () => navigator.serviceWorker?.removeEventListener('message', onMessage)
   }, [isMitra, vehicleType, dismiss, navigate])
 
-  // ── Sinkronisasi known IDs ke SW ──────────────────────────────────────────
+  // ── Sinkronisasi known IDs ke SW (hanya ZasaGo) ──────────────────────────
   useEffect(() => {
     if (!isMitra) return
-    const ids = pendingOrders.map(o => o.id)
+    const ids = pendingOrders.filter(o => o._module === 'zasago').map(o => o.id)
     ids.forEach(id => seenIdsRef.current.add(id))
     sendToSw({ type: 'MITRA_KNOWN_IDS', knownIds: [...seenIdsRef.current] })
   }, [pendingOrders, isMitra])
@@ -83,51 +83,54 @@ export default function MitraOrderAlert() {
   // ── Kelola polling SW berdasarkan visibilitas halaman ─────────────────────
   useEffect(() => {
     if (!isMitra) return
-
     const token = localStorage.getItem('token')
     if (!token) return
-
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        // App di-minimize → aktifkan polling SW
-        sendToSw({
-          type:     'MITRA_POLL_START',
-          knownIds: [...seenIdsRef.current],
-        })
+        sendToSw({ type: 'MITRA_POLL_START', knownIds: [...seenIdsRef.current] })
       } else {
-        // App kembali aktif → hentikan polling SW (halaman yang handle)
         sendToSw({ type: 'MITRA_POLL_STOP' })
       }
     }
-
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [isMitra])
 
+  // ── Endpoint & navigasi per modul ────────────────────────────────────────
+  const MODULE_CONFIG = {
+    zasago:   { accept: (id) => api.post(`/mitra/orders/${id}/accept`),      nav: '/mitra/orders' },
+    zasafood: { accept: (id) => api.post(`/food/mitra/orders/${id}/accept`), nav: '/mitra/food/orders' },
+    zasamart: { accept: (id) => api.post(`/mart/mitra/orders/${id}/accept`), nav: '/mitra/mart/orders' },
+  }
+
   // ── Terima order dari popup in-app ────────────────────────────────────────
-  const handleAccept = useCallback(async (orderId) => {
-    setAccepting(orderId)
+  const handleAccept = useCallback(async (uid) => {
+    setAccepting(uid)
+    const order = pendingOrders.find(o => o._uid === uid)
+    if (!order) return
+    const cfg = MODULE_CONFIG[order._module] ?? MODULE_CONFIG.zasago
     try {
-      await api.post(`/mitra/orders/${orderId}/accept`)
-      dismiss(orderId)
-      navigate('/mitra/orders')
+      await cfg.accept(order.id)
+      dismiss(uid)
+      navigate(cfg.nav)
     } catch (err) {
       alert(err.response?.data?.message || 'Gagal menerima order.')
     } finally {
       setAccepting(null)
     }
-  }, [dismiss, navigate])
+  }, [pendingOrders, dismiss, navigate]) // eslint-disable-line
 
   // Tidak render apapun jika bukan mitra atau tidak ada order pending
   if (!isMitra || pendingOrders.length === 0) return null
 
+  const top = pendingOrders[0]
   return (
     <NewOrderBanner
-      order={pendingOrders[0]}
+      order={top}
       total={pendingOrders.length}
-      accepting={accepting === pendingOrders[0].id}
-      onAccept={handleAccept}
-      onDismiss={dismiss}
+      accepting={accepting === top._uid}
+      onAccept={() => handleAccept(top._uid)}
+      onDismiss={() => dismiss(top._uid)}
     />
   )
 }

@@ -34,57 +34,106 @@ async function playOrderSound() {
   } catch {}
 }
 
-// ── Hook utama ────────────────────────────────────────────────────────────────
+// ── Konfigurasi per modul ─────────────────────────────────────────────────────
+const MODULES = [
+  {
+    key:      'zasago',
+    endpoint: '/mitra/orders/available',
+    wsEvent:  'order.new',
+    label:    'ZasaGo',
+    emoji:    '🛵',
+  },
+  {
+    key:      'zasafood',
+    endpoint: '/food/mitra/orders/available',
+    wsEvent:  'food.order.new',
+    label:    'ZasaFood',
+    emoji:    '🍔',
+  },
+  {
+    key:      'zasamart',
+    endpoint: '/mart/mitra/orders/available',
+    wsEvent:  'mart.order.new',
+    label:    'ZasaMart',
+    emoji:    '🛒',
+  },
+]
+
+// ── Hook utama — handle semua modul sekaligus ─────────────────────────────────
 export default function useNewOrderNotif(vehicleType) {
   const [pendingOrders, setPendingOrders] = useState([])
   const seenIds      = useRef(new Set())
   const dismissedIds = useRef(new Set())
-  const initialized  = useRef(false)
+  // Track inisialisasi per modul agar order yang sudah ada tidak di-alert
+  const initializedModules = useRef(new Set())
 
-  const addOrder = useCallback((order) => {
-    if (seenIds.current.has(order.id))    return
-    if (dismissedIds.current.has(order.id)) return
-    seenIds.current.add(order.id)
+  const addOrder = useCallback((order, module) => {
+    const uid = `${module}:${order.id}`
+    if (seenIds.current.has(uid))      return
+    if (dismissedIds.current.has(uid)) return
+    seenIds.current.add(uid)
     playOrderSound()
-    showNewOrderNotif(order)   // notifikasi sistem (notification bar)
-    setPendingOrders(prev => prev.find(o => o.id === order.id) ? prev : [order, ...prev])
+    showNewOrderNotif({ ...order, module })
+    setPendingOrders(prev =>
+      prev.find(o => o._uid === uid) ? prev : [{ ...order, _uid: uid, _module: module }, ...prev]
+    )
   }, [])
 
-  const removeOrder = useCallback((orderId) => {
-    dismissedIds.current.add(orderId)
-    setPendingOrders(prev => prev.filter(o => o.id !== orderId))
+  const removeOrder = useCallback((uid) => {
+    dismissedIds.current.add(uid)
+    setPendingOrders(prev => prev.filter(o => o._uid !== uid))
   }, [])
 
-  // Polling fallback setiap 8 detik
+  // ── Polling per modul setiap 8 detik ─────────────────────────────────────
   useEffect(() => {
     if (!vehicleType) return
-    const poll = async () => {
-      try {
-        const res    = await api.get('/mitra/orders/available')
-        const orders = res.data ?? []
-        if (!initialized.current) {
-          orders.forEach(o => seenIds.current.add(o.id))
-          initialized.current = true
-          return
-        }
-        orders.forEach(o => addOrder(o))
-        setPendingOrders(prev => prev.filter(p => orders.some(o => o.id === p.id)))
-      } catch {}
-    }
-    poll()
-    const timer = setInterval(poll, 8000)
-    return () => clearInterval(timer)
+
+    const timers = MODULES.map(mod => {
+      const poll = async () => {
+        try {
+          const res    = await api.get(mod.endpoint)
+          const orders = res.data ?? []
+
+          if (!initializedModules.current.has(mod.key)) {
+            // Pertama kali — tandai semua order yang sudah ada agar tidak di-alert
+            orders.forEach(o => seenIds.current.add(`${mod.key}:${o.id}`))
+            initializedModules.current.add(mod.key)
+            return
+          }
+
+          // Order baru yang belum pernah muncul
+          orders.forEach(o => addOrder(o, mod.key))
+
+          // Bersihkan order yang sudah tidak available dari pending list
+          setPendingOrders(prev =>
+            prev.filter(p => p._module !== mod.key || orders.some(o => `${mod.key}:${o.id}` === p._uid))
+          )
+        } catch {}
+      }
+
+      poll()
+      return setInterval(poll, 8000)
+    })
+
+    return () => timers.forEach(t => clearInterval(t))
   }, [vehicleType, addOrder])
 
-  // WebSocket real-time
+  // ── WebSocket real-time per modul ─────────────────────────────────────────
   useEffect(() => {
     if (!vehicleType) return
+
     const ch = echo.channel(`mitra.${vehicleType}`)
-    ch.listen('.order.new',   (data) => addOrder(data))
-    ch.listen('.order.taken', (data) => {
-      removeOrder(data.order_id)
-      setPendingOrders(prev => prev.filter(o => o.id !== data.order_id))
+
+    MODULES.forEach(mod => {
+      ch.listen(`.${mod.wsEvent}`, (data) => addOrder(data, mod.key))
     })
+
+    // Order sudah diambil mitra lain — hapus dari pending
+    ch.listen('.order.taken', (data) => {
+      const uid = `zasago:${data.order_id}`
+      removeOrder(uid)
+    })
+
     return () => echo.leave(`mitra.${vehicleType}`)
   }, [vehicleType, addOrder, removeOrder])
 
