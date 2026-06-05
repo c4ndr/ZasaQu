@@ -77,7 +77,7 @@ class CustomerController extends Controller
 
     public function cart(Request $request): JsonResponse
     {
-        $items = MartCart::with(['product:id,name,price,images,stock,is_active,seller_id', 'seller:id,name,logo_path'])
+        $items = MartCart::with(['product:id,name,price,images,stock,is_active,seller_id', 'seller:id,name,logo_path,lat,lng'])
             ->where('user_id', $request->user()->id)
             ->get();
 

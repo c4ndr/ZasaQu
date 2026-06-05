@@ -64,8 +64,11 @@ export default function MartCheckoutPage() {
   }
 
   const subtotal = items.reduce((s, i) => s + (i.product?.price || 0) * i.quantity, 0)
-  const shippingFee = seller && lat && lng
-    ? Math.max(3000, Math.round(haversine(lat, lng, seller.lat || 0, seller.lng || 0) * 3000 / 1000) * 1000)
+  const sellerLat = parseFloat(seller?.lat)
+  const sellerLng = parseFloat(seller?.lng)
+  const hasSellerCoords = seller && !isNaN(sellerLat) && !isNaN(sellerLng) && sellerLat !== 0
+  const shippingFee = hasSellerCoords && lat && lng
+    ? Math.max(3000, Math.round(haversine(lat, lng, sellerLat, sellerLng) * 3000 / 1000) * 1000)
     : 5000
   const total = subtotal + shippingFee
 
