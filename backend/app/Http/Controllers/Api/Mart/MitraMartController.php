@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Mart;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\MartOrder;
+use App\Models\Wallet;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,6 +41,19 @@ class MitraMartController extends Controller
     public function accept(Request $request, int $id): JsonResponse
     {
         $mitra = $request->user();
+
+        $minBalance = (float) (AdminSetting::where('key', 'wallet_minimum_mitra')->value('value') ?? 0);
+        if ($minBalance > 0) {
+            $wallet    = Wallet::where('user_id', $mitra->id)->first();
+            $available = $wallet ? $wallet->availableBalance() : 0;
+            if ($available < $minBalance) {
+                return response()->json([
+                    'message' => 'Saldo tidak mencukupi untuk menerima pengiriman. '
+                        . 'Minimum: Rp ' . number_format($minBalance, 0, ',', '.') . '. '
+                        . 'Saldo Anda: Rp ' . number_format($available, 0, ',', '.') . '.',
+                ], 422);
+            }
+        }
 
         try {
             DB::transaction(function () use ($mitra, $id) {
