@@ -274,8 +274,8 @@ class CustomerController extends Controller
                 'cancelled_at' => now(),
             ]);
 
-            // ── Refund ke wallet customer ─────────────────────────────────
-            if ($order->total > 0) {
+            // ── Refund ke wallet customer (hanya jika bayar via wallet, bukan COD) ──
+            if ($order->total > 0 && $order->payment_method === 'wallet') {
                 app(WalletService::class)->credit(
                     $request->user(),
                     $order->total,
