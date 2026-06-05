@@ -74,12 +74,71 @@ class UserController extends Controller
             'note'   => ['nullable', 'string', 'max:255'],
         ]);
         $user = User::where('role', '!=', 'admin')->findOrFail($id);
-        app(\App\Services\WalletService::class)->credit(
-            $user, (float) $data['amount'], 'topup',
+        $walletService = app(\App\Services\WalletService::class);
+        $walletBefore = $user->wallet?->balance ?? 0;
+        $walletService->credit(
+            $user, (float) $data['amount'], 'admin_credit',
             $data['note'] ?? 'Penambahan saldo oleh admin', null
         );
-        $this->auditLogService->log($request->user(), 'add_balance', $user, [], $data);
+        $this->auditLogService->log($request->user(), 'add_balance', $user,
+            ['balance' => $walletBefore], ['amount' => $data['amount'], 'note' => $data['note'] ?? null]);
         return response()->json(['message' => 'Saldo berhasil ditambahkan.']);
+    }
+
+    public function deductBalance(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:100'],
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+        $user = User::where('role', '!=', 'admin')->findOrFail($id);
+        $walletService = app(\App\Services\WalletService::class);
+        $walletBefore = (float) ($user->wallet?->balance ?? 0);
+        if ($walletBefore < (float) $data['amount']) {
+            return response()->json([
+                'message' => "Saldo user tidak mencukupi. Saldo saat ini: Rp " . number_format($walletBefore, 0, ',', '.') . ".",
+            ], 422);
+        }
+        $walletService->debit(
+            $user, (float) $data['amount'], 'admin_debit',
+            $data['reason'], null
+        );
+        $this->auditLogService->log($request->user(), 'deduct_balance', $user,
+            ['balance' => $walletBefore], ['amount' => $data['amount'], 'reason' => $data['reason']]);
+        return response()->json(['message' => 'Saldo berhasil dikurangi.']);
+    }
+
+    public function walletTransactions(Request $request, int $id): JsonResponse
+    {
+        $user = User::where('role', '!=', 'admin')->findOrFail($id);
+        $transactions = \App\Models\WalletTransaction::where('wallet_id', $user->wallet?->id)
+            ->latest()
+            ->paginate(30);
+        return response()->json($transactions);
+    }
+
+    public function walletSearch(Request $request): JsonResponse
+    {
+        $users = User::with('wallet')
+            ->where('role', '!=', 'admin')
+            ->when($request->search, fn($q) => $q->where(fn($q2) =>
+                $q2->where('name', 'like', "%{$request->search}%")
+                   ->orWhere('email', 'like', "%{$request->search}%")
+                   ->orWhere('phone', 'like', "%{$request->search}%")))
+            ->when($request->role, fn($q) => $q->where('role', $request->role))
+            ->orderByDesc(fn($q) => $q->select('balance')->from('wallets')->whereColumn('user_id', 'users.id')->limit(1))
+            ->latest()
+            ->paginate(20);
+        return response()->json($users);
+    }
+
+    public function adminAdjustments(Request $request): JsonResponse
+    {
+        $txs = \App\Models\WalletTransaction::with(['wallet.user:id,name,email,role'])
+            ->whereIn('type', ['admin_credit', 'admin_debit'])
+            ->latest()
+            ->paginate(30);
+        return response()->json($txs);
     }
 
     public function updateStatus(Request $request, int $id): JsonResponse

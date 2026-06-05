@@ -245,6 +245,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
             Route::get('{id}', [AdminUserController::class, 'show']);
             Route::patch('{id}/status', [AdminUserController::class, 'updateStatus']);
             Route::post('{id}/add-balance', [AdminUserController::class, 'addBalance']);
+            Route::post('{id}/deduct-balance', [AdminUserController::class, 'deductBalance']);
+            Route::get('{id}/wallet-transactions', [AdminUserController::class, 'walletTransactions']);
+        });
+
+        Route::prefix('wallet')->group(function () {
+            Route::get('search', [AdminUserController::class, 'walletSearch']);
+            Route::get('adjustments', [AdminUserController::class, 'adminAdjustments']);
         });
 
         // Onboarding mitra
