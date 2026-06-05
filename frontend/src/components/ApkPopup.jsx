@@ -121,7 +121,7 @@ export default function ApkPopup() {
                 <path d="M4 18h16v2H4v-2z" fill="#0C0C16"/>
               </svg>
               <span style={{ fontSize: 15, fontWeight: 800, color: '#0C0C16' }}>
-                Download APK · 33 MB
+                Download APK · 42 MB
               </span>
             </div>
           </a>
