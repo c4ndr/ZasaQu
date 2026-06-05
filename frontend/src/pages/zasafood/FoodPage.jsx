@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import BottomNav from '../../components/BottomNav'
 import api, { storageUrl } from '../../services/api'
 
@@ -14,6 +14,8 @@ const CAT_TABS = [
 
 export default function FoodPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const autoJoinSession = location.state?.autoJoinSession ?? null
   const [merchants,       setMerchants]       = useState([])
   const [loading,         setLoading]         = useState(true)
   const [category,        setCategory]        = useState('')
@@ -119,8 +121,33 @@ export default function FoodPage() {
       </div>
 
       <div style={{ padding: '16px 16px 0' }}>
+        {/* Banner: sedang dalam mode pilih warung untuk sesi tertentu */}
+        {autoJoinSession && (
+          <div style={{
+            marginBottom: 16, padding: '14px 16px', borderRadius: 16,
+            background: 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 26 }}>🛵</span>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: '#fff' }}>
+                  Pilih warung untuk sesi {autoJoinSession.mitra?.name ?? 'mitra'}
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>
+                  Ongkir akan digabung — tekan warung untuk memesan
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/food', { replace: true })}
+              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', padding: 4 }}
+            >✕</button>
+          </div>
+        )}
+
         {/* Banner Sesi Hemat Ongkir */}
-        {activeSessions.length > 0 && (
+        {!autoJoinSession && activeSessions.length > 0 && (
           <div
             onClick={() => navigate('/food/jastip/sessions')}
             style={{
@@ -154,7 +181,7 @@ export default function FoodPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {merchants.map(m => (
-              <div key={m.id} onClick={() => navigate(`/food/merchants/${m.id}`)} style={{
+              <div key={m.id} onClick={() => navigate(`/food/merchants/${m.id}`, { state: autoJoinSession ? { autoJoinSession } : undefined })} style={{
                 borderRadius: 18, overflow: 'hidden',
                 background: merchantsInSession.has(m.id)
                   ? 'linear-gradient(145deg, #FFF4EE 0%, #fff 60%)'

@@ -152,7 +152,7 @@ function LocationPicker({ lat, lng, address, onChange }) {
 export default function FoodCartPage() {
   const { state }  = useLocation()
   const navigate   = useNavigate()
-  const { merchant, cart } = state || {}
+  const { merchant, cart, preSelectedSession } = state || {}
 
   const [address,         setAddress]         = useState('')
   const [lat,             setLat]             = useState(null)
@@ -163,9 +163,9 @@ export default function FoodCartPage() {
   const [loadingEst,      setLoadingEst]      = useState(false)
   const [submitting,      setSubmitting]      = useState(false)
   const [err,             setErr]             = useState('')
-  const [deliveryMode,    setDeliveryMode]    = useState('regular')
+  const [deliveryMode,    setDeliveryMode]    = useState(preSelectedSession ? 'jastip' : 'regular')
   const [sessions,        setSessions]        = useState([])
-  const [selectedSession, setSelectedSession] = useState(null)
+  const [selectedSession, setSelectedSession] = useState(preSelectedSession ?? null)
   const [loadingSessions, setLoadingSessions] = useState(false)
   const timerRef = useRef(null)
 
@@ -185,15 +185,18 @@ export default function FoodCartPage() {
     }, 600)
   }, [lat, lng, merchant?.id])
 
-  // Fetch sesi hemat ongkir
+  // Fetch sesi hemat ongkir — filter by merchant agar hanya yang koridor-nya cocok
   useEffect(() => {
-    if (!lat || !lng) return
+    if (!merchant?.id) return
     setLoadingSessions(true)
-    api.get('/food/jastip/sessions/available', { params: { lat, lng } })
+    const params = { merchant_id: merchant.id }
+    if (lat) params.lat = lat
+    if (lng) params.lng = lng
+    api.get('/food/jastip/sessions/available', { params })
       .then(r => setSessions(r.data.data || []))
       .catch(() => {})
       .finally(() => setLoadingSessions(false))
-  }, [lat, lng])
+  }, [merchant?.id, lat, lng])
 
   if (!merchant || !cart?.length) return null
 
@@ -219,8 +222,14 @@ export default function FoodCartPage() {
       })
       const orderId = res.data.data.id
       if (deliveryMode === 'jastip' && selectedSession) {
-        try { await api.post(`/food/jastip/sessions/${selectedSession.id}/join`, { food_order_id: orderId }) }
-        catch {}
+        try {
+          await api.post(`/food/jastip/sessions/${selectedSession.id}/join`, { food_order_id: orderId })
+        } catch (joinErr) {
+          const msg = joinErr.response?.data?.message || 'Gagal bergabung ke sesi hemat ongkir.'
+          setErr(`Order berhasil dibuat, tapi ${msg} Pesanan akan diproses reguler.`)
+          navigate(`/food/orders/${orderId}`, { replace: true })
+          return
+        }
       }
       navigate(`/food/orders/${orderId}`, { replace: true })
     } catch (e) { setErr(e.response?.data?.message || 'Gagal membuat order.') }

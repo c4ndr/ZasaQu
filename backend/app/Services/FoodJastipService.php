@@ -97,16 +97,24 @@ class FoodJastipService
 
         $sessions = $query->latest()->get();
 
-        // Filter by proximity ke destination customer (jika ada koordinat)
+        // Filter by merchant corridor — yang paling penting: merchant harus dalam koridor sesi
+        if (!empty($filters['merchant_id'])) {
+            $merchant = \App\Models\FoodMerchant::find($filters['merchant_id']);
+            if ($merchant && $merchant->lat && $merchant->lng) {
+                $sessions = $sessions->filter(
+                    fn($s) => $this->isMerchantInCorridor($s, (float) $merchant->lat, (float) $merchant->lng)
+                )->values();
+            }
+        }
+
+        // Filter tambahan: proximity ke lokasi pengiriman customer (radius 5 km dari tujuan sesi)
         if (!empty($filters['lat']) && !empty($filters['lng'])) {
             $lat = (float) $filters['lat'];
             $lng = (float) $filters['lng'];
             $sessions = $sessions->filter(function ($session) use ($lat, $lng) {
-                // Gunakan titik tujuan jika ada, atau titik asal sebagai fallback
                 $refLat = $session->destination_lat ?? $session->origin_lat;
                 $refLng = $session->destination_lng ?? $session->origin_lng;
-                $dist   = $this->haversineKm($refLat, $refLng, $lat, $lng);
-                return $dist <= 3.0;
+                return $this->haversineKm($refLat, $refLng, $lat, $lng) <= 5.0;
             })->values();
         }
 

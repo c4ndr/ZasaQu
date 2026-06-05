@@ -24,6 +24,7 @@ class FoodJastipController extends Controller
     {
         $sessions = $this->jastipService->getAvailableSessions([
             'vehicle_type' => $request->query('vehicle_type'),
+            'merchant_id'  => $request->query('merchant_id'),
             'lat'          => $request->query('lat'),
             'lng'          => $request->query('lng'),
         ]);

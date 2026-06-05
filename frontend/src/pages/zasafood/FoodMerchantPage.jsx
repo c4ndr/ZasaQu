@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import api, { storageUrl } from '../../services/api'
 
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
@@ -89,6 +89,8 @@ function ItemDetailModal({ item, qty, notes, onClose, onChange }) {
 export default function FoodMerchantPage() {
   const { id }     = useParams()
   const navigate   = useNavigate()
+  const location   = useLocation()
+  const autoJoinSession = location.state?.autoJoinSession ?? null
   const [merchant, setMerchant]   = useState(null)
   const [loading,  setLoading]    = useState(true)
   const [cart,     setCart]       = useState({})   // { item_id: { item, qty, notes } }
@@ -148,12 +150,16 @@ export default function FoodMerchantPage() {
   const cartCount = cartItems.reduce((s, l) => s + l.qty, 0)
 
   function goToCart() {
-    navigate('/food/cart', { state: { merchant, cart: cartItems.map(l => ({
-      menu_item_id: l.item.id,
-      quantity:     l.qty,
-      notes:        l.notes,
-      item:         l.item,
-    })) } })
+    navigate('/food/cart', { state: {
+      merchant,
+      cart: cartItems.map(l => ({
+        menu_item_id: l.item.id,
+        quantity:     l.qty,
+        notes:        l.notes,
+        item:         l.item,
+      })),
+      preSelectedSession: autoJoinSession ?? undefined,
+    } })
   }
 
   // Flatten semua kategori untuk navigasi
