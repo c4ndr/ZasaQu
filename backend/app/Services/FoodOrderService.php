@@ -522,8 +522,9 @@ class FoodOrderService
 
     private function settleWallet(FoodOrder $order): void
     {
-        // Debit & lepas lock balance pelanggan
         if ($order->payment_method === 'wallet') {
+            // ── WALLET: customer bayar dari saldo ──────────────────────────────
+            // Lepas lock, lalu debit actual
             $customerWallet = Wallet::lockForUpdate()->where('user_id', $order->customer_id)->firstOrFail();
             $customerWallet->decrement('locked_balance', min($order->total_amount, (float) $customerWallet->locked_balance));
             $this->walletService->debit(
@@ -534,33 +535,69 @@ class FoodOrderService
                 $order,
                 'zasafood'
             );
-        }
 
-        // Tandai COD sebagai lunas
-        if ($order->payment_method === 'cod') {
-            $order->update(['payment_status' => 'paid', 'cod_confirmed_at' => now()]);
-        }
-
-        // Credit merchant
-        $this->walletService->credit(
-            $order->merchant->user,
-            $order->merchant_income,
-            'order_income',
-            "Pendapatan order #{$order->order_number}",
-            $order,
-            'zasafood'
-        );
-
-        // Credit mitra (jika ada)
-        if ($order->mitra_id && $order->mitra) {
+            // Credit merchant & mitra netto (komisi platform = selisih yg tidak diteruskan)
             $this->walletService->credit(
-                $order->mitra,
-                $order->mitra_income,
+                $order->merchant->user,
+                $order->merchant_income,
                 'order_income',
-                "Pendapatan delivery order #{$order->order_number}",
+                "Pendapatan order #{$order->order_number}",
                 $order,
                 'zasafood'
             );
+
+            if ($order->mitra_id && $order->mitra) {
+                $this->walletService->credit(
+                    $order->mitra,
+                    $order->mitra_income,
+                    'order_income',
+                    "Pendapatan delivery order #{$order->order_number}",
+                    $order,
+                    'zasafood'
+                );
+            }
+
+        } else {
+            // ── COD: pelanggan bayar cash ke mitra ────────────────────────────
+            //
+            // Alur fisik:
+            //   1. Mitra ambil makanan dari merchant (merchant belum terima uang).
+            //   2. Mitra antar ke pelanggan, pelanggan bayar cash = total_amount.
+            //   3. Mitra pegang cash: total_amount.
+            //
+            // Wallet settlement:
+            //   - Merchant: TIDAK dapat credit wallet.
+            //               Merchant terima cash langsung dari mitra saat mitra pickup
+            //               (mitra bayar merchant = merchant_income sebelum bawa makanan).
+            //               Pendapatan merchant tercatat di kolom merchant_income di tabel order.
+            //   - Mitra: TIDAK dapat credit income (sudah dapat cash delivery_fee).
+            //             Hanya DIDEBIT komisi platform via debitForce (boleh minus = hutang).
+            //   - Platform: +komisi dari wallet mitra.
+            //
+            // Net mitra (cash + wallet):
+            //   Cash pegang : delivery_fee + commission_food
+            //                 (karena bayar merchant hanya merchant_income, bukan subtotal penuh)
+            //   Wallet debit: -(commission_food + commission_delivery)
+            //   Total net   : delivery_fee - commission_delivery = mitra_income ✓
+
+            $order->update(['payment_status' => 'paid', 'cod_confirmed_at' => now()]);
+
+            // Debit komisi platform dari wallet mitra (debitForce = boleh negatif)
+            if ($order->mitra_id && $order->mitra) {
+                $platformComm = $order->platform_commission_food + $order->platform_commission_delivery;
+                if ($platformComm > 0) {
+                    $this->walletService->debitForce(
+                        $order->mitra,
+                        $platformComm,
+                        'platform_commission',
+                        "Komisi platform COD #{$order->order_number} " .
+                            "(makanan Rp " . number_format($order->platform_commission_food, 0, ',', '.') .
+                            " + ongkir Rp " . number_format($order->platform_commission_delivery, 0, ',', '.') . ")",
+                        $order,
+                        'zasafood'
+                    );
+                }
+            }
         }
 
         // Notifikasi selesai + permintaan rating

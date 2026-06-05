@@ -149,7 +149,7 @@ class FoodOrderController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $order = FoodOrder::where('customer_id', $request->user()->id)
-            ->with(['merchant', 'items', 'mitra:id,name,phone'])
+            ->with(['merchant', 'items', 'mitra:id,name,phone,role'])
             ->findOrFail($id);
 
         // Sertakan GPS mitra jika order aktif

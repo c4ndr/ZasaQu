@@ -148,11 +148,14 @@ export default function FoodOrdersPage() {
                         {order.items?.map(i => `${i.item_name} ×${i.quantity}`).join(' · ')}
                       </p>
 
-                      {/* Row bottom: tanggal + total + lacak */}
+                      {/* Row bottom: tanggal + total + ongkir + lacak */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
                           <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{fmtDate(order.created_at)}</p>
                           <p style={{ fontWeight: 800, fontSize: 14, color: '#F97316', marginTop: 2 }}>{fmtRp(order.total_amount)}</p>
+                          {order.delivery_fee > 0 && (
+                            <p style={{ fontSize: 11, color: 'var(--k-muted)', marginTop: 1 }}>Ongkir {fmtRp(order.delivery_fee)}</p>
+                          )}
                         </div>
                         {isLive && !isArrived && (
                           <div style={{ padding: '8px 16px', borderRadius: 12, background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)' }}>

@@ -221,19 +221,34 @@ export default function MerchantOrdersPage() {
 
                     {order.notes && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--k-sub)', background: 'var(--k-input)', padding: '8px 12px', borderRadius: 8 }}>📝 {order.notes}</div>}
 
-                    <div style={{ borderTop: '1px solid var(--k-border)', marginTop: 12, paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: 800, color: '#F97316' }}>{fmtRp(order.total_amount)}</span>
-
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {order.status === 'pending' && (
-                          <>
-                            <button onClick={() => setModal({ type: 'reject', order })} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'rgba(245,101,101,0.12)', color: '#F56565', fontWeight: 700, fontSize: 13 }}>Tolak</button>
-                            <button onClick={() => setModal({ type: 'accept', order })} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#00C896', color: '#fff', fontWeight: 700, fontSize: 13 }}>Terima</button>
-                          </>
-                        )}
-                        {na && (
-                          <button onClick={() => doAction(order.id, na.action)} style={{ padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', background: na.bg, color: na.color, fontWeight: 700, fontSize: 13 }}>{na.label}</button>
-                        )}
+                    <div style={{ borderTop: '1px solid var(--k-border)', marginTop: 12, paddingTop: 10 }}>
+                      {/* Breakdown ongkir */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--k-sub)', marginBottom: 3 }}>
+                        <span>Subtotal</span><span>{fmtRp(order.subtotal)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--k-sub)', marginBottom: 10 }}>
+                        <span>Ongkir</span><span>{fmtRp(order.delivery_fee)}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 800, fontSize: 15, color: '#F97316' }}>{fmtRp(order.total_amount)}</span>
+                          <span style={{
+                            padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                            background: order.payment_method === 'cod' ? 'rgba(249,115,22,0.1)' : 'rgba(0,200,150,0.1)',
+                            color: order.payment_method === 'cod' ? '#F97316' : '#00C896',
+                          }}>{order.payment_method === 'cod' ? 'COD' : 'Wallet'}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          {order.status === 'pending' && (
+                            <>
+                              <button onClick={() => setModal({ type: 'reject', order })} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'rgba(245,101,101,0.12)', color: '#F56565', fontWeight: 700, fontSize: 13 }}>Tolak</button>
+                              <button onClick={() => setModal({ type: 'accept', order })} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#00C896', color: '#fff', fontWeight: 700, fontSize: 13 }}>Terima</button>
+                            </>
+                          )}
+                          {na && (
+                            <button onClick={() => doAction(order.id, na.action)} style={{ padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', background: na.bg, color: na.color, fontWeight: 700, fontSize: 13 }}>{na.label}</button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

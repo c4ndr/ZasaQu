@@ -109,6 +109,7 @@ export default function FoodTrackingPage() {
   const [order,        setOrder]        = useState(null)
   const [mitraGps,     setMitraGps]     = useState(null)
   const [loading,      setLoading]      = useState(true)
+  const [loadError,    setLoadError]    = useState(false)
   const [panelOpen,    setPanelOpen]    = useState(true)
   const [notifStatus,  setNotifStatus]  = useState(null)
   const [rating,       setRating]       = useState({ merchant_score: 0, mitra_score: 0 })
@@ -121,8 +122,12 @@ export default function FoodTrackingPage() {
     try {
       const res = await api.get(`/food/orders/${id}`)
       setOrder(res.data.data)
+      setLoadError(false)
       if (res.data.mitra_gps) setMitraGps(res.data.mitra_gps)
-    } catch { navigate('/food/orders') }
+    } catch (e) {
+      if (e?.response?.status === 404) navigate('/food/orders')
+      else setLoadError(true)
+    }
     finally { setLoading(false) }
   }, [id, navigate])
 
@@ -237,11 +242,23 @@ export default function FoodTrackingPage() {
       <style>{`@keyframes spin { to { transform:rotate(360deg) } }`}</style>
     </div>
   )
+
+  if (loadError && !order) return (
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--k-bg)', gap: 16, padding: 24 }}>
+      <div style={{ fontSize: 48 }}>📡</div>
+      <p style={{ fontWeight: 700, color: 'var(--k-text)', textAlign: 'center' }}>Gagal memuat pesanan</p>
+      <p style={{ fontSize: 13, color: 'var(--k-muted)', textAlign: 'center' }}>Periksa koneksi internet lalu coba lagi</p>
+      <button onClick={loadOrder} style={{ padding: '12px 28px', borderRadius: 12, border: 'none', background: '#F97316', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Coba Lagi</button>
+      <button onClick={() => navigate('/food/orders')} style={{ padding: '10px 24px', borderRadius: 12, border: '1px solid var(--k-border)', background: 'transparent', color: 'var(--k-sub)', fontSize: 13, cursor: 'pointer' }}>Kembali ke Daftar</button>
+    </div>
+  )
+
   if (!order) return null
 
   const sm          = STATUS_META[order.status] ?? STATUS_META.pending
   const stepIndex   = getStepIndex(order.status)
-  const showMap     = !['cancelled','rejected'].includes(order.status)
+  // Map hanya tampil saat mitra sedang dalam perjalanan (ShopeeFood style)
+  const showMap     = ['mitra_on_pickup','picked_up','on_delivery','delivered'].includes(order.status)
   const showMitra   = mitraGps && ['mitra_on_pickup','picked_up','on_delivery','delivered'].includes(order.status)
   const showRoute   = showMitra && routeFrom && routeTo
   const isDone      = ['completed','cancelled','rejected'].includes(order.status)
@@ -386,6 +403,22 @@ export default function FoodTrackingPage() {
             )}
           </div>
 
+          {/* ── Card menunggu merchant (ShopeeFood style) ── */}
+          {order.status === 'pending' && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(246,173,85,0.12), rgba(249,115,22,0.08))',
+              border: '1.5px solid rgba(246,173,85,0.35)',
+              borderRadius: 14, padding: '14px 16px',
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(246,173,85,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0, animation: 'blink 2s infinite' }}>⏳</div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#F6AD55' }}>Menunggu konfirmasi merchant</p>
+                <p style={{ fontSize: 11, color: 'var(--k-muted)', marginTop: 2 }}>Pesanan akan otomatis dibatalkan jika tidak ada respons</p>
+              </div>
+            </div>
+          )}
+
           {/* ── Progress stepper ── */}
           {!['cancelled','rejected'].includes(order.status) && (
             <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '14px 12px' }}>
@@ -446,12 +479,17 @@ export default function FoodTrackingPage() {
             </div>
           )}
 
-          {/* ── Info warung ── */}
+          {/* ── Bill pesanan (selalu tampil, ShopeeFood style) ── */}
           <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, overflow: 'hidden' }}>
+            {/* Header warung */}
             <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--k-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,200,150,0.1)', border: '1.5px solid rgba(0,200,150,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🏪</div>
-              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--k-text)' }}>{order.merchant?.name}</p>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--k-text)' }}>{order.merchant?.name}</p>
+                <p style={{ fontSize: 10, color: 'var(--k-muted)', fontFamily: 'monospace' }}>{order.order_number}</p>
+              </div>
             </div>
+            {/* Item list */}
             <div style={{ padding: '10px 14px' }}>
               {order.items?.map(i => (
                 <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 7, alignItems: 'flex-start' }}>
@@ -459,13 +497,23 @@ export default function FoodTrackingPage() {
                   <span style={{ fontWeight: 600, color: 'var(--k-text)', flexShrink: 0, marginLeft: 8 }}>{fmtRp(i.item_price * i.quantity)}</span>
                 </div>
               ))}
+              {/* Breakdown biaya */}
               <div style={{ borderTop: '1px solid var(--k-border)', marginTop: 8, paddingTop: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--k-muted)', marginBottom: 4 }}>
-                  <span>Ongkir</span><span>{fmtRp(order.delivery_fee)}</span>
+                  <span>Subtotal</span><span>{fmtRp(order.subtotal)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 15 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--k-muted)', marginBottom: 4 }}>
+                  <span>Ongkos kirim</span><span>{fmtRp(order.delivery_fee)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 15, borderTop: '1px solid var(--k-border)', paddingTop: 8, marginTop: 4 }}>
                   <span>Total</span>
                   <span style={{ color: '#F97316' }}>{fmtRp(order.total_amount)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--k-muted)', marginTop: 6 }}>
+                  <span>Pembayaran</span>
+                  <span style={{ fontWeight: 700, color: order.payment_method === 'cod' ? '#F97316' : '#00C896' }}>
+                    {order.payment_method === 'cod' ? 'COD (Tunai)' : 'Saldo ZasaQu'}
+                  </span>
                 </div>
               </div>
             </div>
