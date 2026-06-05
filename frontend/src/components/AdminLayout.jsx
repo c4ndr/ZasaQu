@@ -36,6 +36,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/admin/topup',    emoji: '💰', label: 'Top Up'   },
       { to: '/admin/withdraw', emoji: '💸', label: 'Withdraw' },
+      { to: '/admin/wallet',   emoji: '🏦', label: 'Adjust Saldo' },
     ],
   },
   {

@@ -27,6 +27,7 @@ import WithdrawPage from './pages/WithdrawPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import AdminTopUpPage from './pages/admin/AdminTopUpPage'
 import AdminWithdrawPage from './pages/admin/AdminWithdrawPage'
+import AdminWalletPage from './pages/admin/AdminWalletPage'
 import AdminUsersPage from './pages/admin/AdminUsersPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import AdminAuditLogPage from './pages/admin/AdminAuditLogPage'
@@ -242,6 +243,7 @@ function AppRoutes() {
       <Route path="/admin/home/orders" element={<AdminRoute><AdminHomeOrdersPage /></AdminRoute>} />
       <Route path="/admin/topup" element={<AdminRoute><AdminTopUpPage /></AdminRoute>} />
       <Route path="/admin/withdraw" element={<AdminRoute><AdminWithdrawPage /></AdminRoute>} />
+      <Route path="/admin/wallet" element={<AdminRoute><AdminWalletPage /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
       <Route path="/admin/promos" element={<AdminRoute><AdminPromosPage /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
