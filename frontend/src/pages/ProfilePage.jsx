@@ -414,6 +414,16 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Link legal & info */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[['ℹ️ Tentang', '/about'], ['📋 S&K', '/tos'], ['🔒 Privasi', '/privacy']].map(([l, to]) => (
+            <button key={to} onClick={() => navigate(to)}
+              style={{ flex: 1, padding: '11px 6px', borderRadius: 12, border: '1px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-muted)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+              {l}
+            </button>
+          ))}
+        </div>
+
         {/* Logout */}
         <button onClick={handleLogout} style={{
           width: '100%', padding: '16px', borderRadius: 18, border: '1.5px solid rgba(245,101,101,0.3)',

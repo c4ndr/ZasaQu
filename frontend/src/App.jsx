@@ -86,6 +86,10 @@ import AdminMartSellersPage from './pages/admin/AdminMartSellersPage'
 import AdminMartProductsPage from './pages/admin/AdminMartProductsPage'
 import AdminMartOrdersPage from './pages/admin/AdminMartOrdersPage'
 import AdminModulesPage from './pages/admin/AdminModulesPage'
+import NotFoundPage from './pages/NotFoundPage'
+import AboutPage from './pages/AboutPage'
+import TosPage from './pages/TosPage'
+import PrivacyPage from './pages/PrivacyPage'
 
 function PrivateRoute({ children }) {
   const { user } = useAuth()
@@ -278,6 +282,14 @@ function AppRoutes() {
       <Route path="/merchant/orders" element={<MerchantRoute><MerchantOrdersPage /></MerchantRoute>} />
       <Route path="/merchant/menu" element={<MerchantRoute><MerchantMenuPage /></MerchantRoute>} />
       <Route path="/merchant/settings" element={<MerchantRoute><MerchantSettingsPage /></MerchantRoute>} />
+
+      {/* Halaman publik */}
+      <Route path="/about"   element={<AboutPage />} />
+      <Route path="/tos"     element={<TosPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+
+      {/* 404 — catch-all */}
+      <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   )

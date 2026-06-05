@@ -31,10 +31,13 @@ Route::get('health', \App\Http\Controllers\Api\HealthController::class);
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
 Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('login', [AuthController::class, 'login']);
+    // Max 10 percobaan per menit per IP — cegah brute force
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('register', [AuthController::class, 'register']);
+        Route::post('login', [AuthController::class, 'login']);
+    });
 
-    Route::prefix('otp')->group(function () {
+    Route::prefix('otp')->middleware('throttle:6,1')->group(function () {
         Route::post('send', [OtpController::class, 'sendOtp']);
         Route::post('register', [OtpController::class, 'register']);
         Route::post('login', [OtpController::class, 'login']);
