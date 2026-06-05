@@ -157,21 +157,19 @@ class CustomerController extends Controller
             abort_if($item->product->stock < $item->quantity, 422, "Stok '{$item->product->name}' tidak cukup.");
         }
 
-        $totalEstimate = $cartItems->sum(fn($i) => $i->product->price * $i->quantity) + $data['shipping_fee'];
-
-        // Cek saldo hanya untuk pembayaran wallet
-        if ($paymentMethod === 'wallet') {
-            $userWallet = Wallet::where('user_id', $user->id)->first();
-            abort_if(!$userWallet || $userWallet->availableBalance() < $totalEstimate, 422,
-                'Saldo tidak cukup. Silakan top up atau pilih Bayar di Tempat.');
-        }
-
-        $order = DB::transaction(function () use ($user, $seller, $data, $cartItems, $paymentMethod, $totalEstimate) {
+        $order = DB::transaction(function () use ($user, $seller, $data, $cartItems, $paymentMethod) {
             $subtotal    = $cartItems->sum(fn($i) => $i->product->price * $i->quantity);
             $total       = $subtotal + $data['shipping_fee'];
             $commRate    = (float) AdminSetting::valueOf('mart_commission_percent', 5);
             $commission  = (int) round($total * $commRate / 100);
             $sellerIncome= $total - $commission;
+
+            // Cek saldo di dalam transaksi dengan lockForUpdate agar atomic — mencegah race condition double-spend
+            if ($paymentMethod === 'wallet') {
+                $userWallet = Wallet::lockForUpdate()->where('user_id', $user->id)->first();
+                abort_if(!$userWallet || $userWallet->availableBalance() < $total, 422,
+                    'Saldo tidak cukup. Silakan top up atau pilih Bayar di Tempat.');
+            }
 
             $order = MartOrder::create([
                 'order_number'           => MartOrder::generateNumber(),
@@ -296,21 +294,29 @@ class CustomerController extends Controller
             ->where('status', 'delivered')
             ->findOrFail($id);
 
-        $order->update(['status' => 'completed', 'completed_at' => now()]);
+        DB::transaction(function () use ($order) {
+            // Lock baris order agar concurrent confirm (manual + auto) tidak double-settle
+            $locked = MartOrder::lockForUpdate()->findOrFail($order->id);
+            if ($locked->status !== 'delivered') {
+                throw new \Exception("Status pesanan sudah berubah: {$locked->status}.");
+            }
 
-        $order->items->each(fn($item) => $item->product->increment('total_sold', $item->quantity));
+            $locked->update(['status' => 'completed', 'completed_at' => now()]);
+            $locked->items->each(fn($item) => $item->product->increment('total_sold', $item->quantity));
 
-        // Kredit income ke wallet seller
-        $sellerUser = $order->seller?->user;
-        if ($sellerUser && $order->seller_income > 0) {
-            app(WalletService::class)->credit(
-                $sellerUser,
-                $order->seller_income,
-                'order_income',
-                "Pendapatan order ZasaMart #{$order->order_number}",
-                $order
-            );
-        }
+            // Kredit income ke wallet seller — dalam satu transaksi bersama update status
+            $sellerUser = $locked->seller?->user;
+            if ($sellerUser && $locked->seller_income > 0) {
+                app(WalletService::class)->credit(
+                    $sellerUser,
+                    $locked->seller_income,
+                    'order_income',
+                    "Pendapatan order ZasaMart #{$locked->order_number}",
+                    $locked,
+                    'zasamart'
+                );
+            }
+        });
 
         return response()->json(['message' => 'Pesanan dikonfirmasi selesai.']);
     }

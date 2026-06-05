@@ -211,26 +211,35 @@ class ProviderController extends Controller
             return response()->json(['message' => "Tidak bisa ubah status dari {$current} ke {$next}."], 422);
         }
 
-        $updates = ['status' => $next];
-        if ($next === 'cancelled')  $updates['cancel_reason'] = $data['cancel_reason'] ?? 'Dibatalkan oleh provider';
-        if ($next === 'ready')      $updates['ready_at']      = now();
-        if ($next === 'completed')  $updates['completed_at']  = now();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $next, $data) {
+            // Lock baris order agar concurrent update tidak double-settle
+            $locked = HomeOrder::lockForUpdate()->findOrFail($order->id);
 
-        $order->update($updates);
+            $updates = ['status' => $next];
+            if ($next === 'cancelled')  $updates['cancel_reason'] = $data['cancel_reason'] ?? 'Dibatalkan oleh provider';
+            if ($next === 'ready')      $updates['ready_at']      = now();
+            if ($next === 'completed')  $updates['completed_at']  = now();
 
-        // Kredit income ke wallet provider saat order completed
-        if ($next === 'completed' && $order->provider_income > 0) {
-            $providerUser = $order->provider?->user;
-            if ($providerUser) {
-                app(WalletService::class)->credit(
-                    $providerUser,
-                    $order->provider_income,
-                    'order_income',
-                    "Pendapatan order ZasaHome #{$order->order_number}",
-                    $order
-                );
+            $locked->update($updates);
+
+            // Kredit income ke wallet provider saat order completed — dalam satu transaksi
+            if ($next === 'completed' && $locked->provider_income > 0) {
+                $providerUser = $locked->provider?->user;
+                if ($providerUser) {
+                    app(WalletService::class)->credit(
+                        $providerUser,
+                        $locked->provider_income,
+                        'order_income',
+                        "Pendapatan order ZasaHome #{$locked->order_number}",
+                        $locked,
+                        'zasahome'
+                    );
+                }
             }
-        }
+
+            // Sync ke objek $order agar fresh() benar
+            $order->setRawAttributes($locked->fresh()->getAttributes());
+        });
 
         return response()->json([
             'message' => 'Status pesanan diperbarui.',
