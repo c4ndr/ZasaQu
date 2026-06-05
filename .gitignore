@@ -29,3 +29,6 @@ Thumbs.db
 
 # Storage uploads (tidak di-track di git)
 backend/storage/app/public/order-photos/
+
+# APK binary (terlalu besar untuk GitHub, host di server langsung)
+frontend/public/*.apk
