@@ -259,11 +259,15 @@ class CustomerController extends Controller
 
     public function cancelOrder(Request $request, int $id): JsonResponse
     {
-        $data  = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);
-        $order = MartOrder::where('customer_id', $request->user()->id)->findOrFail($id);
-        abort_if(!$order->canCancel(), 422, 'Pesanan tidak dapat dibatalkan pada status ini.');
+        $data = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);
+        $user = $request->user();
 
-        DB::transaction(function () use ($order, $data, $request) {
+        DB::transaction(function () use ($user, $id, $data) {
+            // Lock order di dalam transaksi — mencegah double-cancel concurrent yang bisa double-restore stok
+            $order = MartOrder::where('customer_id', $user->id)->lockForUpdate()->findOrFail($id);
+            abort_if(!$order->canCancel(), 422, 'Pesanan tidak dapat dibatalkan pada status ini.');
+
+            $order->load('items.product');
             $order->items->each(fn($item) => $item->product->increment('stock', $item->quantity));
 
             $order->update([
@@ -275,7 +279,7 @@ class CustomerController extends Controller
             // ── Refund ke wallet customer (hanya jika bayar via wallet, bukan COD) ──
             if ($order->total > 0 && $order->payment_method === 'wallet') {
                 app(WalletService::class)->credit(
-                    $request->user(),
+                    $user,
                     $order->total,
                     'mart_refund',
                     "Refund ZasaMart #{$order->order_number}",
@@ -295,26 +299,43 @@ class CustomerController extends Controller
             ->findOrFail($id);
 
         DB::transaction(function () use ($order) {
-            // Lock baris order agar concurrent confirm (manual + auto) tidak double-settle
+            // Lock baris order — cegah double-settle concurrent (customer confirm + auto-confirm)
             $locked = MartOrder::lockForUpdate()->findOrFail($order->id);
             if ($locked->status !== 'delivered') {
                 throw new \Exception("Status pesanan sudah berubah: {$locked->status}.");
             }
 
             $locked->update(['status' => 'completed', 'completed_at' => now()]);
-            $locked->items->each(fn($item) => $item->product->increment('total_sold', $item->quantity));
+            // Catatan: total_sold sudah diincrement saat checkout — tidak diincrement lagi di sini
 
-            // Kredit income ke wallet seller — dalam satu transaksi bersama update status
             $sellerUser = $locked->seller?->user;
-            if ($sellerUser && $locked->seller_income > 0) {
-                app(WalletService::class)->credit(
-                    $sellerUser,
-                    $locked->seller_income,
-                    'order_income',
-                    "Pendapatan order ZasaMart #{$locked->order_number}",
-                    $locked,
-                    'zasamart'
-                );
+            $mitra      = $locked->mitra_id ? $locked->mitra : null;
+
+            if ($locked->payment_method === 'wallet') {
+                // Wallet: customer sudah bayar saat checkout → credit income ke seller
+                if ($sellerUser && $locked->seller_income > 0) {
+                    app(WalletService::class)->credit(
+                        $sellerUser,
+                        $locked->seller_income,
+                        'order_income',
+                        "Pendapatan ZasaMart #{$locked->order_number}",
+                        $locked,
+                        'zasamart'
+                    );
+                }
+            } else {
+                // COD: mitra sudah terima cash dari customer, dan bayar seller saat pickup
+                // Platform ambil komisi dari wallet mitra (debitForce = boleh minus/hutang)
+                if ($mitra && $locked->platform_commission > 0) {
+                    app(WalletService::class)->debitForce(
+                        $mitra,
+                        $locked->platform_commission,
+                        'platform_commission',
+                        "Komisi platform COD ZasaMart #{$locked->order_number}",
+                        $locked,
+                        'zasamart'
+                    );
+                }
             }
         });
 

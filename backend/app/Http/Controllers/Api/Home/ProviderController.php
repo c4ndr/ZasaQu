@@ -211,9 +211,14 @@ class ProviderController extends Controller
             return response()->json(['message' => "Tidak bisa ubah status dari {$current} ke {$next}."], 422);
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $next, $data) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $current, $next, $data) {
             // Lock baris order agar concurrent update tidak double-settle
             $locked = HomeOrder::lockForUpdate()->findOrFail($order->id);
+
+            // Re-check status setelah lock — cegah double-settle jika dua request masuk bersamaan
+            if ($locked->status !== $current) {
+                throw new \Exception("Status pesanan sudah berubah menjadi: {$locked->status}.");
+            }
 
             $updates = ['status' => $next];
             if ($next === 'cancelled')  $updates['cancel_reason'] = $data['cancel_reason'] ?? 'Dibatalkan oleh provider';

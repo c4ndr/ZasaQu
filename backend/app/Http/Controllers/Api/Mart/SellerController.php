@@ -244,12 +244,18 @@ class SellerController extends Controller
 
     public function cancelOrder(Request $request, int $id): JsonResponse
     {
-        $data  = $request->validate(['reason' => ['required', 'string', 'max:255']]);
-        $order = MartOrder::where('seller_id', $this->seller($request)->id)
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->findOrFail($id);
+        $data     = $request->validate(['reason' => ['required', 'string', 'max:255']]);
+        $sellerId = $this->seller($request)->id;
 
-        DB::transaction(function () use ($order, $data) {
+        DB::transaction(function () use ($sellerId, $id, $data) {
+            // Lock order di dalam transaksi — cegah race condition double-cancel
+            $order = MartOrder::where('seller_id', $sellerId)
+                ->lockForUpdate()
+                ->findOrFail($id);
+
+            abort_if(!in_array($order->status, ['pending', 'confirmed']), 422, 'Pesanan tidak bisa dibatalkan pada status ini.');
+
+            $order->load('items.product');
             $order->items->each(fn($item) => $item->product->increment('stock', $item->quantity));
             $order->update([
                 'status'       => 'cancelled',
