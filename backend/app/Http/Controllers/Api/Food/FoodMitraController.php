@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Food;
 use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
 use App\Models\FoodOrder;
+use App\Models\Wallet;
 use App\Services\FoodOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -64,9 +65,23 @@ class FoodMitraController extends Controller
     public function accept(Request $request, int $id): JsonResponse
     {
         $order = FoodOrder::findOrFail($id);
+        $mitra = $request->user();
+
+        $minBalance = (float) (AdminSetting::where('key', 'wallet_minimum_mitra')->value('value') ?? 0);
+        if ($minBalance > 0) {
+            $wallet = Wallet::where('user_id', $mitra->id)->first();
+            $available = $wallet ? $wallet->availableBalance() : 0;
+            if ($available < $minBalance) {
+                return response()->json([
+                    'message' => 'Saldo tidak mencukupi untuk menerima order. '
+                        . 'Minimum: Rp ' . number_format($minBalance, 0, ',', '.') . '. '
+                        . 'Saldo Anda: Rp ' . number_format($available, 0, ',', '.') . '.',
+                ], 422);
+            }
+        }
 
         try {
-            $updated = $this->foodOrderService->mitraAccept($order, $request->user());
+            $updated = $this->foodOrderService->mitraAccept($order, $mitra);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
