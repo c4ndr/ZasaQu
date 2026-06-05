@@ -99,7 +99,7 @@ export default function MitraMartOrdersPage() {
 
       {/* Header */}
       <div style={{ padding: '52px 16px 0', background: 'linear-gradient(160deg,#1a1a2e 0%,var(--k-bg) 100%)' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--k-text)', marginBottom: 4 }}>ZasaMart Kurir</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--k-text)', marginBottom: 4 }}>ZasaShop Kurir</h1>
         <p style={{ fontSize: 13, color: 'var(--k-muted)', marginBottom: 16 }}>Antar pesanan belanja ke customer</p>
       </div>
 

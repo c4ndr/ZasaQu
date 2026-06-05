@@ -38,7 +38,7 @@ export default function AdminMartProductsPage() {
     <AdminLayout>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Produk ZasaMart</h2>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Produk ZasaShop</h2>
         <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Pantau dan kelola status produk yang dijual di marketplace</p>
       </div>
 

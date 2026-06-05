@@ -36,7 +36,7 @@ export default function MartSellerPage() {
       <p style={{ fontWeight: 700, color: 'var(--k-text)', marginBottom: 6 }}>Toko Tidak Ditemukan</p>
       <p style={{ fontSize: 13, color: 'var(--k-muted)', marginBottom: 20 }}>{error || 'Toko tidak tersedia.'}</p>
       <button onClick={() => navigate('/mart')} style={{ padding: '10px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#6366F1,#7C3AED)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
-        Kembali ke ZasaMart
+        Kembali ke ZasaShop
       </button>
     </div>
   )

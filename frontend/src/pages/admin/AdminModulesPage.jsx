@@ -24,7 +24,7 @@ const MODULES = [
   },
   {
     key: 'zasamart',
-    label: 'ZasaMart',
+    label: 'ZasaShop',
     emoji: '🛒',
     desc: 'Marketplace produk UMKM lokal',
     color: '#8B5CF6',

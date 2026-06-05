@@ -51,7 +51,7 @@ export default function AdminMartOrdersPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Order ZasaMart</h2>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Order ZasaShop</h2>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Monitor pesanan dari marketplace produk lokal</p>
         </div>
         <button onClick={load} style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-sub)', fontSize: 13, cursor: 'pointer' }}>↻ Refresh</button>
@@ -80,7 +80,7 @@ export default function AdminMartOrdersPage() {
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
           <p style={{ fontSize: 36, marginBottom: 10 }}>🛒</p>
           <p style={{ color: 'var(--k-text)', fontWeight: 700, marginBottom: 4 }}>Tidak ada pesanan</p>
-          <p style={{ color: 'var(--k-muted)', fontSize: 13 }}>Pesanan ZasaMart akan tampil di sini</p>
+          <p style={{ color: 'var(--k-muted)', fontSize: 13 }}>Pesanan ZasaShop akan tampil di sini</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

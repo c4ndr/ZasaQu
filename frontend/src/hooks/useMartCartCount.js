@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 
 /**
- * Mengembalikan total quantity item di keranjang ZasaMart.
+ * Mengembalikan total quantity item di keranjang ZasaShop.
  * - Poll setiap 30 detik
  * - Update instan via custom event 'mart-cart-updated'
  *   (dispatch dari MartProductPage / MartCartPage setelah mutasi)

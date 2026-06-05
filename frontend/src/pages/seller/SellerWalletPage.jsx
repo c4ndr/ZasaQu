@@ -51,7 +51,7 @@ export default function SellerWalletPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  // Pisahkan transaksi ZasaMart dari lainnya
+  // Pisahkan transaksi ZasaShop dari lainnya
   const martTxs  = txs.filter(t => t.service_module === 'zasamart')
   const totalIncome = martTxs
     .filter(t => t.type === 'order_income')
@@ -83,9 +83,9 @@ export default function SellerWalletPage() {
           )}
         </div>
 
-        {/* Ringkasan pendapatan ZasaMart */}
+        {/* Ringkasan pendapatan ZasaShop */}
         <div style={{ background: 'var(--k-card)', borderRadius: 16, border: '1px solid var(--k-border)', padding: '16px' }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--k-text)', marginBottom: 12 }}>Ringkasan ZasaMart</p>
+          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--k-text)', marginBottom: 12 }}>Ringkasan ZasaShop</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {[
               { label: 'Total Pendapatan', value: fmtRp(totalIncome), icon: '💰', color: '#22C55E' },

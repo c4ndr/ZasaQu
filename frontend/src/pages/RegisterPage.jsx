@@ -10,7 +10,7 @@ const ROLES = [
   { value: 'mitra_mobil',  emoji: '🚗', label: 'Mitra Mobil',    desc: 'Antar barang dengan mobil' },
   { value: 'merchant',     emoji: '🏪', label: 'Merchant',       desc: 'Buka toko makanan & minuman' },
   { value: 'home_provider',emoji: '🏠', label: 'Home Provider',  desc: 'Buka layanan laundry & jasa rumah' },
-  { value: 'seller',      emoji: '🛒', label: 'Seller Mart',   desc: 'Jual produk lokal di ZasaMart' },
+  { value: 'seller',      emoji: '🛒', label: 'Seller Mart',   desc: 'Jual produk lokal di ZasaShop' },
 ]
 
 const HOME_CATEGORIES = [
@@ -443,11 +443,11 @@ export default function RegisterPage() {
             {isSeller && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ height: 1, background: 'var(--k-border)' }} />
-                <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--k-text)' }}>🛒 Info Toko ZasaMart</p>
+                <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--k-text)' }}>🛒 Info Toko ZasaShop</p>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--k-muted)', display: 'block', marginBottom: 4 }}>Nama Toko *</label>
                   <input name="seller_name" value={form.seller_name} onChange={handleChange} required={isSeller}
-                    placeholder="Nama toko Anda di ZasaMart"
+                    placeholder="Nama toko Anda di ZasaShop"
                     style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                 </div>
                 <div>

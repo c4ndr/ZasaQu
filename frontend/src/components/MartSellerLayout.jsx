@@ -18,7 +18,7 @@ export default function MartSellerLayout({ children, title }) {
       {/* Top bar */}
       <div style={{ background: 'linear-gradient(135deg,#4F46E5,#7C3AED)', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 50 }}>
         <span style={{ fontSize: 22 }}>🏪</span>
-        <p style={{ color: '#fff', fontWeight: 800, fontSize: 15, flex: 1 }}>{title || 'ZasaMart Seller'}</p>
+        <p style={{ color: '#fff', fontWeight: 800, fontSize: 15, flex: 1 }}>{title || 'ZasaShop Seller'}</p>
         <button onClick={logout} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, padding: '6px 12px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Keluar</button>
       </div>
 

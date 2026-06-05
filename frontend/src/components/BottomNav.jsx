@@ -112,7 +112,7 @@ const IconMart = ({ filled }) => (
 const PELANGGAN_ITEMS = (name) => [
   { to: '/dashboard', Icon: IconHome,   label: 'Beranda',  exact: true },
   { to: '/orders',    Icon: IconBox,    label: 'ZasaGo'  },
-  { to: '/mart',      Icon: IconMart,   label: 'ZasaMart', centerColor: 'linear-gradient(145deg, #7C3AED 0%, #4F46E5 100%)', centerShadow: 'rgba(124,58,237,0.50)' },
+  { to: '/mart',      Icon: IconMart,   label: 'ZasaShop', centerColor: 'linear-gradient(145deg, #7C3AED 0%, #4F46E5 100%)', centerShadow: 'rgba(124,58,237,0.50)' },
   { to: '/food',      Icon: IconFood,   label: 'ZasaFood' },
   { to: '/profile',   Icon: null,       label: 'Akun',    avatar: true },
 ]
@@ -153,7 +153,7 @@ export default function BottomNav() {
 
   const items = isMitra ? filteredMitra : filteredPelanggan
 
-  // Center item: ZasaMart untuk pelanggan (index 2 dari all), tapi hanya jika ada ≥3 item
+  // Center item: ZasaShop untuk pelanggan (index 2 dari all), tapi hanya jika ada ≥3 item
   // Fallback: item tengah (Math.floor)
   const centerIdx = Math.floor(items.length / 2)
 

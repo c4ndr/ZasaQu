@@ -69,7 +69,7 @@ export default function AdminMartSellersPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Penjual ZasaMart</h2>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Penjual ZasaShop</h2>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Kelola toko dan penjual di marketplace lokal</p>
         </div>
         <button onClick={() => setShowCreate(true)}

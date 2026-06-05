@@ -69,7 +69,7 @@ import MerchantDashboardPage from './pages/merchant/MerchantDashboardPage'
 import MerchantMenuPage from './pages/merchant/MerchantMenuPage'
 import MerchantSettingsPage from './pages/merchant/MerchantSettingsPage'
 import MerchantOrdersPage from './pages/merchant/MerchantOrdersPage'
-import ZasaMartPage from './pages/zasamart/ZasaMartPage'
+import ZasaShopPage from './pages/zasamart/ZasaShopPage'
 import MartProductPage from './pages/zasamart/MartProductPage'
 import MartCartPage from './pages/zasamart/MartCartPage'
 import MartCheckoutPage from './pages/zasamart/MartCheckoutPage'
@@ -247,8 +247,8 @@ function AppRoutes() {
       <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
       <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogPage /></AdminRoute>} />
 
-      {/* ZasaMart — Customer */}
-      <Route path="/mart" element={<ModuleRoute featureKey="zasamart"><ZasaMartPage /></ModuleRoute>} />
+      {/* ZasaShop — Customer */}
+      <Route path="/mart" element={<ModuleRoute featureKey="zasamart"><ZasaShopPage /></ModuleRoute>} />
       <Route path="/mart/products/:id" element={<ModuleRoute featureKey="zasamart"><MartProductPage /></ModuleRoute>} />
       <Route path="/mart/cart" element={<ModuleRoute featureKey="zasamart"><MartCartPage /></ModuleRoute>} />
       <Route path="/mart/checkout" element={<ModuleRoute featureKey="zasamart"><MartCheckoutPage /></ModuleRoute>} />
@@ -256,14 +256,14 @@ function AppRoutes() {
       <Route path="/mart/orders/:id" element={<ModuleRoute featureKey="zasamart"><MartOrderDetailPage /></ModuleRoute>} />
       <Route path="/mart/sellers/:id" element={<ModuleRoute featureKey="zasamart"><MartSellerPage /></ModuleRoute>} />
 
-      {/* ZasaMart — Seller */}
+      {/* ZasaShop — Seller */}
       <Route path="/seller" element={<SellerRoute><SellerDashboardPage /></SellerRoute>} />
       <Route path="/seller/orders" element={<SellerRoute><SellerOrdersPage /></SellerRoute>} />
       <Route path="/seller/products" element={<SellerRoute><SellerProductsPage /></SellerRoute>} />
       <Route path="/seller/settings" element={<SellerRoute><SellerSettingsPage /></SellerRoute>} />
       <Route path="/seller/wallet" element={<SellerRoute><SellerWalletPage /></SellerRoute>} />
 
-      {/* Admin ZasaMart */}
+      {/* Admin ZasaShop */}
       <Route path="/admin/mart/sellers" element={<AdminRoute><AdminMartSellersPage /></AdminRoute>} />
       <Route path="/admin/mart/products" element={<AdminRoute><AdminMartProductsPage /></AdminRoute>} />
       <Route path="/admin/mart/orders" element={<AdminRoute><AdminMartOrdersPage /></AdminRoute>} />
