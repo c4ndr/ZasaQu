@@ -37,6 +37,19 @@ class MitraMartController extends Controller
         return response()->json($orders);
     }
 
+    // ── Riwayat pengiriman selesai ───────────────────────────────────────────
+    public function history(Request $request): JsonResponse
+    {
+        $orders = MartOrder::with(['seller:id,name,logo_path,address', 'customer:id,name'])
+            ->where('mitra_id', $request->user()->id)
+            ->whereIn('status', ['completed', 'cancelled', 'delivered'])
+            ->latest('delivered_at')
+            ->limit(50)
+            ->get();
+
+        return response()->json($orders);
+    }
+
     // ── Terima pesanan ────────────────────────────────────────────────────────
     public function accept(Request $request, int $id): JsonResponse
     {

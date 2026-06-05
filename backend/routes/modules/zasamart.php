@@ -57,6 +57,7 @@ Route::prefix('mart/seller')->middleware(['auth:sanctum', 'role:seller,admin'])-
 Route::prefix('mart/mitra')->middleware(['auth:sanctum', 'role:mitra_motor,mitra_mobil,admin'])->group(function () {
     Route::get('orders/available',        [MitraMartController::class, 'available']);
     Route::get('orders/my',               [MitraMartController::class, 'myOrders']);
+    Route::get('orders/history',          [MitraMartController::class, 'history']);
     Route::post('orders/{id}/accept',     [MitraMartController::class, 'accept']);
     Route::patch('orders/{id}/status',    [MitraMartController::class, 'updateStatus']);
 });
