@@ -103,10 +103,10 @@ function TopUpCard({ item, isNew, onConfirm, onReject, actionLoading }) {
   const busy     = actionLoading === item.id
 
   return (
-    <div style={{
+    <div onClick={() => setShowDetail(s => !s)} style={{
       borderTop: '1px solid var(--k-border)',
       background: isNew ? 'rgba(246,173,85,0.04)' : 'transparent',
-      transition: 'background 0.5s',
+      transition: 'background 0.5s', cursor: 'pointer',
     }}>
       {/* Badge NEW */}
       {isNew && (
@@ -157,13 +157,13 @@ function TopUpCard({ item, isNew, onConfirm, onReject, actionLoading }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, alignItems: 'flex-end' }}>
             {item.status === 'pending' && isManual && (
               <>
-                <button onClick={() => onConfirm(item.id)} disabled={busy}
+                <button onClick={e => { e.stopPropagation(); onConfirm(item.id) }} disabled={busy}
                   style={{ padding: '7px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
                     border: 'none', background: 'var(--k-accent)', color: '#0C0C16',
                     opacity: busy ? 0.5 : 1, whiteSpace: 'nowrap' }}>
                   {busy ? '...' : '✓ Konfirmasi'}
                 </button>
-                <button onClick={() => { setShowReject(true); setShowDetail(true) }}
+                <button onClick={e => { e.stopPropagation(); setShowReject(true); setShowDetail(true) }}
                   style={{ padding: '7px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
                     background: 'transparent', border: '1px solid var(--k-danger)', color: 'var(--k-danger)', whiteSpace: 'nowrap' }}>
                   ✕ Tolak
@@ -175,11 +175,10 @@ function TopUpCard({ item, isNew, onConfirm, onReject, actionLoading }) {
                 Otomatis via<br/>payment gateway
               </span>
             )}
-            <button onClick={() => setShowDetail(s => !s)}
-              style={{ padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                background: 'var(--k-card2)', border: '1px solid var(--k-border)', color: 'var(--k-muted)' }}>
-              {showDetail ? '▲ Tutup' : '▼ Detail'}
-            </button>
+            <span style={{ padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+              background: 'var(--k-card2)', border: '1px solid var(--k-border)', color: 'var(--k-muted)' }}>
+              {showDetail ? '▲' : '▼'}
+            </span>
           </div>
         </div>
 
@@ -260,7 +259,7 @@ function TopUpCard({ item, isNew, onConfirm, onReject, actionLoading }) {
 
             {/* Form tolak */}
             {showReject && item.status === 'pending' && isManual && (
-              <div style={{ background: 'rgba(245,101,101,0.06)', border: '1px solid rgba(245,101,101,0.25)', borderRadius: 14, padding: '14px 16px' }}>
+              <div onClick={e => e.stopPropagation()} style={{ background: 'rgba(245,101,101,0.06)', border: '1px solid rgba(245,101,101,0.25)', borderRadius: 14, padding: '14px 16px' }}>
                 <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-danger)', marginBottom: 10 }}>Alasan Penolakan</p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input className="input-field" style={{ flex: 1, padding: '9px 14px', fontSize: 13 }}

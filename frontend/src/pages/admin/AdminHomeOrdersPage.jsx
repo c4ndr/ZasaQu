@@ -166,7 +166,7 @@ export default function AdminHomeOrdersPage() {
               {orders.map(o => {
                 const s = sm(o.status)
                 return (
-                  <tr key={o.id} style={{ borderBottom: '1px solid var(--k-border)' }}>
+                  <tr key={o.id} onClick={() => setSelected(o)} style={{ borderBottom: '1px solid var(--k-border)', cursor: 'pointer' }}>
                     <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: 12, color: 'var(--k-muted)' }}>{o.order_number}</td>
                     <td style={{ padding: '12px', fontWeight: 600 }}>{o.provider?.name}</td>
                     <td style={{ padding: '12px', color: 'var(--k-muted)' }}>{o.customer?.name}</td>
@@ -176,9 +176,9 @@ export default function AdminHomeOrdersPage() {
                     <td style={{ padding: '12px', fontWeight: 700, color: '#6366F1' }}>{fmtRp(o.total_price)}</td>
                     <td style={{ padding: '12px', color: 'var(--k-muted)', fontSize: 11 }}>{fmtDate(o.created_at)}</td>
                     <td style={{ padding: '12px' }}>
-                      <button onClick={() => setSelected(o)} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'rgba(99,102,241,0.1)', color: '#6366F1', fontWeight: 700, fontSize: 12 }}>
-                        Detail
-                      </button>
+                      <span style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.1)', color: '#6366F1', fontWeight: 700, fontSize: 12 }}>
+                        Detail ›
+                      </span>
                     </td>
                   </tr>
                 )

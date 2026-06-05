@@ -234,7 +234,7 @@ export default function AdminFoodOrdersPage() {
               const canCancel   = !isFinal
 
               return (
-                <div key={order.id} style={{ padding: '16px 20px', borderTop: i === 0 ? 'none' : '1px solid var(--k-border)' }}>
+                <div key={order.id} onClick={() => setSelected(order)} style={{ padding: '16px 20px', borderTop: i === 0 ? 'none' : '1px solid var(--k-border)', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
 
                     {/* Info utama */}
@@ -293,15 +293,9 @@ export default function AdminFoodOrdersPage() {
 
                     {/* Tombol aksi */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-                      {/* Detail keuangan */}
-                      <button onClick={() => setSelected(order)} style={{
-                        padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600,
-                        background: 'var(--k-input)', color: 'var(--k-sub)',
-                        border: '1px solid var(--k-border)', cursor: 'pointer',
-                      }}>Detail</button>
                       {/* Force Complete: hanya saat delivered */}
                       {canComplete && (
-                        <button onClick={() => forceComplete(order.id)} disabled={actionId === order.id}
+                        <button onClick={e => { e.stopPropagation(); forceComplete(order.id) }} disabled={actionId === order.id}
                           style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
                             background: 'rgba(0,200,150,0.1)', color: '#00C896',
                             border: '1px solid rgba(0,200,150,0.25)', cursor: 'pointer',
@@ -311,7 +305,7 @@ export default function AdminFoodOrdersPage() {
                       )}
                       {/* Cancel */}
                       {canCancel && (
-                        <button onClick={() => { setShowCancel(showCancel === order.id ? null : order.id); setCancelReason('') }}
+                        <button onClick={e => { e.stopPropagation(); setShowCancel(showCancel === order.id ? null : order.id); setCancelReason('') }}
                           style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
                             background: 'rgba(245,101,101,0.08)', color: '#F56565',
                             border: '1px solid rgba(245,101,101,0.2)', cursor: 'pointer' }}>
@@ -323,7 +317,7 @@ export default function AdminFoodOrdersPage() {
 
                   {/* Form cancel */}
                   {showCancel === order.id && (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                       <input value={cancelReason} onChange={e => setCancelReason(e.target.value)}
                         style={{ flex: 1, padding: '8px 14px', fontSize: 13, borderRadius: 10, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)' }}
                         placeholder="Alasan pembatalan..." />

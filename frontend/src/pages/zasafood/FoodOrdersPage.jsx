@@ -59,10 +59,10 @@ function OrderCard({ order, onTrack, onConfirm, onReorder, onRate, confirming })
   const isDone = ['completed','cancelled','rejected'].includes(order.status)
 
   return (
-    <div style={{
+    <div onClick={() => onTrack(order.id)} style={{
       borderRadius: 16, background: '#fff',
       border: `1.5px solid ${sm.border}`,
-      overflow: 'hidden',
+      overflow: 'hidden', cursor: 'pointer',
       boxShadow: order.status === 'delivered'
         ? '0 4px 24px rgba(0,200,150,0.15)'
         : '0 1px 4px rgba(0,0,0,0.06)',

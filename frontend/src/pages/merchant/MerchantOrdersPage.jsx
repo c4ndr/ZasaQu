@@ -171,8 +171,106 @@ function RejectModal({ order, onClose, onRejected }) {
   )
 }
 
+// ── Modal Detail Order ────────────────────────────────────────────────────────
+function OrderDetailModal({ order, onClose }) {
+  const sm = STATUS_META[order.status] ?? STATUS_META.pending
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: 'var(--k-card)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 520, maxHeight: '88dvh', display: 'flex', flexDirection: 'column' }}>
+
+        {/* Header */}
+        <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--k-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <span style={{ fontSize: 14, fontWeight: 800, color: sm.color }}>{sm.icon} {sm.label}</span>
+            <p style={{ fontSize: 11, color: 'var(--k-sub)', fontFamily: 'monospace', marginTop: 2 }}>#{order.order_number}</p>
+          </div>
+          <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: 10, border: 'none', background: 'var(--k-input)', cursor: 'pointer', fontSize: 20, color: 'var(--k-sub)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+        </div>
+
+        <div style={{ overflowY: 'auto', padding: '16px 18px', flex: 1 }}>
+
+          {/* Pelanggan */}
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--k-muted)', letterSpacing: '0.07em', marginBottom: 8 }}>Pelanggan</p>
+            <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--k-text)', marginBottom: 4 }}>{order.customer?.name}</p>
+            {order.customer?.phone && (
+              <a href={`tel:${order.customer.phone}`} style={{ fontSize: 13, color: '#1D4ED8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                📞 {order.customer.phone}
+              </a>
+            )}
+          </div>
+
+          {/* Alamat pengiriman */}
+          {order.delivery_address && (
+            <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 10, background: 'var(--k-input)', border: '1px solid var(--k-border)' }}>
+              <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--k-muted)', letterSpacing: '0.07em', marginBottom: 6 }}>Alamat Pengiriman</p>
+              <p style={{ fontSize: 13, color: 'var(--k-text)', lineHeight: 1.6 }}>📍 {order.delivery_address}</p>
+            </div>
+          )}
+
+          {/* Item dengan catatan per-item */}
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--k-muted)', letterSpacing: '0.07em', marginBottom: 8 }}>Item Pesanan</p>
+            {order.items?.map(i => (
+              <div key={i.id} style={{ marginBottom: 8, padding: '10px 12px', borderRadius: 10, background: 'var(--k-input)', border: '1px solid var(--k-border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: i.notes ? 5 : 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--k-text)' }}>{i.quantity}× {i.item_name}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#F97316', flexShrink: 0, marginLeft: 8 }}>{fmtRp(i.item_price * i.quantity)}</span>
+                </div>
+                {i.notes && (
+                  <p style={{ fontSize: 12, color: 'var(--k-sub)', fontStyle: 'italic', marginTop: 3 }}>📝 {i.notes}</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Catatan global */}
+          {order.notes && (
+            <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 10, background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.2)' }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#C2410C', marginBottom: 4 }}>Catatan Pesanan</p>
+              <p style={{ fontSize: 13, color: 'var(--k-text)' }}>{order.notes}</p>
+            </div>
+          )}
+
+          {/* Pembayaran */}
+          <div style={{ borderTop: '1px solid var(--k-border)', paddingTop: 12, marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--k-sub)', marginBottom: 4 }}>
+              <span>Subtotal</span><span>{fmtRp(order.subtotal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--k-sub)', marginBottom: 8 }}>
+              <span>Ongkir</span><span>{fmtRp(order.delivery_fee)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 800 }}>
+              <span style={{ color: 'var(--k-text)' }}>Total</span>
+              <span style={{ color: '#F97316' }}>{fmtRp(order.total_amount)}</span>
+            </div>
+            {order.merchant_income > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 5 }}>
+                <span style={{ color: 'var(--k-sub)' }}>Pendapatanmu (setelah komisi)</span>
+                <span style={{ fontWeight: 700, color: '#027A48' }}>+{fmtRp(order.merchant_income)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Waktu */}
+          <div style={{ borderTop: '1px solid var(--k-border)', paddingTop: 12 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--k-muted)', letterSpacing: '0.07em', marginBottom: 8 }}>Waktu</p>
+            {order.created_at  && <p style={{ fontSize: 12, color: 'var(--k-sub)', marginBottom: 4 }}>📥 Masuk: {fmtTime(order.created_at)}</p>}
+            {order.accepted_at && <p style={{ fontSize: 12, color: 'var(--k-sub)', marginBottom: 4 }}>✅ Diterima: {fmtTime(order.accepted_at)}</p>}
+          </div>
+        </div>
+
+        <div style={{ padding: '12px 18px', borderTop: '1px solid var(--k-border)', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: 'var(--k-input)', color: 'var(--k-text)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Tutup</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Order Card ────────────────────────────────────────────────────────────────
-function OrderCard({ order, onAccept, onReject, onAction }) {
+function OrderCard({ order, onAccept, onReject, onAction, onDetail }) {
   const sm  = STATUS_META[order.status] ?? STATUS_META.pending
   const isDone = ['completed','cancelled','rejected'].includes(order.status)
   const isActive = ACTIVE.includes(order.status)
@@ -183,10 +281,10 @@ function OrderCard({ order, onAccept, onReject, onAction }) {
   }[order.status]
 
   return (
-    <div style={{
+    <div onClick={() => onDetail(order)} style={{
       borderRadius: 16, background: 'var(--k-card)',
       border: `2px solid ${sm.border}`,
-      overflow: 'hidden',
+      overflow: 'hidden', cursor: 'pointer',
       boxShadow: order.status === 'pending'
         ? `0 0 0 4px rgba(220,38,38,0.12), 0 4px 20px rgba(220,38,38,0.1)`
         : '0 2px 8px rgba(0,0,0,0.06)',
@@ -292,11 +390,11 @@ function OrderCard({ order, onAccept, onReject, onAction }) {
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             {order.status === 'pending' && (
               <>
-                <button onClick={() => onReject(order)} style={{
+                <button onClick={e => { e.stopPropagation(); onReject(order) }} style={{
                   flex: 1, padding: '11px', borderRadius: 10, border: 'none', cursor: 'pointer',
                   background: '#FEF2F2', color: '#DC2626', fontWeight: 700, fontSize: 13,
                 }}>Tolak</button>
-                <button onClick={() => onAccept(order)} style={{
+                <button onClick={e => { e.stopPropagation(); onAccept(order) }} style={{
                   flex: 2, padding: '11px', borderRadius: 10, border: 'none', cursor: 'pointer',
                   background: '#00C896', color: '#fff', fontWeight: 800, fontSize: 14,
                 }}>✓ Terima Order</button>
@@ -304,7 +402,7 @@ function OrderCard({ order, onAccept, onReject, onAction }) {
             )}
 
             {nextAction && (
-              <button onClick={() => onAction(order.id, nextAction.endpoint)} style={{
+              <button onClick={e => { e.stopPropagation(); onAction(order.id, nextAction.endpoint) }} style={{
                 flex: 1, padding: '11px', borderRadius: 10, border: 'none', cursor: 'pointer',
                 background: nextAction.bg, color: nextAction.color, fontWeight: 700, fontSize: 13,
               }}>{nextAction.label}</button>
@@ -328,6 +426,7 @@ export default function MerchantOrdersPage() {
   const [loading,   setLoading]   = useState(true)
   const [tab,       setTab]       = useState('active')
   const [modal,     setModal]     = useState(null) // { type: 'accept'|'reject', order }
+  const [detail,    setDetail]    = useState(null) // order object
   const [toast,     setToast]     = useState(null)
   const [syncError, setSyncError] = useState(false)
   const pollRef = useRef(null)
@@ -384,8 +483,9 @@ export default function MerchantOrdersPage() {
       )}
 
       {/* Modal */}
-      {modal?.type === 'accept' && <PrepModal   order={modal.order} onClose={() => setModal(null)} onAccepted={() => { setModal(null); showToast(true, 'Order diterima!'); load() }} />}
-      {modal?.type === 'reject' && <RejectModal order={modal.order} onClose={() => setModal(null)} onRejected={() => { setModal(null); showToast(true, 'Order ditolak.'); load() }} />}
+      {modal?.type === 'accept' && <PrepModal      order={modal.order} onClose={() => setModal(null)} onAccepted={() => { setModal(null); showToast(true, 'Order diterima!'); load() }} />}
+      {modal?.type === 'reject' && <RejectModal    order={modal.order} onClose={() => setModal(null)} onRejected={() => { setModal(null); showToast(true, 'Order ditolak.'); load() }} />}
+      {detail                   && <OrderDetailModal order={detail}    onClose={() => setDetail(null)} />}
 
       <div style={{ maxWidth: 620 }}>
 
@@ -435,6 +535,7 @@ export default function MerchantOrdersPage() {
                 onAccept={o => setModal({ type: 'accept', order: o })}
                 onReject={o => setModal({ type: 'reject', order: o })}
                 onAction={doAction}
+                onDetail={o => setDetail(o)}
               />
             ))}
           </div>

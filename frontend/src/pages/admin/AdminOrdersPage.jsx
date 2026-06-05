@@ -32,12 +32,95 @@ function StatusBadge({ status }) {
   )
 }
 
+// ── Drawer detail order ZasaGo ────────────────────────────────────────────────
+function OrderDrawer({ order, onClose }) {
+  const color  = STATUS_COLOR[order.status]  ?? '#A0A0BC'
+  const label  = STATUS_LABELS[order.status] ?? order.status
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ width: '100%', maxWidth: 400, background: 'var(--k-card)', height: '100%', overflowY: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 0 }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div>
+            <p style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>#{order.order_number}</p>
+            <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{formatDate(order.created_at)}</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--k-sub)' }}>×</button>
+        </div>
+
+        {/* Status + tipe */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+          <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: `${color}18`, color, border: `1px solid ${color}33` }}>
+            {label}
+          </span>
+          <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: order.type === 'jastip' ? 'rgba(183,148,244,0.12)' : 'var(--k-input)', color: order.type === 'jastip' ? '#B794F4' : 'var(--k-muted)' }}>
+            {order.type === 'jastip' ? '⚡ Jastip' : 'Master'}
+          </span>
+        </div>
+
+        {/* Rute */}
+        <div style={{ background: 'var(--k-input)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--k-muted)', letterSpacing: '0.07em', marginBottom: 10 }}>Rute Pengiriman</p>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2, flexShrink: 0 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#00C896' }} />
+              <div style={{ width: 1.5, height: 18, background: 'var(--k-border)' }} />
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F56565' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 11, color: 'var(--k-muted)', marginBottom: 2 }}>Pickup</p>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--k-text)', marginBottom: 10 }}>{order.pickup_address}</p>
+              <p style={{ fontSize: 11, color: 'var(--k-muted)', marginBottom: 2 }}>Dropoff</p>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--k-text)' }}>{order.dropoff_address}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Info */}
+        {[
+          ['Pelanggan', order.customer?.name],
+          ['Mitra',     order.mitra?.name ?? '— (belum assign)'],
+        ].map(([l, v]) => v && (
+          <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 10 }}>
+            <span style={{ color: 'var(--k-sub)' }}>{l}</span>
+            <span style={{ fontWeight: 600 }}>{v}</span>
+          </div>
+        ))}
+
+        {order.notes && (
+          <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.15)', fontSize: 12, color: 'var(--k-sub)', marginBottom: 16 }}>
+            📝 {order.notes}
+          </div>
+        )}
+
+        {/* Biaya */}
+        <div style={{ borderTop: '1px solid var(--k-border)', paddingTop: 14, marginTop: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--k-sub)', marginBottom: 6 }}>
+            <span>Ongkos Kirim</span><span>{formatRp(order.shipping_fee)}</span>
+          </div>
+          {order.jastip_discount_applied > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#00C896', marginBottom: 6 }}>
+              <span>Diskon JastipQu</span><span>-{formatRp(order.jastip_discount_applied)}</span>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 800, paddingTop: 6, borderTop: '1px solid var(--k-border)' }}>
+            <span>Total</span><span style={{ color: '#F97316' }}>{formatRp(order.shipping_fee)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminOrdersPage() {
   const [data,         setData]         = useState(null)
   const [loading,      setLoading]      = useState(true)
   const [search,       setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter,   setTypeFilter]   = useState('')
+  const [selected,     setSelected]     = useState(null)
   const [actionId,     setActionId]     = useState(null)
   const [showCancel,   setShowCancel]   = useState(null)
   const [cancelReason, setCancelReason] = useState('')
@@ -73,6 +156,8 @@ export default function AdminOrdersPage() {
   return (
     <AdminLayout>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {selected && <OrderDrawer order={selected} onClose={() => setSelected(null)} />}
 
       {/* Sub-header */}
       <p style={{ fontSize: 13, color: 'var(--k-muted)', marginBottom: 20 }}>
@@ -122,7 +207,7 @@ export default function AdminOrdersPage() {
             <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Tidak ada order ditemukan</p>
           </div>
         ) : data.data.map((order, i) => (
-          <div key={order.id} style={{ padding: '16px 20px', borderTop: i === 0 ? 'none' : '1px solid var(--k-border)' }}>
+          <div key={order.id} onClick={() => setSelected(order)} style={{ padding: '16px 20px', borderTop: i === 0 ? 'none' : '1px solid var(--k-border)', cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
 
               {/* Info utama */}
@@ -191,7 +276,7 @@ export default function AdminOrdersPage() {
               {/* Tombol aksi */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
                 {order.status === 'delivered' && (
-                  <button onClick={() => forceComplete(order.id)} disabled={actionId === order.id}
+                  <button onClick={e => { e.stopPropagation(); forceComplete(order.id) }} disabled={actionId === order.id}
                     style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
                       background: 'rgba(0,200,150,0.1)', color: 'var(--k-accent)',
                       border: '1px solid rgba(0,200,150,0.25)', cursor: 'pointer',
@@ -200,7 +285,7 @@ export default function AdminOrdersPage() {
                   </button>
                 )}
                 {!['completed', 'cancelled'].includes(order.status) && (
-                  <button onClick={() => { setShowCancel(showCancel === order.id ? null : order.id); setCancelReason('') }}
+                  <button onClick={e => { e.stopPropagation(); setShowCancel(showCancel === order.id ? null : order.id); setCancelReason('') }}
                     style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
                       background: 'rgba(245,101,101,0.08)', color: 'var(--k-danger)',
                       border: '1px solid rgba(245,101,101,0.2)', cursor: 'pointer' }}>
@@ -212,7 +297,7 @@ export default function AdminOrdersPage() {
 
             {/* Form cancel */}
             {showCancel === order.id && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 <input value={cancelReason} onChange={e => setCancelReason(e.target.value)}
                   className="input-field" style={{ flex: 1, padding: '8px 14px', fontSize: 13 }}
                   placeholder="Alasan pembatalan..." />
