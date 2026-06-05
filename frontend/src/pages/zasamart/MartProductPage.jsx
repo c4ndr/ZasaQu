@@ -133,6 +133,9 @@ export default function MartProductPage() {
           {product.average_rating > 0 && (
             <span style={{ fontSize: 12, color: 'var(--k-sub)' }}>⭐ {product.average_rating.toFixed(1)} ({product.total_ratings} ulasan)</span>
           )}
+          {product.total_sold > 0 && (
+            <span style={{ fontSize: 12, color: 'var(--k-sub)' }}>🔥 Terjual {product.total_sold >= 1000 ? (product.total_sold / 1000).toFixed(1) + 'rb' : product.total_sold}</span>
+          )}
           <span style={{ fontSize: 12, color: 'var(--k-sub)' }}>📦 Stok: {product.stock}</span>
           {product.weight > 0 && <span style={{ fontSize: 12, color: 'var(--k-sub)' }}>⚖️ {product.weight}g</span>}
         </div>
@@ -183,17 +186,24 @@ export default function MartProductPage() {
       {/* Bottom bar */}
       {product.stock > 0 ? (
         <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'var(--k-surface)', borderTop: '1px solid var(--k-border)', padding: '12px 16px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom,0px))' }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--k-card)', borderRadius: 10, padding: '6px 12px', border: '1px solid var(--k-border)' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--k-card)', borderRadius: 10, padding: '6px 10px', border: '1px solid var(--k-border)', flexShrink: 0 }}>
               <button onClick={() => setQty(q => Math.max(1, q - 1))}
-                style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--k-text)', cursor: 'pointer', padding: '0 4px' }}>−</button>
-              <span style={{ fontSize: 15, fontWeight: 800, minWidth: 24, textAlign: 'center', color: 'var(--k-text)' }}>{qty}</span>
+                style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--k-text)', cursor: 'pointer', padding: '0 2px' }}>−</button>
+              <span style={{ fontSize: 14, fontWeight: 800, minWidth: 20, textAlign: 'center', color: 'var(--k-text)' }}>{qty}</span>
               <button onClick={() => setQty(q => Math.min(product.stock, q + 1))}
-                style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--k-text)', cursor: 'pointer', padding: '0 4px' }}>+</button>
+                style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--k-text)', cursor: 'pointer', padding: '0 2px' }}>+</button>
             </div>
             <button onClick={addToCart} disabled={adding}
-              style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#6366F1,#7C3AED)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', opacity: adding ? 0.7 : 1 }}>
-              {adding ? 'Menambahkan...' : `🛒 Tambah ke Keranjang · ${fmtRp(product.price * qty)}`}
+              style={{ flex: 1, padding: '11px 8px', borderRadius: 12, border: '2px solid #6366F1', background: 'transparent', color: '#6366F1', fontWeight: 700, fontSize: 12, cursor: 'pointer', opacity: adding ? 0.6 : 1 }}>
+              🛒 Keranjang
+            </button>
+            <button onClick={async () => {
+              await addToCart()
+              navigate('/mart/cart')
+            }} disabled={adding}
+              style={{ flex: 1.3, padding: '11px 8px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#6366F1,#7C3AED)', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', opacity: adding ? 0.7 : 1 }}>
+              ⚡ Beli Langsung
             </button>
           </div>
           {msg && <p style={{ fontSize: 12, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', marginTop: 6, textAlign: 'center' }}>{msg}</p>}

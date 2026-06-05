@@ -128,16 +128,26 @@ class CustomerController extends Controller
             'delivery_phone'   => ['nullable', 'string', 'max:20'],
             'notes'            => ['nullable', 'string', 'max:500'],
             'shipping_fee'     => ['required', 'integer', 'min:0'],
+            'payment_method'   => ['nullable', 'in:wallet,cod'],
+            'cart_item_ids'    => ['nullable', 'array'],
+            'cart_item_ids.*'  => ['integer'],
         ]);
+
+        $paymentMethod = $data['payment_method'] ?? 'wallet';
 
         $user   = $request->user();
         $seller = MartSeller::findOrFail($data['seller_id']);
         abort_if(!$seller->isActive(), 422, 'Toko tidak aktif.');
 
-        $cartItems = MartCart::with('product')
+        $cartQuery = MartCart::with('product')
             ->where('user_id', $user->id)
-            ->where('seller_id', $seller->id)
-            ->get();
+            ->where('seller_id', $seller->id);
+
+        if (!empty($data['cart_item_ids'])) {
+            $cartQuery->whereIn('id', $data['cart_item_ids']);
+        }
+
+        $cartItems = $cartQuery->get();
 
         abort_if($cartItems->isEmpty(), 422, 'Keranjang kosong untuk toko ini.');
 
@@ -146,13 +156,16 @@ class CustomerController extends Controller
             abort_if($item->product->stock < $item->quantity, 422, "Stok '{$item->product->name}' tidak cukup.");
         }
 
-        // ── Cek saldo wallet sebelum membuka transaksi DB ─────────────────────
         $totalEstimate = $cartItems->sum(fn($i) => $i->product->price * $i->quantity) + $data['shipping_fee'];
-        $userWallet    = Wallet::where('user_id', $user->id)->first();
-        abort_if(!$userWallet || $userWallet->availableBalance() < $totalEstimate, 422,
-            'Saldo tidak cukup. Silakan top up terlebih dahulu.');
 
-        $order = DB::transaction(function () use ($user, $seller, $data, $cartItems) {
+        // Cek saldo hanya untuk pembayaran wallet
+        if ($paymentMethod === 'wallet') {
+            $userWallet = Wallet::where('user_id', $user->id)->first();
+            abort_if(!$userWallet || $userWallet->availableBalance() < $totalEstimate, 422,
+                'Saldo tidak cukup. Silakan top up atau pilih Bayar di Tempat.');
+        }
+
+        $order = DB::transaction(function () use ($user, $seller, $data, $cartItems, $paymentMethod, $totalEstimate) {
             $subtotal    = $cartItems->sum(fn($i) => $i->product->price * $i->quantity);
             $total       = $subtotal + $data['shipping_fee'];
             $commRate    = (float) AdminSetting::valueOf('mart_commission_percent', 5);
@@ -164,6 +177,8 @@ class CustomerController extends Controller
                 'customer_id'            => $user->id,
                 'seller_id'              => $seller->id,
                 'status'                 => 'pending',
+                'payment_method'         => $paymentMethod,
+                'paid_at'                => $paymentMethod === 'wallet' ? now() : null,
                 'seller_name_snapshot'   => $seller->name,
                 'seller_address_snapshot'=> $seller->address,
                 'seller_lat'             => $seller->lat,
@@ -195,19 +210,25 @@ class CustomerController extends Controller
                 ]);
 
                 $item->product->decrement('stock', $item->quantity);
+                $item->product->increment('total_sold', $item->quantity);
             }
 
-            MartCart::where('user_id', $user->id)->where('seller_id', $seller->id)->delete();
+            MartCart::where('user_id', $user->id)
+                ->where('seller_id', $seller->id)
+                ->whereIn('id', $cartItems->pluck('id'))
+                ->delete();
 
-            // ── Debit wallet customer ─────────────────────────────────────
-            app(WalletService::class)->debit(
-                $user,
-                $total,
-                'mart_payment',
-                "Pembayaran ZasaMart #{$order->order_number}",
-                $order,
-                'zasamart'
-            );
+            // Debit wallet hanya jika metode pembayaran wallet
+            if ($paymentMethod === 'wallet') {
+                app(WalletService::class)->debit(
+                    $user,
+                    $total,
+                    'mart_payment',
+                    "Pembayaran ZasaMart #{$order->order_number}",
+                    $order,
+                    'zasamart'
+                );
+            }
 
             return $order;
         });
