@@ -338,11 +338,19 @@ function OrderCard({ order, onAccept, onReject, onAction, onDetail }) {
         {/* ── Daftar item ── */}
         <div style={{ marginBottom: 12 }}>
           {order.items?.map(i => (
-            <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 5, color: 'var(--k-text)' }}>
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>
-                <span style={{ fontWeight: 600 }}>{i.quantity}×</span> {i.item_name}
-              </span>
-              <span style={{ fontWeight: 500, flexShrink: 0, color: 'var(--k-sub)' }}>{fmtRp(i.item_price * i.quantity)}</span>
+            <div key={i.id} style={{ marginBottom: i.notes ? 8 : 5 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--k-text)' }}>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>
+                  <span style={{ fontWeight: 600 }}>{i.quantity}×</span> {i.item_name}
+                </span>
+                <span style={{ fontWeight: 500, flexShrink: 0, color: 'var(--k-sub)' }}>{fmtRp(i.item_price * i.quantity)}</span>
+              </div>
+              {i.notes && (
+                <div style={{ fontSize: 12, color: '#D97706', fontStyle: 'italic', marginTop: 3, paddingLeft: 2, display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+                  <span>📝</span>
+                  <span>{i.notes}</span>
+                </div>
+              )}
             </div>
           ))}
         </div>
