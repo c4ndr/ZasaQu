@@ -46,28 +46,49 @@ export default function AdminMartOrdersPage() {
 
   return (
     <AdminLayout>
-      <div style={{ padding: '0 0 80px' }}>
-        <div style={{ display: 'flex', overflowX: 'auto', background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)', scrollbarWidth: 'none' }}>
-          {[{ v: '', l: 'Semua' }, { v: 'pending', l: 'Menunggu' }, { v: 'confirmed', l: 'Dikonfirmasi' }, { v: 'packed', l: 'Dikemas' }, { v: 'picking_up', l: 'Dijemput' }, { v: 'on_delivery', l: 'Dikirim' }, { v: 'completed', l: 'Selesai' }, { v: 'cancelled', l: 'Batal' }].map(t => (
-            <button key={t.v} onClick={() => setTab(t.v)}
-              style={{ padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: tab === t.v ? 700 : 500, color: tab === t.v ? 'var(--k-accent)' : 'var(--k-muted)', borderBottom: tab === t.v ? '2px solid var(--k-accent)' : '2px solid transparent', whiteSpace: 'nowrap' }}>
-              {t.l}
-            </button>
-          ))}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Order ZasaMart</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Monitor pesanan dari marketplace produk lokal</p>
         </div>
+        <button onClick={load} style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-sub)', fontSize: 13, cursor: 'pointer' }}>↻ Refresh</button>
+      </div>
 
-        <div style={{ padding: '14px 16px' }}>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari no. pesanan / nama pembeli..."
-            style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-text)', fontSize: 13, outline: 'none', marginBottom: 14, boxSizing: 'border-box' }} />
+      {/* Tabs + Search */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        {[{ v: '', l: 'Semua', c: 'var(--k-sub)' }, { v: 'pending', l: 'Menunggu', c: '#F59E0B' }, { v: 'confirmed', l: 'Dikonfirmasi', c: '#3B82F6' }, { v: 'packed', l: 'Dikemas', c: '#8B5CF6' }, { v: 'on_delivery', l: 'Dikirim', c: '#6366F1' }, { v: 'completed', l: 'Selesai', c: '#22C55E' }, { v: 'cancelled', l: 'Batal', c: '#EF4444' }].map(t => (
+          <button key={t.v} onClick={() => setTab(t.v)}
+            style={{
+              padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: tab === t.v ? 700 : 500,
+              border: `1px solid ${tab === t.v ? t.c + '40' : 'var(--k-border)'}`,
+              cursor: 'pointer', background: tab === t.v ? `${t.c}18` : 'var(--k-card)',
+              color: tab === t.v ? t.c : 'var(--k-sub)', whiteSpace: 'nowrap',
+            }}>{t.l}</button>
+        ))}
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari no. pesanan / nama pembeli..."
+          style={{ marginLeft: 'auto', padding: '9px 14px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 13, outline: 'none', width: 260 }} />
+      </div>
 
-          {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div style={{ width: 24, height: 24, border: '3px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>
-          : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {orders.map(o => {
-                const sm = STATUS_META[o.status] ?? { label: o.status, color: '#888' }
-                return (
-                  <div key={o.id} onClick={() => setSelected(o.id === selected ? null : o.id)}
-                    style={{ background: 'var(--k-card)', borderRadius: 12, border: `1px solid ${selected === o.id ? 'var(--k-accent)' : 'var(--k-border)'}`, padding: '12px 14px', cursor: 'pointer' }}>
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+          <div style={{ width: 24, height: 24, border: '3px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        </div>
+      ) : orders.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <p style={{ fontSize: 36, marginBottom: 10 }}>🛒</p>
+          <p style={{ color: 'var(--k-text)', fontWeight: 700, marginBottom: 4 }}>Tidak ada pesanan</p>
+          <p style={{ color: 'var(--k-muted)', fontSize: 13 }}>Pesanan ZasaMart akan tampil di sini</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {orders.map(o => {
+            const sm = STATUS_META[o.status] ?? { label: o.status, color: '#888' }
+            return (
+              <div key={o.id} onClick={() => setSelected(o.id === selected ? null : o.id)}
+                style={{ background: 'var(--k-card)', borderRadius: 14, border: `1.5px solid ${selected === o.id ? 'var(--k-accent)' : 'var(--k-border)'}`, padding: '14px 16px', cursor: 'pointer', transition: 'border-color .15s' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                       <div>
                         <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-text)' }}>{o.order_number}</p>
@@ -128,10 +149,8 @@ export default function AdminMartOrdersPage() {
                   </div>
                 )
               })}
-            </div>
-          )}
         </div>
-      </div>
+      )}
     </AdminLayout>
   )
 }

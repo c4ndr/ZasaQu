@@ -159,28 +159,35 @@ export default function AdminOrdersPage() {
 
       {selected && <OrderDrawer order={selected} onClose={() => setSelected(null)} />}
 
-      {/* Sub-header */}
-      <p style={{ fontSize: 13, color: 'var(--k-muted)', marginBottom: 20 }}>
-        Monitor dan kelola semua transaksi pengiriman
-      </p>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Order ZasaGo</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Monitor dan kelola semua transaksi pengiriman</p>
+        </div>
+        <button onClick={fetchOrders} style={{
+          padding: '8px 16px', borderRadius: 10, border: '1px solid var(--k-border)',
+          background: 'var(--k-card)', color: 'var(--k-sub)', fontSize: 13, cursor: 'pointer',
+        }}>↻ Refresh</button>
+      </div>
 
       {/* Filter bar */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="🔍  Cari nomor order..."
+          placeholder="Cari nomor order, nama..."
           className="input-field"
-          style={{ flex: 1, minWidth: 180, maxWidth: 260, padding: '9px 14px', fontSize: 13 }}
+          style={{ flex: '1 1 200px', maxWidth: 260, padding: '9px 14px', fontSize: 13 }}
         />
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="input-field" style={{ width: 170, padding: '9px 14px', fontSize: 13 }}>
+          className="input-field" style={{ padding: '9px 14px', fontSize: 13 }}>
           <option value="">Semua Status</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-          className="input-field" style={{ width: 140, padding: '9px 14px', fontSize: 13 }}>
+          className="input-field" style={{ padding: '9px 14px', fontSize: 13 }}>
           <option value="">Semua Tipe</option>
           <option value="master">Master</option>
           <option value="jastip">Jastip</option>
@@ -188,7 +195,7 @@ export default function AdminOrdersPage() {
         {(search || statusFilter || typeFilter) && (
           <button
             onClick={() => { setSearch(''); setStatusFilter(''); setTypeFilter('') }}
-            style={{ padding: '9px 14px', borderRadius: 12, border: '1px solid var(--k-border)', background: 'var(--k-card2)', color: 'var(--k-muted)', fontSize: 13, cursor: 'pointer' }}>
+            style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-muted)', fontSize: 13, cursor: 'pointer' }}>
             ✕ Reset
           </button>
         )}
@@ -207,7 +214,10 @@ export default function AdminOrdersPage() {
             <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>Tidak ada order ditemukan</p>
           </div>
         ) : data.data.map((order, i) => (
-          <div key={order.id} onClick={() => setSelected(order)} style={{ padding: '16px 20px', borderTop: i === 0 ? 'none' : '1px solid var(--k-border)', cursor: 'pointer' }}>
+          <div key={order.id} onClick={() => setSelected(order)}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--k-surface)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            style={{ padding: '16px 20px', borderTop: i === 0 ? 'none' : '1px solid var(--k-border)', cursor: 'pointer', transition: 'background .1s' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
 
               {/* Info utama */}
@@ -314,10 +324,10 @@ export default function AdminOrdersPage() {
         ))}
       </div>
 
-      {/* Pagination info */}
+      {/* Jumlah hasil */}
       {data?.total > 0 && (
-        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--k-muted)', marginTop: 16 }}>
-          Menampilkan {data.data?.length ?? 0} dari {data.total} order
+        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--k-muted)', marginTop: 14 }}>
+          Menampilkan <strong>{data.data?.length ?? 0}</strong> dari <strong>{data.total}</strong> order
         </p>
       )}
     </AdminLayout>

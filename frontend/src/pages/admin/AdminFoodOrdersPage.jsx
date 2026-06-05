@@ -192,39 +192,49 @@ export default function AdminFoodOrdersPage() {
         }}>{toast.msg}</div>
       )}
 
-      <div style={{ padding: '0 0 40px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Order ZasaFood</h1>
-          <button onClick={load} style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-card)', color: 'var(--k-sub)', fontSize: 13, cursor: 'pointer' }}>↻ Refresh</button>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Order ZasaFood</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>Monitor pesanan makanan dan minuman dari merchant</p>
         </div>
+        <button onClick={load} style={{
+          padding: '8px 16px', borderRadius: 10, border: '1px solid var(--k-border)',
+          background: 'var(--k-card)', color: 'var(--k-sub)', fontSize: 13, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>↻ Refresh</button>
+      </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{
-              padding: '8px 18px', borderRadius: 20, border: 'none', cursor: 'pointer',
-              fontWeight: tab === t.key ? 700 : 400, fontSize: 13,
-              background: tab === t.key ? '#F97316' : 'var(--k-input)',
-              color: tab === t.key ? '#fff' : 'var(--k-sub)',
-            }}>{t.label}</button>
-          ))}
-        </div>
-
-        {/* Search */}
+      {/* Tabs + Search */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        {TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            padding: '8px 18px', borderRadius: 20, cursor: 'pointer',
+            fontWeight: tab === t.key ? 700 : 500, fontSize: 13,
+            border: `1px solid ${tab === t.key ? '#F9731640' : 'var(--k-border)'}`,
+            background: tab === t.key ? 'rgba(249,115,22,0.12)' : 'var(--k-card)',
+            color: tab === t.key ? '#F97316' : 'var(--k-sub)',
+          }}>{t.label}</button>
+        ))}
         <input type="text" value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Cari nomor order, warung, atau pelanggan..."
           style={{
-            width: '100%', maxWidth: 400, padding: '10px 16px', borderRadius: 10, fontSize: 14,
+            marginLeft: 'auto', padding: '9px 16px', borderRadius: 10, fontSize: 13,
             border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)',
-            marginBottom: 16, boxSizing: 'border-box',
+            boxSizing: 'border-box', outline: 'none', width: 320,
           }} />
+      </div>
 
-        {/* Order list */}
-        {loading ? (
-          <p style={{ color: 'var(--k-sub)', padding: '40px 0' }}>Memuat...</p>
-        ) : orders.length === 0 ? (
-          <p style={{ textAlign: 'center', color: 'var(--k-sub)', padding: '60px 0' }}>Tidak ada order.</p>
-        ) : (
+      {/* Order list */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-muted)' }}>Memuat...</div>
+      ) : orders.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <p style={{ fontSize: 36, marginBottom: 10 }}>🍜</p>
+          <p style={{ color: 'var(--k-text)', fontWeight: 700, marginBottom: 4 }}>Tidak ada order</p>
+          <p style={{ color: 'var(--k-muted)', fontSize: 13 }}>Pesanan ZasaFood akan tampil di sini</p>
+        </div>
+      ) : (
           <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, overflow: 'hidden' }}>
             {orders.map((order, i) => {
               const sm     = STATUS_META[order.status] ?? STATUS_META.pending
@@ -234,7 +244,10 @@ export default function AdminFoodOrdersPage() {
               const canCancel   = !isFinal
 
               return (
-                <div key={order.id} onClick={() => setSelected(order)} style={{ padding: '16px 20px', borderTop: i === 0 ? 'none' : '1px solid var(--k-border)', cursor: 'pointer' }}>
+                <div key={order.id} onClick={() => setSelected(order)}
+                  onMouseEnter={e => { if (!e.currentTarget.querySelector('input:focus')) e.currentTarget.style.background = 'var(--k-surface)' }}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  style={{ padding: '16px 20px', borderTop: i === 0 ? 'none' : '1px solid var(--k-border)', cursor: 'pointer', transition: 'background .1s' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
 
                     {/* Info utama */}
@@ -336,21 +349,20 @@ export default function AdminFoodOrdersPage() {
           </div>
         )}
 
-        {/* Pagination */}
-        {meta.last_page > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 20 }}>
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{
-              padding: '8px 16px', borderRadius: 10, border: '1.5px solid var(--k-border)',
-              background: 'transparent', color: page === 1 ? 'var(--k-sub)' : 'var(--k-text)', cursor: page === 1 ? 'default' : 'pointer',
-            }}>‹ Sebelumnya</button>
-            <span style={{ padding: '8px 14px', fontSize: 13, color: 'var(--k-sub)' }}>{page} / {meta.last_page}</span>
-            <button onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} disabled={page === meta.last_page} style={{
-              padding: '8px 16px', borderRadius: 10, border: '1.5px solid var(--k-border)',
-              background: 'transparent', color: page === meta.last_page ? 'var(--k-sub)' : 'var(--k-text)', cursor: page === meta.last_page ? 'default' : 'pointer',
-            }}>Berikutnya ›</button>
-          </div>
-        )}
-      </div>
+      {/* Pagination */}
+      {meta.last_page > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 20 }}>
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{
+            padding: '8px 16px', borderRadius: 10, border: '1.5px solid var(--k-border)', fontWeight: 600,
+            background: 'transparent', color: page === 1 ? 'var(--k-sub)' : 'var(--k-text)', cursor: page === 1 ? 'default' : 'pointer',
+          }}>‹ Sebelumnya</button>
+          <span style={{ padding: '8px 14px', fontSize: 13, color: 'var(--k-sub)' }}>{page} / {meta.last_page}</span>
+          <button onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} disabled={page === meta.last_page} style={{
+            padding: '8px 16px', borderRadius: 10, border: '1.5px solid var(--k-border)', fontWeight: 600,
+            background: 'transparent', color: page === meta.last_page ? 'var(--k-sub)' : 'var(--k-text)', cursor: page === meta.last_page ? 'default' : 'pointer',
+          }}>Berikutnya ›</button>
+        </div>
+      )}
     </AdminLayout>
   )
 }
