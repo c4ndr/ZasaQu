@@ -134,10 +134,12 @@ export default function DashboardPage() {
   const navigate  = useNavigate()
   const isMitra   = user?.role?.startsWith('mitra')
 
-  const [walletData,    setWalletData]    = useState(null)
-  const [locationName,  setLocationName]  = useState(null)
-  const [bannerIdx,     setBannerIdx]     = useState(0)
-  const [promos,        setPromos]        = useState(DEFAULT_BANNERS)
+  const [walletData,       setWalletData]       = useState(null)
+  const [locationName,     setLocationName]     = useState(null)
+  const [bannerIdx,        setBannerIdx]        = useState(0)
+  const [promos,           setPromos]           = useState(DEFAULT_BANNERS)
+  const [goOrderCount,     setGoOrderCount]     = useState(null)
+  const [foodOrderCount,   setFoodOrderCount]   = useState(null)
   const touchStartX = useRef(null)
   const { count: notifCount } = useNotifCount()
   const { isDark, toggle: toggleTheme } = useTheme()
@@ -149,6 +151,14 @@ export default function DashboardPage() {
     if (user?.role === 'admin') return
     api.get('/wallet/summary').then(r => setWalletData(r.data)).catch(() => {})
   }, [user])
+
+  useEffect(() => {
+    if (!isMitra) return
+    api.get('/mitra/orders/available').then(r => setGoOrderCount((r.data?.data ?? r.data ?? []).length)).catch(() => setGoOrderCount(0))
+    if (feat.zasafood !== false) {
+      api.get('/food/mitra/orders/available').then(r => setFoodOrderCount((r.data?.data ?? []).length)).catch(() => setFoodOrderCount(0))
+    }
+  }, [isMitra, feat.zasafood])
 
   useEffect(() => {
     if (user?.role === 'admin') navigate('/admin', { replace: true })
@@ -192,6 +202,7 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 100 }}>
+      <style>{`@keyframes dashPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}`}</style>
 
       {/* ── Header ─────────────────────────────────── */}
       <div style={{
@@ -428,45 +439,55 @@ export default function DashboardPage() {
               letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
               Menu Utama
             </p>
-            <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-              <MainCard
-                to="/mitra/orders"
-                emoji="📦"
-                bgDecor="📦"
-                title="Order Tersedia"
-                desc="Terima order baru"
-                gradient="linear-gradient(135deg, #EBF5FF 0%, #F0F9FF 100%)"
-                borderColor="rgba(59,130,246,0.15)"
-              />
-              <MainCard
-                to="/mitra/gps"
-                emoji="📍"
-                bgDecor="🗺️"
-                title="GPS Saya"
-                desc="Aktifkan tracking"
-                gradient="linear-gradient(135deg, #F0FFF4 0%, #F0FDFA 100%)"
-                borderColor="rgba(0,200,150,0.15)"
-              />
-            </div>
-            <Link to="/mitra/orders" style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}>
-              <div style={{
-                background: 'var(--k-surface)', border: '1px solid var(--k-border)',
-                borderRadius: 16, padding: '14px 16px',
-                display: 'flex', alignItems: 'center', gap: 14,
-                boxShadow: 'var(--k-shadow)',
-              }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: 14, flexShrink: 0,
-                  background: 'rgba(249,115,22,0.10)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
-                }}>💼</div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 2 }}>Mulai Bekerja</p>
-                  <p style={{ fontSize: 12, color: 'var(--k-sub)' }}>Aktifkan GPS dan terima order baru hari ini</p>
+            {/* Baris 1: ZasaGo + ZasaFood */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+              {/* ZasaGo Order Tersedia */}
+              <Link to="/mitra/orders" style={{ flex: 1, textDecoration: 'none' }}>
+                <div style={{ background: 'linear-gradient(135deg, #EBF5FF 0%, #F0F9FF 100%)', border: '1.5px solid rgba(59,130,246,0.2)', borderRadius: 18, padding: '16px 14px', position: 'relative', overflow: 'hidden', minHeight: 110 }}>
+                  <div style={{ position: 'absolute', right: -6, top: -4, fontSize: 60, opacity: 0.12, transform: 'rotate(12deg)', pointerEvents: 'none' }}>📦</div>
+                  <div style={{ fontSize: 26, marginBottom: 6 }}>🛵</div>
+                  <p style={{ fontWeight: 800, fontSize: 13, color: '#1D4ED8', marginBottom: 2 }}>ZasaGo</p>
+                  <p style={{ fontSize: 11, color: 'var(--k-sub)', marginBottom: 6 }}>Kurir & titip barang</p>
+                  {goOrderCount !== null && (
+                    <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: goOrderCount > 0 ? '#1D4ED8' : 'rgba(59,130,246,0.12)', color: goOrderCount > 0 ? '#fff' : '#6B7280' }}>
+                      {goOrderCount > 0 ? `${goOrderCount} order` : 'Kosong'}
+                    </span>
+                  )}
                 </div>
-                <span style={{ color: 'var(--k-muted)' }}><IconArrowRight /></span>
-              </div>
-            </Link>
+              </Link>
+
+              {/* ZasaFood Order Tersedia */}
+              <Link to="/mitra/food/orders" style={{ flex: 1, textDecoration: 'none' }}>
+                <div style={{ background: 'linear-gradient(135deg, #FFF4EE 0%, #FFFBF7 100%)', border: `1.5px solid ${foodOrderCount > 0 ? 'rgba(249,115,22,0.45)' : 'rgba(249,115,22,0.2)'}`, borderRadius: 18, padding: '16px 14px', position: 'relative', overflow: 'hidden', minHeight: 110 }}>
+                  <div style={{ position: 'absolute', right: -6, top: -4, fontSize: 60, opacity: 0.12, transform: 'rotate(12deg)', pointerEvents: 'none' }}>🍜</div>
+                  {foodOrderCount > 0 && (
+                    <div style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: '50%', background: '#F97316', animation: 'dashPulse 1.5s infinite' }} />
+                  )}
+                  <div style={{ fontSize: 26, marginBottom: 6 }}>🍜</div>
+                  <p style={{ fontWeight: 800, fontSize: 13, color: '#EA580C', marginBottom: 2 }}>ZasaFood</p>
+                  <p style={{ fontSize: 11, color: 'var(--k-sub)', marginBottom: 6 }}>Delivery makanan</p>
+                  {foodOrderCount !== null && (
+                    <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: foodOrderCount > 0 ? '#F97316' : 'rgba(249,115,22,0.12)', color: foodOrderCount > 0 ? '#fff' : '#6B7280' }}>
+                      {foodOrderCount > 0 ? `${foodOrderCount} order` : 'Kosong'}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            </div>
+
+            {/* Baris 2: GPS Saya */}
+            <div style={{ marginBottom: 16 }}>
+              <Link to="/mitra/gps" style={{ textDecoration: 'none' }}>
+                <div style={{ background: 'var(--k-surface)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--k-shadow)' }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 13, background: 'rgba(0,200,150,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>📍</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 1 }}>GPS Saya</p>
+                    <p style={{ fontSize: 12, color: 'var(--k-sub)' }}>Aktifkan tracking posisi</p>
+                  </div>
+                  <span style={{ color: 'var(--k-muted)' }}><IconArrowRight /></span>
+                </div>
+              </Link>
+            </div>
           </>
         )}
 
@@ -548,11 +569,11 @@ export default function DashboardPage() {
                 active={feat.zasahome !== false}
               />
 
-              {/* ZasaMart */}
+              {/* ZasaShop */}
               <ServiceCard
                 to={feat.zasamart ? '/mart' : null}
                 emoji="🛒" bgDecor="🏪"
-                title="ZasaMart" desc="Produk UMKM lokal"
+                title="ZasaShop" desc="Produk UMKM lokal"
                 badge={feat.zasamart ? 'AKTIF' : 'SEGERA'}
                 badgeColor={feat.zasamart ? '#8B5CF6' : 'var(--k-muted)'}
                 badgeBg={feat.zasamart ? 'rgba(139,92,246,0.12)' : 'var(--k-input)'}
