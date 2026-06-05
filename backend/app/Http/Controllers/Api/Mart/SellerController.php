@@ -200,7 +200,7 @@ class SellerController extends Controller
 
     public function orders(Request $request): JsonResponse
     {
-        $orders = MartOrder::with(['customer:id,name,phone', 'items'])
+        $orders = MartOrder::with(['customer:id,name,phone', 'items', 'mitra:id,name,phone'])
             ->where('seller_id', $this->seller($request)->id)
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->latest()

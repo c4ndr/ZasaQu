@@ -72,7 +72,7 @@ class MitraMartController extends Controller
             DB::transaction(function () use ($mitra, $id) {
                 // Cek mitra sudah punya order aktif
                 $active = MartOrder::where('mitra_id', $mitra->id)
-                    ->whereNotIn('status', ['completed', 'cancelled'])
+                    ->whereNotIn('status', ['delivered', 'completed', 'cancelled'])
                     ->lockForUpdate()
                     ->first();
 
