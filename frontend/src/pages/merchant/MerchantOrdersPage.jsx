@@ -366,7 +366,7 @@ export default function MerchantOrdersPage() {
   const pendingCount = orders.filter(o => o.status === 'pending').length
 
   return (
-    <MerchantLayout title="Order Masuk">
+    <MerchantLayout title="Order Masuk" pendingCount={pendingCount}>
       <style>{`
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
         @keyframes ring  { 0%,100%{box-shadow:0 0 0 4px rgba(220,38,38,0.12),0 4px 20px rgba(220,38,38,0.1)} 50%{box-shadow:0 0 0 8px rgba(220,38,38,0.18),0 4px 24px rgba(220,38,38,0.18)} }
