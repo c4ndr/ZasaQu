@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAddresses from '../hooks/useAddresses'
+import { getPosition } from '../utils/geo'
+import { reverseGeocodeGoogle } from '../utils/googleMaps'
 
 const LABEL_EMOJI = { Rumah: '🏠', Kantor: '🏢', Lainnya: '📌' }
 
@@ -43,50 +45,32 @@ export default function AddressPicker({ value, onChange, onGpsLoading }) {
     setOpen(false)
   }
 
-  function handleGps() {
-    if (!navigator.geolocation) {
-      alert('GPS tidak tersedia di browser ini.')
-      return
-    }
+  async function handleGps() {
     setGpsLoading(true)
     onGpsLoading?.(true)
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude: la, longitude: lo } = pos.coords
-        try {
-          const r = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${la}&lon=${lo}&format=json&accept-language=id`
-          )
-          const d = await r.json()
-          onChange({
-            address: d.display_name || `${la.toFixed(5)}, ${lo.toFixed(5)}`,
-            lat: la,
-            lng: lo,
-            recipient_name: '',
-            recipient_phone: '',
-            notes: '',
-          })
-        } catch {
-          onChange({
-            address: `Lokasi saat ini (${la.toFixed(4)}, ${lo.toFixed(4)})`,
-            lat: la,
-            lng: lo,
-            recipient_name: '',
-            recipient_phone: '',
-            notes: '',
-          })
-        }
-        setGpsLoading(false)
-        onGpsLoading?.(false)
-        setOpen(false)
-      },
-      () => {
-        setGpsLoading(false)
-        onGpsLoading?.(false)
-        alert('Gagal mendapatkan lokasi GPS. Pastikan izin lokasi diaktifkan.')
-      },
-      { timeout: 10000, maximumAge: 60000 }
-    )
+    try {
+      const { lat: la, lng: lo } = await getPosition()
+      try {
+        const addr = await reverseGeocodeGoogle(la, lo)
+        onChange({
+          address: addr,
+          lat: la, lng: lo,
+          recipient_name: '', recipient_phone: '', notes: '',
+        })
+      } catch {
+        onChange({
+          address: `Lokasi saat ini (${la.toFixed(4)}, ${lo.toFixed(4)})`,
+          lat: la, lng: lo,
+          recipient_name: '', recipient_phone: '', notes: '',
+        })
+      }
+      setOpen(false)
+    } catch {
+      alert('Gagal mendapatkan lokasi GPS. Pastikan izin lokasi diaktifkan.')
+    } finally {
+      setGpsLoading(false)
+      onGpsLoading?.(false)
+    }
   }
 
   const truncate = (str, max = 55) => str && str.length > max ? str.slice(0, max) + '...' : str

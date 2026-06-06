@@ -1,9 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import Map, { Marker } from 'react-map-gl/maplibre'
-import { SATELLITE_STYLE } from '../utils/mapStyle'
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api'
+import { getPosition } from '../utils/geo'
+import { reverseGeocodeGoogle } from '../utils/googleMaps'
+import LocationSearch from '../components/LocationSearch'
 import api from '../services/api'
 import useAddresses from '../hooks/useAddresses'
+
+const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' }
+const MAP_OPTIONS = {
+  disableDefaultUI: true,
+  zoomControl: true,
+  mapTypeId: 'roadmap',
+  gestureHandling: 'greedy',
+  styles: [
+    { featureType: 'poi', stylers: [{ visibility: 'simplified' }] },
+  ],
+}
 
 // ── SVG Pin marker ───────────────────────────────────────────────────────────
 function PinMarker({ color }) {
@@ -17,27 +30,14 @@ function PinMarker({ color }) {
   )
 }
 
-// ── Reverse geocode via Nominatim ────────────────────────────────────────────
-async function reverseGeocode(lat, lng) {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=id`
-    )
-    const data = await res.json()
-    return data.display_name ?? `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-  } catch {
-    return `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-  }
-}
-
 const GPS_ERROR_MSG = {
   1: 'Izin lokasi ditolak. Ketuk "Izinkan" saat browser meminta akses lokasi.',
   2: 'Sinyal GPS tidak tersedia. Pastikan GPS perangkat aktif.',
   3: 'Waktu deteksi habis. Coba lagi atau ketuk peta secara manual.',
 }
 
-// ── Komponen Map Picker ───────────────────────────────────────────────────────
-function LocationPicker({ label, color, lat, lng, address, onchange }) {
+// ── Komponen Map Picker (Google Maps) ─────────────────────────────────────────
+function LocationPicker({ label, color, lat, lng, address, onchange, isLoaded }) {
   const [geocoding, setGeocoding] = useState(false)
   const [locating,  setLocating]  = useState(false)
   const [gpsError,  setGpsError]  = useState('')
@@ -49,54 +49,35 @@ function LocationPicker({ label, color, lat, lng, address, onchange }) {
     onchange('lat', String(newLat))
     onchange('lng', String(newLng))
     setGeocoding(true)
-    const addr = await reverseGeocode(newLat, newLng)
+    const addr = await reverseGeocodeGoogle(newLat, newLng)
     onchange('address', addr)
     setGeocoding(false)
   }, [onchange])
 
-  // Fly to new position after pick
+  // Pan ke posisi baru setelah pick
   useEffect(() => {
-    if (!position) return
-    const map = mapRef.current?.getMap()
-    if (!map) return
-    const currentZoom = map.getZoom()
-    map.flyTo({
-      center: [position.lng, position.lat],
-      zoom: currentZoom < 14 ? 15 : currentZoom,
-      duration: 600,
-    })
+    if (!position || !mapRef.current) return
+    mapRef.current.panTo(position)
+    if (mapRef.current.getZoom() < 14) mapRef.current.setZoom(15)
   }, [lat, lng]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const detectLocation = () => {
+  const detectLocation = async () => {
     setGpsError('')
-
-    if (!navigator.geolocation) {
-      setGpsError('Browser tidak mendukung GPS. Ketuk peta untuk pilih lokasi manual.')
-      return
-    }
-
     setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        await pick(pos.coords.latitude, pos.coords.longitude)
-        setLocating(false)
-      },
-      (err) => {
-        setLocating(false)
-        const msg = GPS_ERROR_MSG[err.code]
-        // Error code 1 di HTTP = browser blokir karena non-HTTPS
-        const isHttpBlock = err.code === 1 && !window.isSecureContext
-        setGpsError(isHttpBlock
-          ? 'GPS diblokir browser karena koneksi HTTP. Ketuk peta untuk pilih lokasi manual.'
-          : (msg ?? 'Gagal mendeteksi lokasi. Ketuk peta untuk pilih manual.'))
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    )
+    try {
+      const { lat: la, lng: lo } = await getPosition()
+      await pick(la, lo)
+    } catch (err) {
+      const isHttpBlock = err.code === 1 && !window.isSecureContext
+      setGpsError(isHttpBlock
+        ? 'GPS diblokir browser karena koneksi HTTP. Ketuk peta untuk pilih lokasi manual.'
+        : (GPS_ERROR_MSG[err.code] ?? 'Gagal mendeteksi lokasi. Ketuk peta untuk pilih manual.'))
+    } finally {
+      setLocating(false)
+    }
   }
 
-  const initialCenter = position
-    ? { longitude: position.lng, latitude: position.lat, zoom: 15 }
-    : { longitude: 106.816, latitude: -6.2, zoom: 12 }
+  const center = position ?? { lat: -6.2, lng: 106.816 }
 
   return (
     <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 20, overflow: 'hidden' }}>
@@ -134,53 +115,75 @@ function LocationPicker({ label, color, lat, lng, address, onchange }) {
         </div>
       )}
 
-      {/* Peta */}
+      {/* Peta Google Maps */}
       <div style={{ height: 220, position: 'relative' }}>
-        <Map
-          ref={mapRef}
-          initialViewState={initialCenter}
-          mapStyle={SATELLITE_STYLE}
-          style={{ width: '100%', height: '100%' }}
-          onClick={(e) => pick(e.lngLat.lat, e.lngLat.lng)}
-        >
-          {position && (
-            <Marker longitude={position.lng} latitude={position.lat} anchor="bottom">
-              <PinMarker color={color} />
-            </Marker>
-          )}
-        </Map>
+        {isLoaded ? (
+          <GoogleMap
+            onLoad={m => { mapRef.current = m }}
+            center={center}
+            zoom={position ? 15 : 12}
+            mapContainerStyle={MAP_CONTAINER_STYLE}
+            options={MAP_OPTIONS}
+            onClick={e => pick(e.latLng.lat(), e.latLng.lng())}
+          >
+            {position && (
+              <Marker
+                position={position}
+                icon={{
+                  path: window.google.maps.SymbolPath.CIRCLE,
+                  fillColor: color,
+                  fillOpacity: 1,
+                  strokeColor: '#fff',
+                  strokeWeight: 2,
+                  scale: 10,
+                }}
+              />
+            )}
+          </GoogleMap>
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'var(--k-card2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 20, height: 20, border: '2px solid var(--k-border)', borderTopColor: 'var(--k-accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        )}
         {!position && (
           <div style={{
             position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
-            background: 'rgba(12,12,22,0.5)', zIndex: 500, gap: 6,
+            background: 'rgba(12,12,22,0.45)', zIndex: 1, gap: 6,
           }}>
             <span style={{ fontSize: 28 }}>👆</span>
-            <p style={{ color: 'var(--k-sub)', fontSize: 13, fontWeight: 600 }}>Ketuk peta untuk pilih lokasi</p>
+            <p style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Ketuk peta untuk pilih lokasi</p>
           </div>
         )}
       </div>
 
       {/* Alamat */}
       <div style={{ padding: '10px 16px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ position: 'relative' }}>
-          <input
-            className="input-field"
-            type="text"
-            value={geocoding ? 'Memuat alamat...' : address}
-            onChange={e => onchange('address', e.target.value)}
-            placeholder="Alamat (otomatis dari peta atau ketik manual)"
-            required
-            style={{ paddingRight: 36 }}
+        {geocoding ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '12px 14px', borderRadius: 12,
+            background: 'var(--k-card2)', border: '1px solid var(--k-border)',
+            color: 'var(--k-muted)', fontSize: 13,
+          }}>
+            <div style={{ width: 14, height: 14, border: '2px solid var(--k-border)', borderTopColor: 'var(--k-accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+            Memuat alamat...
+          </div>
+        ) : (
+          <LocationSearch
+            value={address}
+            onChange={val => onchange('address', val)}
+            onSelect={({ lat: selLat, lng: selLng, display }) => {
+              onchange('lat', String(selLat))
+              onchange('lng', String(selLng))
+              onchange('address', display)
+            }}
+            nearLat={position?.lat ?? null}
+            nearLng={position?.lng ?? null}
+            placeholder="Ketik nama tempat, warung, atau jalan..."
+            confirmed={!!position}
           />
-          {geocoding && (
-            <div style={{
-              position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-              width: 16, height: 16, border: '2px solid var(--k-accent)', borderTopColor: 'transparent',
-              borderRadius: '50%', animation: 'spin 0.8s linear infinite',
-            }} />
-          )}
-        </div>
+        )}
         {position && (
           <p style={{ color: 'var(--k-muted)', fontSize: 11, letterSpacing: '0.02em' }}>
             {parseFloat(lat).toFixed(6)}, {parseFloat(lng).toFixed(6)}
@@ -196,6 +199,10 @@ function LocationPicker({ label, color, lat, lng, address, onchange }) {
 export default function CreateOrderPage() {
   const navigate = useNavigate()
   const { addresses } = useAddresses()
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
+    libraries: ['places'],
+  })
   const [categories, setCategories] = useState([])
   const [catError,   setCatError]   = useState(false)
   const [form, setForm] = useState({
@@ -318,6 +325,7 @@ export default function CreateOrderPage() {
             color="#00C896"
             lat={form.pickup_lat} lng={form.pickup_lng} address={form.pickup_address}
             onchange={onPickup}
+            isLoaded={isLoaded}
           />
 
           {/* Alamat tersimpan — shortcut isi lokasi tujuan */}
@@ -360,6 +368,7 @@ export default function CreateOrderPage() {
             color="#F56565"
             lat={form.dropoff_lat} lng={form.dropoff_lng} address={form.dropoff_address}
             onchange={onDropoff}
+            isLoaded={isLoaded}
           />
 
           {/* Detail Barang */}

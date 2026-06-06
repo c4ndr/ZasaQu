@@ -1,11 +1,20 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import Map, { Marker, Source, Layer } from 'react-map-gl/maplibre'
-import { SATELLITE_STYLE } from '../utils/mapStyle'
-import { fitPoints } from '../utils/geo'
+import { GoogleMap, Marker, Polyline, useJsApiLoader } from '@react-google-maps/api'
 import useRoadRoute from '../hooks/useRoadRoute'
 import useOrderTracking from '../hooks/useOrderTracking'
 import api from '../services/api'
+
+const GMAPS_LIBS = ['places']
+const MAP_CONTAINER_STYLE = { width: '100%', height: '100%', minHeight: 300 }
+const MAP_OPTIONS = {
+  disableDefaultUI: true,
+  zoomControl: false,
+  gestureHandling: 'greedy',
+  styles: [
+    { featureType: 'poi', stylers: [{ visibility: 'simplified' }] },
+  ],
+}
 
 // ── Marker SVG ────────────────────────────────────────────────────────────────
 function MitraMarker() {
@@ -31,22 +40,15 @@ function PinMarker({ color, emoji }) {
   )
 }
 
-// ── Rute jalan (GeoJSON Source + Layer) ───────────────────────────────────────
-function RouteLayer({ pickup, dropoff }) {
+// ── Rute jalan (Google Maps Polyline) ─────────────────────────────────────────
+function RoutePolyline({ pickup, dropoff }) {
   const { routePoints } = useRoadRoute(pickup, dropoff)
-  const data = {
-    type: 'Feature',
-    geometry: {
-      type: 'LineString',
-      coordinates: (routePoints ?? [pickup, dropoff]).map(([lat, lng]) => [lng, lat]),
-    },
-  }
+  const path = (routePoints ?? [pickup, dropoff]).map(([lat, lng]) => ({ lat, lng }))
   return (
-    <Source id="tracking-route" type="geojson" data={data}>
-      <Layer id="tracking-route-line" type="line"
-        paint={{ 'line-color': '#00C896', 'line-width': 4, 'line-opacity': 0.85 }}
-        layout={{ 'line-join': 'round', 'line-cap': 'round' }} />
-    </Source>
+    <Polyline
+      path={path}
+      options={{ strokeColor: '#00C896', strokeWeight: 5, strokeOpacity: 0.85 }}
+    />
   )
 }
 
@@ -310,12 +312,15 @@ export default function TrackingPage() {
   const [shownUpdate, setShownUpdate] = useState(null)
   const dismissNotif = useCallback(() => setShownUpdate(null), [])
 
-  // Camera follow smooth — easeTo saja, tanpa rAF React state (tidak re-render)
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
+    libraries: GMAPS_LIBS,
+  })
+
+  // Camera follow smooth — panTo Google Maps
   useEffect(() => {
-    if (!mitraLocation) return
-    const map = mapRef.current?.getMap()
-    if (!map) return
-    if (follow) map.easeTo({ center: [mitraLocation.lng, mitraLocation.lat], duration: 4000, easing: t => 1 - (1-t)**3 })
+    if (!mitraLocation || !mapRef.current) return
+    if (follow) mapRef.current.panTo({ lat: mitraLocation.lat, lng: mitraLocation.lng })
   }, [mitraLocation, follow])
 
   useEffect(() => {
@@ -457,36 +462,69 @@ export default function TrackingPage() {
         </div>
       )}
 
-      {/* ── Peta MapLibre GL ── */}
-      <div style={{ flex: 1, minHeight: panelOpen ? 'calc(100vh - 340px)' : 'calc(100vh - 72px)', transition: 'min-height 0.3s' }}>
-        <Map
-          ref={mapRef}
-          initialViewState={{ longitude: initLng, latitude: initLat, zoom: 14 }}
-          mapStyle={SATELLITE_STYLE}
-          style={{ width: '100%', height: '100%', minHeight: 300 }}
-          attributionControl={false}
-          onLoad={() => { if (!mitraLocation) fitPoints(mapRef.current?.getMap(), [pickup, dropoff], 60) }}
-        >
-          {/* Rute dengan jalur jalan nyata */}
-          <RouteLayer pickup={pickup} dropoff={dropoff} />
+      {/* ── Peta Google Maps ── */}
+      <div style={{ flex: 1, minHeight: panelOpen ? 'calc(100vh - 340px)' : 'calc(100vh - 72px)', transition: 'min-height 0.3s', position: 'relative' }}>
+        {isLoaded ? (
+          <GoogleMap
+            onLoad={m => {
+              mapRef.current = m
+              // Fit bounds ke pickup + dropoff saat pertama load
+              if (window.google?.maps?.LatLngBounds) {
+                const bounds = new window.google.maps.LatLngBounds()
+                bounds.extend({ lat: pickup[0], lng: pickup[1] })
+                bounds.extend({ lat: dropoff[0], lng: dropoff[1] })
+                if (mitraLocation) bounds.extend({ lat: mitraLocation.lat, lng: mitraLocation.lng })
+                m.fitBounds(bounds, 60)
+              }
+            }}
+            center={{ lat: initLat, lng: initLng }}
+            zoom={14}
+            mapContainerStyle={MAP_CONTAINER_STYLE}
+            options={MAP_OPTIONS}
+          >
+            {/* Rute dengan jalur jalan nyata */}
+            <RoutePolyline pickup={pickup} dropoff={dropoff} />
 
-          {/* Marker mitra — posisi diinterpolasi smooth */}
-          {mitraLocation && (
-            <Marker longitude={mitraLocation.lng} latitude={mitraLocation.lat} anchor="center">
-              <MitraMarker />
-            </Marker>
-          )}
+            {/* Marker mitra */}
+            {mitraLocation && (
+              <Marker
+                position={{ lat: mitraLocation.lat, lng: mitraLocation.lng }}
+                icon={{
+                  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+                      <circle cx="22" cy="22" r="20" fill="#3B82F6" stroke="white" stroke-width="3"/>
+                      <text x="22" y="28" text-anchor="middle" font-size="18">🏍️</text>
+                    </svg>`),
+                  anchor: { x: 22, y: 22 },
+                }}
+              />
+            )}
 
-          {/* Marker pickup */}
-          <Marker longitude={pickup[1]} latitude={pickup[0]} anchor="bottom">
-            <PinMarker color="#00C896" emoji="🟢" />
-          </Marker>
+            {/* Marker pickup */}
+            <Marker
+              position={{ lat: pickup[0], lng: pickup[1] }}
+              icon={{
+                path: window.google.maps.SymbolPath.CIRCLE,
+                fillColor: '#00C896', fillOpacity: 1,
+                strokeColor: '#fff', strokeWeight: 2, scale: 10,
+              }}
+            />
 
-          {/* Marker tujuan */}
-          <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom">
-            <PinMarker color="#F56565" emoji="🔴" />
-          </Marker>
-        </Map>
+            {/* Marker tujuan */}
+            <Marker
+              position={{ lat: dropoff[0], lng: dropoff[1] }}
+              icon={{
+                path: window.google.maps.SymbolPath.CIRCLE,
+                fillColor: '#F56565', fillOpacity: 1,
+                strokeColor: '#fff', strokeWeight: 2, scale: 10,
+              }}
+            />
+          </GoogleMap>
+        ) : (
+          <div style={{ width: '100%', height: '100%', minHeight: 300, background: 'var(--k-card2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 24, height: 24, border: '3px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        )}
 
         {/* Hint GPS belum aktif */}
         {showGpsHint && (

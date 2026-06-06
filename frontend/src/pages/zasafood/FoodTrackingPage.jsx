@@ -1,11 +1,19 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import Map, { Marker, Source, Layer } from 'react-map-gl/maplibre'
-import { SATELLITE_STYLE } from '../../utils/mapStyle'
-import { distanceMeter, fitPoints } from '../../utils/geo'
+import { GoogleMap, Marker, Polyline, useJsApiLoader } from '@react-google-maps/api'
+import { distanceMeter } from '../../utils/geo'
 import useRoadRoute from '../../hooks/useRoadRoute'
 import api from '../../services/api'
 import echo from '../../services/echo'
+
+const GMAPS_LIBS = ['places']
+const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' }
+const MAP_OPTIONS = {
+  disableDefaultUI: true,
+  zoomControl: false,
+  gestureHandling: 'greedy',
+  styles: [{ featureType: 'poi', stylers: [{ visibility: 'simplified' }] }],
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
@@ -103,8 +111,12 @@ export default function FoodTrackingPage() {
   const { id }   = useParams()
   const navigate = useNavigate()
   const mapRef   = useRef(null)
-  const mapLoaded = useRef(false)
   const prevStatus = useRef(null)
+
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
+    libraries: GMAPS_LIBS,
+  })
 
   const [order,        setOrder]        = useState(null)
   const [mitraGps,     setMitraGps]     = useState(null)
@@ -151,8 +163,8 @@ export default function FoodTrackingPage() {
 
   // ── Kamera follow mitra ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mitraGps || !mapLoaded.current) return
-    mapRef.current?.getMap()?.easeTo({ center: [mitraGps.lng, mitraGps.lat], duration: 1500 })
+    if (!mitraGps || !mapRef.current) return
+    mapRef.current.panTo({ lat: mitraGps.lat, lng: mitraGps.lng })
   }, [mitraGps])
 
   // ── Route: mitra → target tergantung status ─────────────────────────────────
@@ -175,28 +187,24 @@ export default function FoodTrackingPage() {
 
   const { routePoints } = useRoadRoute(routeFrom, routeTo)
 
-  const routeGeoJson = useMemo(() => ({
-    type: 'Feature',
-    geometry: {
-      type: 'LineString',
-      coordinates: routePoints
-        ? routePoints.map(([lat, lng]) => [lng, lat])
-        : (routeFrom && routeTo ? [[routeFrom[1], routeFrom[0]], [routeTo[1], routeTo[0]]] : []),
-    },
-  }), [routePoints, routeFrom, routeTo])
+  const routePathGoogle = useMemo(() => {
+    if (routePoints) return routePoints.map(([lat, lng]) => ({ lat, lng }))
+    if (routeFrom && routeTo) return [{ lat: routeFrom[0], lng: routeFrom[1] }, { lat: routeTo[0], lng: routeTo[1] }]
+    return []
+  }, [routePoints, routeFrom, routeTo])
 
   // ── Fit bounds saat map load ─────────────────────────────────────────────────
   const fitMap = useCallback(() => {
-    if (!order || !mapLoaded.current) return
-    const pts = []
-    if (mitraGps) pts.push([mitraGps.lat, mitraGps.lng])
-    if (order.merchant?.lat) pts.push([parseFloat(order.merchant.lat), parseFloat(order.merchant.lng)])
-    if (order.delivery_lat)  pts.push([parseFloat(order.delivery_lat), parseFloat(order.delivery_lng)])
-    if (pts.length >= 2) fitPoints(mapRef.current?.getMap(), pts, 70)
-    else if (pts.length === 1) mapRef.current?.getMap()?.flyTo({ center: [pts[0][1], pts[0][0]], zoom: 15 })
+    if (!order || !mapRef.current || !window.google?.maps?.LatLngBounds) return
+    const bounds = new window.google.maps.LatLngBounds()
+    let hasPts = false
+    if (mitraGps) { bounds.extend({ lat: mitraGps.lat, lng: mitraGps.lng }); hasPts = true }
+    if (order.merchant?.lat) { bounds.extend({ lat: parseFloat(order.merchant.lat), lng: parseFloat(order.merchant.lng) }); hasPts = true }
+    if (order.delivery_lat)  { bounds.extend({ lat: parseFloat(order.delivery_lat),  lng: parseFloat(order.delivery_lng) });  hasPts = true }
+    if (hasPts) mapRef.current.fitBounds(bounds, 70)
   }, [order, mitraGps])
 
-  useEffect(() => { if (order && mapLoaded.current) fitMap() }, [order?.status]) // eslint-disable-line
+  useEffect(() => { if (order && mapRef.current) fitMap() }, [order?.status]) // eslint-disable-line
 
   // ── Jarak mitra ke tujuan saat ini ──────────────────────────────────────────
   const distToTarget = useMemo(() => {
@@ -270,7 +278,6 @@ export default function FoodTrackingPage() {
         @keyframes spin      { to { transform:rotate(360deg) } }
         @keyframes blink     { 0%,100%{opacity:1} 50%{opacity:.3} }
         @keyframes pulseRing { 0%{transform:scale(.6);opacity:.8} 100%{transform:scale(1.8);opacity:0} }
-        .maplibregl-ctrl-logo, .maplibregl-ctrl-attrib { display:none !important; }
       `}</style>
 
       {/* ── Notif status slide-in ── */}
@@ -304,60 +311,74 @@ export default function FoodTrackingPage() {
         )}
       </div>
 
-      {/* ── Peta ── */}
+      {/* ── Peta Google Maps ── */}
       <div style={{ height: showMap ? '45vh' : '0px', minHeight: showMap ? 200 : 0, transition: 'height 0.3s', flexShrink: 0 }}>
-        {showMap && (
-          <Map
-            ref={mapRef}
-            initialViewState={{
-              longitude: order.delivery_lng ?? 106.8456,
-              latitude:  order.delivery_lat ?? -6.2088,
-              zoom: 14,
-            }}
-            mapStyle={SATELLITE_STYLE}
-            style={{ width: '100%', height: '100%' }}
-            attributionControl={false}
-            onLoad={() => { mapLoaded.current = true; fitMap() }}
+        {showMap && isLoaded && (
+          <GoogleMap
+            onLoad={m => { mapRef.current = m; fitMap() }}
+            center={{ lat: parseFloat(order.delivery_lat) || -6.2088, lng: parseFloat(order.delivery_lng) || 106.8456 }}
+            zoom={14}
+            mapContainerStyle={MAP_CONTAINER_STYLE}
+            options={MAP_OPTIONS}
           >
             {/* Route line */}
             {showRoute && (
-              <Source id="food-route" type="geojson" data={routeGeoJson}>
-                <Layer id="food-route-line" type="line"
-                  paint={{ 'line-color': '#F97316', 'line-width': 5, 'line-opacity': 0.9 }}
-                  layout={{ 'line-join': 'round', 'line-cap': 'round' }} />
-              </Source>
+              <Polyline
+                path={routePathGoogle}
+                options={{ strokeColor: '#F97316', strokeWeight: 5, strokeOpacity: 0.9 }}
+              />
             )}
 
             {/* Mitra marker — motor berdenyut */}
             {showMitra && (
-              <Marker longitude={mitraGps.lng} latitude={mitraGps.lat} anchor="center">
-                <div style={{ position: 'relative', width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ position: 'absolute', width: 52, height: 52, borderRadius: '50%', background: 'rgba(249,115,22,0.2)', animation: 'pulseRing 2s ease-out infinite' }} />
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#F97316', border: '3px solid #fff', boxShadow: '0 4px 12px rgba(249,115,22,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, zIndex: 1 }}>🏍️</div>
-                </div>
-              </Marker>
+              <Marker
+                position={{ lat: mitraGps.lat, lng: mitraGps.lng }}
+                icon={{
+                  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
+                      <circle cx="26" cy="26" r="24" fill="#F97316" stroke="white" stroke-width="3"/>
+                      <text x="26" y="33" text-anchor="middle" font-size="20">🏍️</text>
+                    </svg>`),
+                  anchor: { x: 26, y: 26 },
+                }}
+              />
             )}
 
             {/* Merchant marker */}
             {order.merchant?.lat && order.merchant?.lng && (
-              <Marker longitude={parseFloat(order.merchant.lng)} latitude={parseFloat(order.merchant.lat)} anchor="bottom">
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#00C896', border: '3px solid #fff', boxShadow: '0 3px 10px rgba(0,200,150,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🏪</div>
-                  <div style={{ width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '8px solid #00C896' }} />
-                </div>
-              </Marker>
+              <Marker
+                position={{ lat: parseFloat(order.merchant.lat), lng: parseFloat(order.merchant.lng) }}
+                icon={{
+                  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 42 42">
+                      <circle cx="21" cy="21" r="19" fill="#00C896" stroke="white" stroke-width="3"/>
+                      <text x="21" y="27" text-anchor="middle" font-size="16">🏪</text>
+                    </svg>`),
+                  anchor: { x: 21, y: 42 },
+                }}
+              />
             )}
 
             {/* Destinasi marker */}
             {order.delivery_lat && order.delivery_lng && (
-              <Marker longitude={parseFloat(order.delivery_lng)} latitude={parseFloat(order.delivery_lat)} anchor="bottom">
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#F56565', border: '3px solid #fff', boxShadow: '0 3px 10px rgba(245,101,101,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📍</div>
-                  <div style={{ width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '8px solid #F56565' }} />
-                </div>
-              </Marker>
+              <Marker
+                position={{ lat: parseFloat(order.delivery_lat), lng: parseFloat(order.delivery_lng) }}
+                icon={{
+                  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 42 42">
+                      <circle cx="21" cy="21" r="19" fill="#F56565" stroke="white" stroke-width="3"/>
+                      <text x="21" y="27" text-anchor="middle" font-size="16">📍</text>
+                    </svg>`),
+                  anchor: { x: 21, y: 42 },
+                }}
+              />
             )}
-          </Map>
+          </GoogleMap>
+        )}
+        {showMap && !isLoaded && (
+          <div style={{ width: '100%', height: '100%', background: '#0C0C16', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 24, height: 24, border: '3px solid #F97316', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
         )}
       </div>
 

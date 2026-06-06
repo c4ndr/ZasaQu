@@ -1,7 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import ApkPopup from './components/ApkPopup'
 import { useEffect } from 'react'
+import { useJsApiLoader } from '@react-google-maps/api'
 import { AuthProvider, useAuth } from './context/AuthContext'
+
+const _GMAPS_LIBS = ['places']
 import { MitraGpsProvider } from './context/MitraGpsContext'
 import { useTheme } from './hooks/useTheme'
 import { unlockAudio } from './hooks/useNewOrderNotif'
@@ -169,6 +172,12 @@ function AppRoutes() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { maintenance_mode } = useAppInfo()
+
+  // Load Google Maps script sekali di level app — tersedia untuk semua halaman pelanggan
+  useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
+    libraries: _GMAPS_LIBS,
+  })
 
   useEffect(() => {
     const handler = () => navigate('/login', { replace: true })
