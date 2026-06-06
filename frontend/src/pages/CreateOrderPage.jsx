@@ -1,27 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api'
+import Map, { Marker } from 'react-map-gl/maplibre'
+import { OSM_STYLE } from '../utils/mapStyle'
 import { getPosition } from '../utils/geo'
 import { reverseGeocodeGoogle } from '../utils/googleMaps'
 import LocationSearch from '../components/LocationSearch'
 import api from '../services/api'
 import useAddresses from '../hooks/useAddresses'
 
-const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' }
-const MAP_OPTIONS = {
-  disableDefaultUI: true,
-  zoomControl: true,
-  mapTypeId: 'roadmap',
-  gestureHandling: 'greedy',
-  styles: [
-    { featureType: 'poi', stylers: [{ visibility: 'simplified' }] },
-  ],
-}
-
 // ── SVG Pin marker ───────────────────────────────────────────────────────────
 function PinMarker({ color }) {
   return (
-    <div style={{ position: 'relative', width: 32, height: 40 }}>
+    <div style={{ position: 'relative', width: 32, height: 40, pointerEvents: 'none' }}>
       <svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="40">
         <path d="M16 0C8.268 0 2 6.268 2 14c0 9.6 14 26 14 26S30 23.6 30 14C30 6.268 23.732 0 16 0z" fill={color} />
         <circle cx="16" cy="14" r="6" fill="white" />
@@ -36,12 +26,12 @@ const GPS_ERROR_MSG = {
   3: 'Waktu deteksi habis. Coba lagi atau ketuk peta secara manual.',
 }
 
-// ── Komponen Map Picker (Google Maps) ─────────────────────────────────────────
-function LocationPicker({ label, color, lat, lng, address, onchange, isLoaded }) {
+// ── Komponen Map Picker (MapLibre) ────────────────────────────────────────────
+function LocationPicker({ label, color, lat, lng, address, onchange }) {
   const [geocoding, setGeocoding] = useState(false)
   const [locating,  setLocating]  = useState(false)
   const [gpsError,  setGpsError]  = useState('')
-  const mapRef = useRef(null)
+  const mapRef  = useRef(null)
   const position = (lat && lng) ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null
 
   const pick = useCallback(async (newLat, newLng) => {
@@ -57,8 +47,7 @@ function LocationPicker({ label, color, lat, lng, address, onchange, isLoaded })
   // Pan ke posisi baru setelah pick
   useEffect(() => {
     if (!position || !mapRef.current) return
-    mapRef.current.panTo(position)
-    if (mapRef.current.getZoom() < 14) mapRef.current.setZoom(15)
+    mapRef.current.getMap().flyTo({ center: [position.lng, position.lat], zoom: 15, speed: 1.2 })
   }, [lat, lng]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const detectLocation = async () => {
@@ -77,7 +66,9 @@ function LocationPicker({ label, color, lat, lng, address, onchange, isLoaded })
     }
   }
 
-  const center = position ?? { lat: -6.2, lng: 106.816 }
+  const initCenter = position
+    ? { longitude: position.lng, latitude: position.lat }
+    : { longitude: 106.816, latitude: -6.2 }
 
   return (
     <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 20, overflow: 'hidden' }}>
@@ -103,48 +94,30 @@ function LocationPicker({ label, color, lat, lng, address, onchange, isLoaded })
         </button>
       </div>
 
-      {/* Pesan error GPS */}
       {gpsError && (
-        <div style={{
-          margin: '0 12px 8px', padding: '9px 12px', borderRadius: 10,
-          background: 'rgba(246,173,85,0.08)', border: '1px solid rgba(246,173,85,0.25)',
-          display: 'flex', gap: 8, alignItems: 'flex-start',
-        }}>
+        <div style={{ margin: '0 12px 8px', padding: '9px 12px', borderRadius: 10, background: 'rgba(246,173,85,0.08)', border: '1px solid rgba(246,173,85,0.25)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
           <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
           <p style={{ color: 'var(--k-warn)', fontSize: 12, lineHeight: 1.5 }}>{gpsError}</p>
         </div>
       )}
 
-      {/* Peta Google Maps */}
-      <div style={{ height: 220, position: 'relative' }}>
-        {isLoaded ? (
-          <GoogleMap
-            onLoad={m => { mapRef.current = m }}
-            center={center}
-            zoom={position ? 15 : 12}
-            mapContainerStyle={MAP_CONTAINER_STYLE}
-            options={MAP_OPTIONS}
-            onClick={e => pick(e.latLng.lat(), e.latLng.lng())}
-          >
-            {position && (
-              <Marker
-                position={position}
-                icon={{
-                  path: window.google.maps.SymbolPath.CIRCLE,
-                  fillColor: color,
-                  fillOpacity: 1,
-                  strokeColor: '#fff',
-                  strokeWeight: 2,
-                  scale: 10,
-                }}
-              />
-            )}
-          </GoogleMap>
-        ) : (
-          <div style={{ width: '100%', height: '100%', background: 'var(--k-card2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 20, height: 20, border: '2px solid var(--k-border)', borderTopColor: 'var(--k-accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          </div>
-        )}
+      {/* Peta MapLibre */}
+      <div style={{ height: 220, position: 'relative', cursor: 'crosshair' }}>
+        <Map
+          ref={mapRef}
+          initialViewState={{ ...initCenter, zoom: position ? 15 : 12 }}
+          mapStyle={OSM_STYLE}
+          style={{ width: '100%', height: '100%' }}
+          attributionControl={false}
+          onClick={e => pick(e.lngLat.lat, e.lngLat.lng)}
+        >
+          {position && (
+            <Marker longitude={position.lng} latitude={position.lat} anchor="bottom">
+              <PinMarker color={color} />
+            </Marker>
+          )}
+        </Map>
+
         {!position && (
           <div style={{
             position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
@@ -160,12 +133,7 @@ function LocationPicker({ label, color, lat, lng, address, onchange, isLoaded })
       {/* Alamat */}
       <div style={{ padding: '10px 16px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {geocoding ? (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '12px 14px', borderRadius: 12,
-            background: 'var(--k-card2)', border: '1px solid var(--k-border)',
-            color: 'var(--k-muted)', fontSize: 13,
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderRadius: 12, background: 'var(--k-card2)', border: '1px solid var(--k-border)', color: 'var(--k-muted)', fontSize: 13 }}>
             <div style={{ width: 14, height: 14, border: '2px solid var(--k-border)', borderTopColor: 'var(--k-accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
             Memuat alamat...
           </div>
@@ -199,10 +167,6 @@ function LocationPicker({ label, color, lat, lng, address, onchange, isLoaded })
 export default function CreateOrderPage() {
   const navigate = useNavigate()
   const { addresses } = useAddresses()
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
-    libraries: ['places'],
-  })
   const [categories, setCategories] = useState([])
   const [catError,   setCatError]   = useState(false)
   const [form, setForm] = useState({
@@ -213,9 +177,9 @@ export default function CreateOrderPage() {
     payment_method: 'wallet', is_jastip_enabled: false,
     requires_disclaimer: false, require_photo: false, notes: '',
   })
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState('')
-  const [estimate,  setEstimate]  = useState(null)   // { distance_km, shipping_fee, breakdown }
+  const [loading,    setLoading]    = useState(false)
+  const [error,      setError]      = useState('')
+  const [estimate,   setEstimate]   = useState(null)
   const [estimating, setEstimating] = useState(false)
 
   const fetchCategories = useCallback(() => {
@@ -224,19 +188,12 @@ export default function CreateOrderPage() {
   }, [])
   useEffect(() => { fetchCategories() }, [fetchCategories])
 
-  // Auto-hitung ongkir setiap kali koordinat atau tipe kendaraan berubah
   const calcShipping = useCallback(async (f) => {
     if (!f.pickup_lat || !f.pickup_lng || !f.dropoff_lat || !f.dropoff_lng) return
     setEstimating(true)
     try {
       const res = await api.get('/shipping/estimate', {
-        params: {
-          pickup_lat:   f.pickup_lat,
-          pickup_lng:   f.pickup_lng,
-          dropoff_lat:  f.dropoff_lat,
-          dropoff_lng:  f.dropoff_lng,
-          vehicle_type: f.vehicle_type,
-        }
+        params: { pickup_lat: f.pickup_lat, pickup_lng: f.pickup_lng, dropoff_lat: f.dropoff_lat, dropoff_lng: f.dropoff_lng, vehicle_type: f.vehicle_type }
       })
       setEstimate(res.data)
       setForm(prev => ({ ...prev, shipping_fee: res.data.shipping_fee }))
@@ -248,7 +205,6 @@ export default function CreateOrderPage() {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setForm(f => {
       const next = { ...f, [e.target.name]: val }
-      // Recalculate kalau vehicle_type berubah dan koordinat sudah ada
       if (e.target.name === 'vehicle_type') calcShipping(next)
       return next
     })
@@ -295,18 +251,8 @@ export default function CreateOrderPage() {
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 32 }}>
 
-      {/* Navbar */}
-      <nav style={{
-        background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)',
-        padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14,
-        position: 'sticky', top: 0, zIndex: 30,
-      }}>
-        <Link to="/orders" style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: 'var(--k-card)', border: '1px solid var(--k-border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'var(--k-muted)', textDecoration: 'none', fontSize: 18,
-        }}>←</Link>
+      <nav style={{ background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 30 }}>
+        <Link to="/orders" style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--k-card)', border: '1px solid var(--k-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--k-muted)', textDecoration: 'none', fontSize: 18 }}>←</Link>
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 800, color: 'var(--k-text)', lineHeight: 1.2 }}>Buat Order</h1>
           <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>Ketuk peta atau gunakan GPS otomatis</p>
@@ -319,57 +265,24 @@ export default function CreateOrderPage() {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Lokasi Pickup */}
-          <LocationPicker
-            label="Lokasi Pickup"
-            color="#00C896"
-            lat={form.pickup_lat} lng={form.pickup_lng} address={form.pickup_address}
-            onchange={onPickup}
-            isLoaded={isLoaded}
-          />
+          <LocationPicker label="Lokasi Pickup" color="#00C896" lat={form.pickup_lat} lng={form.pickup_lng} address={form.pickup_address} onchange={onPickup} />
 
-          {/* Alamat tersimpan — shortcut isi lokasi tujuan */}
           {addresses.length > 0 && (
             <div>
-              <p style={{ color: 'var(--k-sub)', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
-                📒 Alamat Tersimpan
-              </p>
+              <p style={{ color: 'var(--k-sub)', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>📒 Alamat Tersimpan</p>
               <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
                 {addresses.map(addr => (
-                  <button
-                    key={addr.id}
-                    type="button"
-                    onClick={() => {
-                      onDropoff('lat', String(addr.lat))
-                      onDropoff('lng', String(addr.lng))
-                      onDropoff('address', addr.address)
-                    }}
-                    style={{
-                      flexShrink: 0,
-                      padding: '7px 14px',
-                      borderRadius: 20,
-                      border: '1.5px solid var(--k-border)',
-                      background: form.dropoff_address === addr.address ? 'rgba(99,102,241,0.12)' : 'var(--k-card)',
-                      color: form.dropoff_address === addr.address ? 'var(--k-primary)' : 'var(--k-text)',
-                      fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {addr.label === 'Rumah' ? '🏠' : addr.label === 'Kantor' ? '🏢' : '📌'} {addr.label}
-                    {addr.is_default ? ' ★' : ''}
+                  <button key={addr.id} type="button"
+                    onClick={() => { onDropoff('lat', String(addr.lat)); onDropoff('lng', String(addr.lng)); onDropoff('address', addr.address) }}
+                    style={{ flexShrink: 0, padding: '7px 14px', borderRadius: 20, border: '1.5px solid var(--k-border)', background: form.dropoff_address === addr.address ? 'rgba(99,102,241,0.12)' : 'var(--k-card)', color: form.dropoff_address === addr.address ? 'var(--k-primary)' : 'var(--k-text)', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    {addr.label === 'Rumah' ? '🏠' : addr.label === 'Kantor' ? '🏢' : '📌'} {addr.label}{addr.is_default ? ' ★' : ''}
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Lokasi Tujuan */}
-          <LocationPicker
-            label="Lokasi Tujuan"
-            color="#F56565"
-            lat={form.dropoff_lat} lng={form.dropoff_lng} address={form.dropoff_address}
-            onchange={onDropoff}
-            isLoaded={isLoaded}
-          />
+          <LocationPicker label="Lokasi Tujuan" color="#F56565" lat={form.dropoff_lat} lng={form.dropoff_lng} address={form.dropoff_address} onchange={onDropoff} />
 
           {/* Detail Barang */}
           <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 20, padding: '16px' }}>
@@ -380,13 +293,10 @@ export default function CreateOrderPage() {
                 {catError ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: 'rgba(245,101,101,0.07)', border: '1px solid rgba(245,101,101,0.2)' }}>
                     <p style={{ flex: 1, color: 'var(--k-danger)', fontSize: 12 }}>⚠ Gagal memuat kategori.</p>
-                    <button type="button" onClick={fetchCategories} style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'var(--k-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
-                      Coba Lagi
-                    </button>
+                    <button type="button" onClick={fetchCategories} style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'var(--k-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>Coba Lagi</button>
                   </div>
                 ) : (
-                  <select name="item_category_id" value={form.item_category_id} onChange={handleChange}
-                    className="input-field" style={{ cursor: 'pointer' }}>
+                  <select name="item_category_id" value={form.item_category_id} onChange={handleChange} className="input-field" style={{ cursor: 'pointer' }}>
                     <option value="">Pilih kategori barang</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
@@ -394,36 +304,22 @@ export default function CreateOrderPage() {
               </div>
 
               {selectedCat?.requires_disclaimer && (
-                <div style={{
-                  background: 'rgba(246,173,85,0.08)', border: '1px solid rgba(246,173,85,0.2)',
-                  borderRadius: 14, padding: '12px 14px',
-                }}>
-                  <p style={{ color: 'var(--k-warn)', fontSize: 12, marginBottom: 10 }}>
-                    ⚠️ Barang ini memerlukan disclaimer risiko kerusakan.
-                  </p>
+                <div style={{ background: 'rgba(246,173,85,0.08)', border: '1px solid rgba(246,173,85,0.2)', borderRadius: 14, padding: '12px 14px' }}>
+                  <p style={{ color: 'var(--k-warn)', fontSize: 12, marginBottom: 10 }}>⚠️ Barang ini memerlukan disclaimer risiko kerusakan.</p>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                    <input type="checkbox" name="requires_disclaimer"
-                      checked={form.requires_disclaimer} onChange={handleChange}
-                      style={{ accentColor: 'var(--k-accent)', width: 16, height: 16 }} />
-                    <span style={{ color: 'var(--k-sub)', fontSize: 13 }}>
-                      Saya mengerti dan menyetujui risiko
-                    </span>
+                    <input type="checkbox" name="requires_disclaimer" checked={form.requires_disclaimer} onChange={handleChange} style={{ accentColor: 'var(--k-accent)', width: 16, height: 16 }} />
+                    <span style={{ color: 'var(--k-sub)', fontSize: 13 }}>Saya mengerti dan menyetujui risiko</span>
                   </label>
                 </div>
               )}
 
               <div>
                 <label className="label">Deskripsi Barang</label>
-                <input className="input-field" type="text" name="item_description"
-                  value={form.item_description} onChange={handleChange} required
-                  placeholder="Contoh: Paket dokumen A4" />
+                <input className="input-field" type="text" name="item_description" value={form.item_description} onChange={handleChange} required placeholder="Contoh: Paket dokumen A4" />
               </div>
-
               <div>
                 <label className="label">Nilai Barang (opsional)</label>
-                <input className="input-field" type="number" name="item_value" min="0"
-                  value={form.item_value} onChange={handleChange}
-                  placeholder="Rp — untuk keperluan asuransi" />
+                <input className="input-field" type="number" name="item_value" min="0" value={form.item_value} onChange={handleChange} placeholder="Rp — untuk keperluan asuransi" />
               </div>
             </div>
           </div>
@@ -432,24 +328,12 @@ export default function CreateOrderPage() {
           <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 20, padding: '16px' }}>
             <p style={{ color: 'var(--k-sub)', fontSize: 13, fontWeight: 700, marginBottom: 14 }}>Armada & Pembayaran</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
               <div>
                 <label className="label">Tipe Armada</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {[
-                    { v: 'motor', emoji: '🏍️', label: 'Motor' },
-                    { v: 'mobil', emoji: '🚗', label: 'Mobil' },
-                  ].map(({ v, emoji, label }) => (
-                    <label key={v} style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '12px 14px', borderRadius: 14, cursor: 'pointer',
-                      border: `1.5px solid ${form.vehicle_type === v ? 'var(--k-accent)' : 'var(--k-border)'}`,
-                      background: form.vehicle_type === v ? 'var(--k-glow)' : 'var(--k-card2)',
-                      transition: 'all 0.2s',
-                    }}>
-                      <input type="radio" name="vehicle_type" value={v}
-                        checked={form.vehicle_type === v} onChange={handleChange}
-                        style={{ display: 'none' }} />
+                  {[{ v: 'motor', emoji: '🏍️', label: 'Motor' }, { v: 'mobil', emoji: '🚗', label: 'Mobil' }].map(({ v, emoji, label }) => (
+                    <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, cursor: 'pointer', border: `1.5px solid ${form.vehicle_type === v ? 'var(--k-accent)' : 'var(--k-border)'}`, background: form.vehicle_type === v ? 'var(--k-glow)' : 'var(--k-card2)', transition: 'all 0.2s' }}>
+                      <input type="radio" name="vehicle_type" value={v} checked={form.vehicle_type === v} onChange={handleChange} style={{ display: 'none' }} />
                       <span style={{ fontSize: 20 }}>{emoji}</span>
                       <span style={{ color: 'var(--k-text)', fontSize: 14, fontWeight: 600 }}>{label}</span>
                     </label>
@@ -457,54 +341,29 @@ export default function CreateOrderPage() {
                 </div>
               </div>
 
-              {/* Ongkos Kirim — otomatis dari kalkulasi jarak */}
               <div>
                 <label className="label">Ongkos Kirim</label>
                 {estimate ? (
-                  <div style={{
-                    background: 'var(--k-glow)', border: '1px solid rgba(0,200,150,0.3)',
-                    borderRadius: 14, padding: '14px 16px',
-                  }}>
+                  <div style={{ background: 'var(--k-glow)', border: '1px solid rgba(0,200,150,0.3)', borderRadius: 14, padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 16 }}>🧮</span>
                         <span style={{ color: 'var(--k-muted)', fontSize: 12 }}>Dihitung otomatis</span>
                       </div>
-                      <p style={{ color: 'var(--k-accent)', fontSize: 22, fontWeight: 900 }}>
-                        Rp {Number(form.shipping_fee).toLocaleString('id-ID')}
-                      </p>
+                      <p style={{ color: 'var(--k-accent)', fontSize: 22, fontWeight: 900 }}>Rp {Number(form.shipping_fee).toLocaleString('id-ID')}</p>
                     </div>
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                      <span style={{ color: 'var(--k-muted)', fontSize: 11 }}>
-                        📍 {estimate.distance_km} km
-                      </span>
-                      <span style={{ color: 'var(--k-muted)', fontSize: 11 }}>
-                        Biaya dasar: Rp {Number(estimate.breakdown.base_fee).toLocaleString('id-ID')}
-                      </span>
-                      <span style={{ color: 'var(--k-muted)', fontSize: 11 }}>
-                        Per km: Rp {Number(estimate.breakdown.per_km).toLocaleString('id-ID')}
-                      </span>
+                      <span style={{ color: 'var(--k-muted)', fontSize: 11 }}>📍 {estimate.distance_km} km</span>
+                      <span style={{ color: 'var(--k-muted)', fontSize: 11 }}>Biaya dasar: Rp {Number(estimate.breakdown.base_fee).toLocaleString('id-ID')}</span>
+                      <span style={{ color: 'var(--k-muted)', fontSize: 11 }}>Per km: Rp {Number(estimate.breakdown.per_km).toLocaleString('id-ID')}</span>
                     </div>
                   </div>
                 ) : (
-                  <div style={{
-                    background: 'var(--k-card2)', border: '1px solid var(--k-border)',
-                    borderRadius: 14, padding: '14px 16px',
-                    display: 'flex', alignItems: 'center', gap: 10,
-                  }}>
-                    {estimating ? (
-                      <>
-                        <div style={{ width: 16, height: 16, border: '2px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
-                        <span style={{ color: 'var(--k-muted)', fontSize: 13 }}>Menghitung ongkir...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ fontSize: 16 }}>📍</span>
-                        <span style={{ color: 'var(--k-muted)', fontSize: 13 }}>
-                          Pilih lokasi pickup & tujuan untuk menghitung ongkir
-                        </span>
-                      </>
-                    )}
+                  <div style={{ background: 'var(--k-card2)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {estimating
+                      ? <><div style={{ width: 16, height: 16, border: '2px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} /><span style={{ color: 'var(--k-muted)', fontSize: 13 }}>Menghitung ongkir...</span></>
+                      : <><span style={{ fontSize: 16 }}>📍</span><span style={{ color: 'var(--k-muted)', fontSize: 13 }}>Pilih lokasi pickup & tujuan untuk menghitung ongkir</span></>
+                    }
                   </div>
                 )}
               </div>
@@ -512,20 +371,9 @@ export default function CreateOrderPage() {
               <div>
                 <label className="label">Metode Pembayaran</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {[
-                    { v: 'wallet', emoji: '💳', label: 'Saldo Wallet' },
-                    { v: 'cod',    emoji: '💵', label: 'COD / Tunai' },
-                  ].map(({ v, emoji, label }) => (
-                    <label key={v} style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '12px 14px', borderRadius: 14, cursor: 'pointer',
-                      border: `1.5px solid ${form.payment_method === v ? 'var(--k-accent)' : 'var(--k-border)'}`,
-                      background: form.payment_method === v ? 'var(--k-glow)' : 'var(--k-card2)',
-                      transition: 'all 0.2s',
-                    }}>
-                      <input type="radio" name="payment_method" value={v}
-                        checked={form.payment_method === v} onChange={handleChange}
-                        style={{ display: 'none' }} />
+                  {[{ v: 'wallet', emoji: '💳', label: 'Saldo Wallet' }, { v: 'cod', emoji: '💵', label: 'COD / Tunai' }].map(({ v, emoji, label }) => (
+                    <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, cursor: 'pointer', border: `1.5px solid ${form.payment_method === v ? 'var(--k-accent)' : 'var(--k-border)'}`, background: form.payment_method === v ? 'var(--k-glow)' : 'var(--k-card2)', transition: 'all 0.2s' }}>
+                      <input type="radio" name="payment_method" value={v} checked={form.payment_method === v} onChange={handleChange} style={{ display: 'none' }} />
                       <span style={{ fontSize: 18 }}>{emoji}</span>
                       <span style={{ color: 'var(--k-text)', fontSize: 13, fontWeight: 600 }}>{label}</span>
                     </label>
@@ -535,67 +383,33 @@ export default function CreateOrderPage() {
             </div>
           </div>
 
-          {/* JastipQu */}
-          <label style={{
-            display: 'flex', alignItems: 'flex-start', gap: 14, cursor: 'pointer',
-            background: form.is_jastip_enabled ? 'rgba(0,200,150,0.06)' : 'var(--k-card)',
-            border: `1.5px solid ${form.is_jastip_enabled ? 'var(--k-accent)' : 'var(--k-border)'}`,
-            borderRadius: 20, padding: '14px 16px', transition: 'all 0.2s',
-          }}>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 14, cursor: 'pointer', background: form.is_jastip_enabled ? 'rgba(0,200,150,0.06)' : 'var(--k-card)', border: `1.5px solid ${form.is_jastip_enabled ? 'var(--k-accent)' : 'var(--k-border)'}`, borderRadius: 20, padding: '14px 16px', transition: 'all 0.2s' }}>
             <div style={{ paddingTop: 2 }}>
-              <input type="checkbox" name="is_jastip_enabled"
-                checked={form.is_jastip_enabled} onChange={handleChange}
-                style={{ accentColor: 'var(--k-accent)', width: 18, height: 18 }} />
+              <input type="checkbox" name="is_jastip_enabled" checked={form.is_jastip_enabled} onChange={handleChange} style={{ accentColor: 'var(--k-accent)', width: 18, height: 18 }} />
             </div>
             <div>
-              <p style={{ color: 'var(--k-text)', fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
-                ⚡ Izinkan JastipQu
-              </p>
-              <p style={{ color: 'var(--k-muted)', fontSize: 12, lineHeight: 1.6 }}>
-                Mitra bisa titip barang tambahan searah rute Anda. Dapatkan diskon ongkos kirim di akhir.
-              </p>
+              <p style={{ color: 'var(--k-text)', fontWeight: 700, fontSize: 14, marginBottom: 4 }}>⚡ Izinkan JastipQu</p>
+              <p style={{ color: 'var(--k-muted)', fontSize: 12, lineHeight: 1.6 }}>Mitra bisa titip barang tambahan searah rute Anda. Dapatkan diskon ongkos kirim di akhir.</p>
             </div>
           </label>
 
-          {/* Wajib Foto */}
-          <label style={{
-            display: 'flex', alignItems: 'flex-start', gap: 14, cursor: 'pointer',
-            background: form.require_photo ? 'rgba(0,200,150,0.06)' : 'var(--k-card)',
-            border: `1.5px solid ${form.require_photo ? 'var(--k-accent)' : 'var(--k-border)'}`,
-            borderRadius: 20, padding: '14px 16px', transition: 'all 0.2s',
-          }}>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 14, cursor: 'pointer', background: form.require_photo ? 'rgba(0,200,150,0.06)' : 'var(--k-card)', border: `1.5px solid ${form.require_photo ? 'var(--k-accent)' : 'var(--k-border)'}`, borderRadius: 20, padding: '14px 16px', transition: 'all 0.2s' }}>
             <div style={{ paddingTop: 2 }}>
-              <input type="checkbox" name="require_photo"
-                checked={form.require_photo} onChange={handleChange}
-                style={{ accentColor: 'var(--k-accent)', width: 18, height: 18 }} />
+              <input type="checkbox" name="require_photo" checked={form.require_photo} onChange={handleChange} style={{ accentColor: 'var(--k-accent)', width: 18, height: 18 }} />
             </div>
             <div>
-              <p style={{ color: 'var(--k-text)', fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
-                📸 Wajib Foto di Setiap Tahap
-              </p>
-              <p style={{ color: 'var(--k-muted)', fontSize: 12, lineHeight: 1.6 }}>
-                Mitra wajib memfoto saat tiba di pickup, saat barang dikemas, dan saat sampai tujuan sebelum bisa melanjutkan ke tahap berikutnya.
-              </p>
+              <p style={{ color: 'var(--k-text)', fontWeight: 700, fontSize: 14, marginBottom: 4 }}>📸 Wajib Foto di Setiap Tahap</p>
+              <p style={{ color: 'var(--k-muted)', fontSize: 12, lineHeight: 1.6 }}>Mitra wajib memfoto saat tiba di pickup, saat barang dikemas, dan saat sampai tujuan sebelum bisa melanjutkan ke tahap berikutnya.</p>
             </div>
           </label>
 
-          {/* Catatan */}
           <div>
             <label className="label">Catatan (opsional)</label>
-            <textarea
-              name="notes" value={form.notes} onChange={handleChange} rows={3}
-              placeholder="Contoh: Tolong berhati-hati, barang mudah pecah"
-              style={{
-                width: '100%', background: 'var(--k-card2)', border: '1.5px solid var(--k-border)',
-                color: 'var(--k-text)', padding: '12px 16px', borderRadius: 14, fontSize: 14,
-                outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6,
-              }}
-            />
+            <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} placeholder="Contoh: Tolong berhati-hati, barang mudah pecah"
+              style={{ width: '100%', background: 'var(--k-card2)', border: '1.5px solid var(--k-border)', color: 'var(--k-text)', padding: '12px 16px', borderRadius: 14, fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }} />
           </div>
 
-          {/* Submit */}
-          <button type="submit" className="btn-primary"
-            disabled={loading || !estimate || estimating}>
+          <button type="submit" className="btn-primary" disabled={loading || !estimate || estimating}>
             {loading ? 'Membuat Order...' : !estimate ? 'Pilih lokasi dulu' : 'Buat Order Sekarang'}
           </button>
         </form>

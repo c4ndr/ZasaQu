@@ -1,10 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
-const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
+async function searchNominatim(query, nearLat, nearLng) {
+  let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=id&limit=6&accept-language=id&addressdetails=1`
+  if (nearLat && nearLng) url += `&viewbox=${nearLng - 0.3},${nearLat + 0.3},${nearLng + 0.3},${nearLat - 0.3}&bounded=0`
+  const res = await fetch(url, { headers: { 'User-Agent': 'ZasaQu/1.0' } })
+  return res.json()
+}
 
-// Pastikan Google Maps sudah di-load sebelum pakai
-function isGoogleReady() {
-  return !!(window.google?.maps?.places)
+function formatSuggestion(item) {
+  const a = item.address || {}
+  const main = item.name || a.road || a.hamlet || item.display_name.split(',')[0]
+  const parts = [a.suburb || a.village || a.town, a.city || a.county, a.state].filter(Boolean)
+  const secondary = parts.slice(0, 2).join(', ')
+  return { main, secondary, display: item.display_name }
 }
 
 export default function LocationSearch({
@@ -16,68 +24,35 @@ export default function LocationSearch({
   const [suggestions, setSuggestions] = useState([])
   const [open,        setOpen]        = useState(false)
   const [loading,     setLoading]     = useState(false)
-  const containerRef  = useRef(null)
-  const debounceRef   = useRef(null)
-  const serviceRef    = useRef(null)
-  const touchingRef   = useRef(false)
+  const containerRef = useRef(null)
+  const debounceRef  = useRef(null)
+  const touchingRef  = useRef(false)
 
-  // Inisialisasi AutocompleteService saat Google Maps siap
-  const initService = useCallback(() => {
-    if (!serviceRef.current && isGoogleReady()) {
-      serviceRef.current = new window.google.maps.places.AutocompleteService()
-    }
-  }, [])
-
-  useEffect(() => {
-    initService()
-    // Coba lagi setelah 1 detik jika belum siap
-    if (!serviceRef.current) {
-      const t = setTimeout(initService, 1000)
-      return () => clearTimeout(t)
-    }
-  }, [initService])
-
-  // Google Places Autocomplete saat user mengetik
   useEffect(() => {
     clearTimeout(debounceRef.current)
     if (value.length < 2) { setSuggestions([]); setOpen(false); return }
 
-    debounceRef.current = setTimeout(() => {
-      initService()
-      if (!serviceRef.current) return
+    debounceRef.current = setTimeout(async () => {
       setLoading(true)
-      const req = {
-        input: value,
-        language: 'id',
-        componentRestrictions: { country: 'id' },
-      }
-      if (nearLat && nearLng) {
-        req.locationBias = {
-          center: { lat: nearLat, lng: nearLng },
-          radius: 15000, // 15 km
-        }
-      }
-      serviceRef.current.getPlacePredictions(req, (results, status) => {
+      try {
+        const results = await searchNominatim(value, nearLat, nearLng)
+        setSuggestions(results)
+        setOpen(results.length > 0)
+      } catch {
+        setSuggestions([])
+        setOpen(false)
+      } finally {
         setLoading(false)
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && results?.length) {
-          setSuggestions(results)
-          setOpen(true)
-        } else {
-          setSuggestions([])
-          setOpen(false)
-        }
-      })
-    }, 300)
-    return () => clearTimeout(debounceRef.current)
-  }, [value, nearLat, nearLng, initService])
+      }
+    }, 400)
 
-  // Klik di luar → tutup dropdown
+    return () => clearTimeout(debounceRef.current)
+  }, [value, nearLat, nearLng])
+
   useEffect(() => {
     function handleOutside(e) {
       if (touchingRef.current) return
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setOpen(false)
-      }
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false)
     }
     document.addEventListener('mousedown', handleOutside)
     document.addEventListener('touchstart', handleOutside, { passive: true })
@@ -87,23 +62,11 @@ export default function LocationSearch({
     }
   }, [])
 
-  // Saat user pilih suggestion → ambil koordinat via Geocoder
-  function handleSelect(prediction) {
+  function handleSelect(item) {
     setOpen(false); setSuggestions([]); touchingRef.current = false
-    onChange(prediction.description)
-
-    if (!window.google?.maps?.Geocoder) return
-    const geocoder = new window.google.maps.Geocoder()
-    geocoder.geocode({ placeId: prediction.place_id, language: 'id' }, (results, status) => {
-      if (status === 'OK' && results?.[0]) {
-        const loc = results[0].geometry.location
-        onSelect({
-          lat: loc.lat(),
-          lng: loc.lng(),
-          display: results[0].formatted_address || prediction.description,
-        })
-      }
-    })
+    const { display } = formatSuggestion(item)
+    onChange(display)
+    onSelect({ lat: parseFloat(item.lat), lng: parseFloat(item.lon), display })
   }
 
   return (
@@ -112,7 +75,7 @@ export default function LocationSearch({
         <input
           type="text"
           value={value}
-          onChange={e => { onChange(e.target.value) }}
+          onChange={e => onChange(e.target.value)}
           onFocus={() => { if (suggestions.length > 0) setOpen(true) }}
           placeholder={placeholder}
           style={{
@@ -140,38 +103,39 @@ export default function LocationSearch({
           boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
           maxHeight: 280, overflowY: 'auto',
         }}>
-          {suggestions.map((s, i) => (
-            <button key={s.place_id} type="button"
-              onMouseDown={e => e.preventDefault()}
-              onTouchStart={() => { touchingRef.current = true }}
-              onTouchEnd={() => handleSelect(s)}
-              onClick={() => handleSelect(s)}
-              style={{
-                width: '100%', textAlign: 'left', padding: '12px 14px',
-                background: 'none', border: 'none', cursor: 'pointer',
-                borderBottom: i < suggestions.length - 1 ? '1px solid var(--k-border)' : 'none',
-                color: 'var(--k-text)', fontSize: 13,
-                display: 'flex', alignItems: 'flex-start', gap: 8,
-                WebkitTapHighlightColor: 'rgba(0,200,150,0.1)',
-              }}
-            >
-              <span style={{ flexShrink: 0, marginTop: 2, fontSize: 14 }}>📍</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {s.structured_formatting?.main_text || s.description}
-                </div>
-                {s.structured_formatting?.secondary_text && (
-                  <div style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.structured_formatting.secondary_text}
+          {suggestions.map((s, i) => {
+            const { main, secondary } = formatSuggestion(s)
+            return (
+              <button key={s.place_id} type="button"
+                onMouseDown={e => e.preventDefault()}
+                onTouchStart={() => { touchingRef.current = true }}
+                onTouchEnd={() => handleSelect(s)}
+                onClick={() => handleSelect(s)}
+                style={{
+                  width: '100%', textAlign: 'left', padding: '12px 14px',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  borderBottom: i < suggestions.length - 1 ? '1px solid var(--k-border)' : 'none',
+                  color: 'var(--k-text)', fontSize: 13,
+                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                  WebkitTapHighlightColor: 'rgba(0,200,150,0.1)',
+                }}
+              >
+                <span style={{ flexShrink: 0, marginTop: 2, fontSize: 14 }}>📍</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {main}
                   </div>
-                )}
-              </div>
-            </button>
-          ))}
-          {/* Attributi Google Places */}
+                  {secondary && (
+                    <div style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {secondary}
+                    </div>
+                  )}
+                </div>
+              </button>
+            )
+          })}
           <div style={{ padding: '6px 14px', borderTop: '1px solid var(--k-border)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-            <img src={`https://maps.gstatic.com/mapfiles/api-3/images/powered-by-google-on-white3.png`}
-              alt="Powered by Google" style={{ height: 14, opacity: 0.7 }} />
+            <span style={{ fontSize: 10, color: 'var(--k-muted)' }}>© OpenStreetMap contributors</span>
           </div>
         </div>
       )}

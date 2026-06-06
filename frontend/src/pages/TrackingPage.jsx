@@ -1,56 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { GoogleMap, Marker, Polyline, useJsApiLoader } from '@react-google-maps/api'
+import Map, { Marker } from 'react-map-gl/maplibre'
+import { OSM_STYLE } from '../utils/mapStyle'
+import { fitPoints } from '../utils/geo'
+import RoadPolyline from '../components/RoadPolyline'
 import useRoadRoute from '../hooks/useRoadRoute'
 import useOrderTracking from '../hooks/useOrderTracking'
 import api from '../services/api'
-
-const GMAPS_LIBS = ['places']
-const MAP_CONTAINER_STYLE = { width: '100%', height: '100%', minHeight: 300 }
-const MAP_OPTIONS = {
-  disableDefaultUI: true,
-  zoomControl: false,
-  gestureHandling: 'greedy',
-  styles: [
-    { featureType: 'poi', stylers: [{ visibility: 'simplified' }] },
-  ],
-}
-
-// ── Marker SVG ────────────────────────────────────────────────────────────────
-function MitraMarker() {
-  return (
-    <div style={{
-      width: 44, height: 44, borderRadius: '50%',
-      background: '#3B82F6', border: '3px solid #fff',
-      boxShadow: '0 4px 14px rgba(59,130,246,.5)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 20, userSelect: 'none',
-    }}>🏍️</div>
-  )
-}
-function PinMarker({ color, emoji }) {
-  return (
-    <div style={{ position: 'relative', width: 36, height: 46, display: 'flex', justifyContent: 'center', userSelect: 'none' }}>
-      <svg viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="46" style={{ position: 'absolute', top: 0, left: 0 }}>
-        <path d="M18 1C9.163 1 2 8.163 2 17c0 10.8 16 28 16 28S34 27.8 34 17C34 8.163 26.837 1 18 1z" fill={color} stroke="white" strokeWidth="2" />
-        <circle cx="18" cy="17" r="7" fill="white" />
-      </svg>
-      <span style={{ position: 'absolute', top: 8, fontSize: 14, zIndex: 1 }}>{emoji}</span>
-    </div>
-  )
-}
-
-// ── Rute jalan (Google Maps Polyline) ─────────────────────────────────────────
-function RoutePolyline({ pickup, dropoff }) {
-  const { routePoints } = useRoadRoute(pickup, dropoff)
-  const path = (routePoints ?? [pickup, dropoff]).map(([lat, lng]) => ({ lat, lng }))
-  return (
-    <Polyline
-      path={path}
-      options={{ strokeColor: '#00C896', strokeWeight: 5, strokeOpacity: 0.85 }}
-    />
-  )
-}
 
 // ── Konstanta status ──────────────────────────────────────────────────────────
 const STATUS_STEPS = [
@@ -84,7 +40,6 @@ function playStatusSound() {
     const ctx  = new (window.AudioContext || window.webkitAudioContext)()
     const gain = ctx.createGain()
     gain.connect(ctx.destination)
-    // Tiga nada naik — terasa seperti notif penting
     [[660, 0], [880, 0.15], [1100, 0.3]].forEach(([freq, when]) => {
       const osc = ctx.createOscillator()
       osc.connect(gain)
@@ -130,43 +85,23 @@ function StatusNotif({ update, onDismiss }) {
         cursor: 'pointer',
       }}>
       <style>{`
-        @keyframes notifSlideIn {
-          from { transform: translateY(-100%); opacity: 0; }
-          to   { transform: translateY(0);    opacity: 1; }
-        }
-        @keyframes notifPulse {
-          0%,100% { box-shadow: 0 0 0 0 ${colors.border}55; }
-          50%      { box-shadow: 0 0 0 10px ${colors.border}00; }
-        }
-      `}</style>
-
-      {/* Progress bar countdown 6 detik */}
-      <div style={{
-        height: 3, background: colors.border, transformOrigin: 'left',
-        animation: 'notifBar 6s linear forwards',
-      }} />
-      <style>{`
+        @keyframes notifSlideIn { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes notifPulse { 0%,100% { box-shadow: 0 0 0 0 ${colors.border}55; } 50% { box-shadow: 0 0 0 10px ${colors.border}00; } }
         @keyframes notifBar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
       `}</style>
-
+      <div style={{ height: 3, background: colors.border, transformOrigin: 'left', animation: 'notifBar 6s linear forwards' }} />
       <div style={{ padding: '16px 20px 4px', display: 'flex', alignItems: 'center', gap: 16 }}>
         <div style={{
           width: 56, height: 56, borderRadius: 18, flexShrink: 0,
-          background: `${colors.border}20`,
-          border: `2px solid ${colors.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 28,
+          background: `${colors.border}20`, border: `2px solid ${colors.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
           animation: 'notifPulse 1.5s infinite',
         }}>
           {update.emoji}
         </div>
         <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: colors.border, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-            Update Order
-          </p>
-          <p style={{ fontSize: 16, fontWeight: 800, color: '#E8E8F2', lineHeight: 1.4 }}>
-            {update.message}
-          </p>
+          <p style={{ fontSize: 11, fontWeight: 700, color: colors.border, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Update Order</p>
+          <p style={{ fontSize: 16, fontWeight: 800, color: '#E8E8F2', lineHeight: 1.4 }}>{update.message}</p>
         </div>
         <span style={{ fontSize: 18, color: '#A0A0BC', flexShrink: 0 }}>✕</span>
       </div>
@@ -176,7 +111,6 @@ function StatusNotif({ update, onDismiss }) {
 
 const PHOTO_LABELS = { pickup: '📍 Tiba di Pickup', packing: '📦 Barang Dikemas', delivery: '🏁 Sampai Tujuan' }
 
-// Fetch gambar via Axios agar Bearer token ikut dikirim ke endpoint authenticated
 function AuthedImg({ src, alt, style }) {
   const [blobUrl, setBlobUrl] = useState(null)
   const [status,  setStatus]  = useState('loading')
@@ -218,7 +152,6 @@ function PhotoViewer({ photos, orderId }) {
 
   return (
     <>
-      {/* Lightbox */}
       {preview && (
         <div onClick={() => setPreview(null)} style={{
           position: 'fixed', inset: 0, zIndex: 9999,
@@ -233,7 +166,6 @@ function PhotoViewer({ photos, orderId }) {
           }}>✕</button>
         </div>
       )}
-
       <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '12px 14px', marginTop: 12 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
           📸 Foto Bukti Pengiriman
@@ -246,11 +178,7 @@ function PhotoViewer({ photos, orderId }) {
               <div key={stage}>
                 {url ? (
                   <button onClick={() => setPreview(url)} style={{ width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}>
-                    <AuthedImg
-                      src={url}
-                      alt={PHOTO_LABELS[stage]}
-                      style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 10, border: '2px solid rgba(0,200,150,0.3)' }}
-                    />
+                    <AuthedImg src={url} alt={PHOTO_LABELS[stage]} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 10, border: '2px solid rgba(0,200,150,0.3)' }} />
                   </button>
                 ) : (
                   <div style={{ width: '100%', aspectRatio: '1', background: 'var(--k-card2)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--k-border)' }}>
@@ -269,35 +197,50 @@ function PhotoViewer({ photos, orderId }) {
   )
 }
 
-// ── Teks badge GPS berdasarkan konteks ───────────────────────────────────────
 function getGpsBadge(order, gpsActive, mitraLocation) {
   if (!order) return { text: '—', color: 'var(--k-muted)', pulse: false }
-
   if (['pending'].includes(order.status))
     return { text: 'Mencari Mitra...', color: 'var(--k-muted)', pulse: false }
-
   if (['completed', 'cancelled'].includes(order.status))
     return { text: 'Order Selesai', color: 'var(--k-muted)', pulse: false }
-
   if (gpsActive)
     return { text: 'GPS Mitra Aktif', color: 'var(--k-accent)', pulse: true }
-
   if (mitraLocation && !gpsActive)
     return { text: 'GPS Mitra Terputus', color: 'var(--k-warn)', pulse: false }
-
   if (order.mitra && ['accepted', 'on_pickup', 'picked_up', 'on_delivery', 'delivered'].includes(order.status))
     return { text: 'Menunggu GPS Mitra', color: '#A0A0BC', pulse: false }
-
   return { text: 'GPS Tidak Aktif', color: 'var(--k-muted)', pulse: false }
 }
 
-// ── Pesan notifikasi GPS yang lebih jelas ─────────────────────────────────────
 function formatNotifMessage(n) {
-  if (n.type === 'gps_lost')
-    return 'GPS mitra terputus. Lokasi di peta mungkin tidak akurat. Hubungi mitra lewat chat jika perlu.'
-  if (n.type === 'jastip_placed')
-    return n.message || 'Titipan baru masuk ke sesi JastipQu.'
+  if (n.type === 'gps_lost') return 'GPS mitra terputus. Lokasi di peta mungkin tidak akurat. Hubungi mitra lewat chat jika perlu.'
+  if (n.type === 'jastip_placed') return n.message || 'Titipan baru masuk ke sesi JastipQu.'
   return n.message || ''
+}
+
+// ── Marker MapLibre ───────────────────────────────────────────────────────────
+function MitraMarkerEl() {
+  return (
+    <div style={{
+      width: 44, height: 44, borderRadius: '50%',
+      background: '#3B82F6', border: '3px solid #fff',
+      boxShadow: '0 4px 14px rgba(59,130,246,.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 20, userSelect: 'none',
+    }}>🏍️</div>
+  )
+}
+
+function PinMarkerEl({ color, emoji }) {
+  return (
+    <div style={{ position: 'relative', width: 36, height: 46, display: 'flex', justifyContent: 'center', userSelect: 'none' }}>
+      <svg viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="46" style={{ position: 'absolute', top: 0, left: 0 }}>
+        <path d="M18 1C9.163 1 2 8.163 2 17c0 10.8 16 28 16 28S34 27.8 34 17C34 8.163 26.837 1 18 1z" fill={color} stroke="white" strokeWidth="2" />
+        <circle cx="18" cy="17" r="7" fill="white" />
+      </svg>
+      <span style={{ position: 'absolute', top: 8, fontSize: 14, zIndex: 1 }}>{emoji}</span>
+    </div>
+  )
 }
 
 // ── Halaman utama ─────────────────────────────────────────────────────────────
@@ -312,22 +255,19 @@ export default function TrackingPage() {
   const [shownUpdate, setShownUpdate] = useState(null)
   const dismissNotif = useCallback(() => setShownUpdate(null), [])
 
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
-    libraries: GMAPS_LIBS,
-  })
-
-  // Camera follow smooth — panTo Google Maps
+  // Camera follow mitra
   useEffect(() => {
     if (!mitraLocation || !mapRef.current) return
-    if (follow) mapRef.current.panTo({ lat: mitraLocation.lat, lng: mitraLocation.lng })
+    if (follow) mapRef.current.getMap().flyTo({
+      center: [mitraLocation.lng, mitraLocation.lat],
+      speed: 0.8,
+    })
   }, [mitraLocation, follow])
 
   useEffect(() => {
     api.get(`/orders/${id}`).then(r => setOrder(r.data)).finally(() => setLoading(false))
   }, [id])
 
-  // Saat status berubah via WebSocket — refresh order + tampilkan notifikasi
   useEffect(() => {
     if (!statusUpdate) return
     setShownUpdate(statusUpdate)
@@ -392,7 +332,6 @@ export default function TrackingPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          {/* GPS Follow toggle */}
           <button onClick={() => setFollow(f => !f)} style={{
             width: 40, height: 40, borderRadius: 12,
             background: follow ? 'rgba(0,200,150,0.2)' : 'rgba(25,25,39,0.92)',
@@ -400,11 +339,8 @@ export default function TrackingPage() {
             backdropFilter: 'blur(12px)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', fontSize: 18, color: follow ? 'var(--k-accent)' : 'var(--k-muted)',
-          }} title={follow ? 'Berhenti ikuti mitra' : 'Ikuti mitra'}>
-            🎯
-          </button>
+          }} title={follow ? 'Berhenti ikuti mitra' : 'Ikuti mitra'}>🎯</button>
 
-          {/* Chat — hanya tampil setelah mitra menerima order */}
           {order.mitra && (
             <Link to={`/orders/${id}/chat`} style={{
               width: 40, height: 40, borderRadius: 12,
@@ -432,9 +368,7 @@ export default function TrackingPage() {
           animation: gpsBadge.pulse ? 'pulse-gps 2s infinite' : 'none',
           flexShrink: 0,
         }} />
-        <span style={{ fontSize: 12, fontWeight: 700, color: gpsBadge.color }}>
-          {gpsBadge.text}
-        </span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: gpsBadge.color }}>{gpsBadge.text}</span>
       </div>
 
       {/* ── Notifikasi ── */}
@@ -448,13 +382,8 @@ export default function TrackingPage() {
               border: `1px solid ${n.type === 'gps_lost' ? 'rgba(246,173,85,0.35)' : 'rgba(0,200,150,0.3)'}`,
               backdropFilter: 'blur(12px)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
             }}>
-              <span style={{ flexShrink: 0, fontSize: 15 }}>
-                {n.type === 'gps_lost' ? '⚠️' : '📦'}
-              </span>
-              <p style={{
-                flex: 1, fontSize: 12, lineHeight: 1.5, fontWeight: 600,
-                color: n.type === 'gps_lost' ? 'var(--k-warn)' : 'var(--k-accent)',
-              }}>
+              <span style={{ flexShrink: 0, fontSize: 15 }}>{n.type === 'gps_lost' ? '⚠️' : '📦'}</span>
+              <p style={{ flex: 1, fontSize: 12, lineHeight: 1.5, fontWeight: 600, color: n.type === 'gps_lost' ? 'var(--k-warn)' : 'var(--k-accent)' }}>
                 {formatNotifMessage(n)}
               </p>
             </div>
@@ -462,71 +391,37 @@ export default function TrackingPage() {
         </div>
       )}
 
-      {/* ── Peta Google Maps ── */}
+      {/* ── Peta MapLibre ── */}
       <div style={{ flex: 1, minHeight: panelOpen ? 'calc(100vh - 340px)' : 'calc(100vh - 72px)', transition: 'min-height 0.3s', position: 'relative' }}>
-        {isLoaded ? (
-          <GoogleMap
-            onLoad={m => {
-              mapRef.current = m
-              // Fit bounds ke pickup + dropoff saat pertama load
-              if (window.google?.maps?.LatLngBounds) {
-                const bounds = new window.google.maps.LatLngBounds()
-                bounds.extend({ lat: pickup[0], lng: pickup[1] })
-                bounds.extend({ lat: dropoff[0], lng: dropoff[1] })
-                if (mitraLocation) bounds.extend({ lat: mitraLocation.lat, lng: mitraLocation.lng })
-                m.fitBounds(bounds, 60)
-              }
-            }}
-            center={{ lat: initLat, lng: initLng }}
-            zoom={14}
-            mapContainerStyle={MAP_CONTAINER_STYLE}
-            options={MAP_OPTIONS}
-          >
-            {/* Rute dengan jalur jalan nyata */}
-            <RoutePolyline pickup={pickup} dropoff={dropoff} />
+        <Map
+          ref={mapRef}
+          initialViewState={{ longitude: initLng, latitude: initLat, zoom: 14 }}
+          mapStyle={OSM_STYLE}
+          style={{ width: '100%', height: '100%', minHeight: 300 }}
+          attributionControl={false}
+          onLoad={() => {
+            const pts = [pickup, dropoff]
+            if (mitraLocation) pts.push([mitraLocation.lat, mitraLocation.lng])
+            fitPoints(mapRef.current.getMap(), pts, 60)
+          }}
+        >
+          <RoadPolyline pickup={pickup} dropoff={dropoff} color="#00C896" />
 
-            {/* Marker mitra */}
-            {mitraLocation && (
-              <Marker
-                position={{ lat: mitraLocation.lat, lng: mitraLocation.lng }}
-                icon={{
-                  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
-                      <circle cx="22" cy="22" r="20" fill="#3B82F6" stroke="white" stroke-width="3"/>
-                      <text x="22" y="28" text-anchor="middle" font-size="18">🏍️</text>
-                    </svg>`),
-                  anchor: { x: 22, y: 22 },
-                }}
-              />
-            )}
+          {mitraLocation && (
+            <Marker longitude={mitraLocation.lng} latitude={mitraLocation.lat} anchor="center">
+              <MitraMarkerEl />
+            </Marker>
+          )}
 
-            {/* Marker pickup */}
-            <Marker
-              position={{ lat: pickup[0], lng: pickup[1] }}
-              icon={{
-                path: window.google.maps.SymbolPath.CIRCLE,
-                fillColor: '#00C896', fillOpacity: 1,
-                strokeColor: '#fff', strokeWeight: 2, scale: 10,
-              }}
-            />
+          <Marker longitude={pickup[1]} latitude={pickup[0]} anchor="bottom">
+            <PinMarkerEl color="#00C896" emoji="📍" />
+          </Marker>
 
-            {/* Marker tujuan */}
-            <Marker
-              position={{ lat: dropoff[0], lng: dropoff[1] }}
-              icon={{
-                path: window.google.maps.SymbolPath.CIRCLE,
-                fillColor: '#F56565', fillOpacity: 1,
-                strokeColor: '#fff', strokeWeight: 2, scale: 10,
-              }}
-            />
-          </GoogleMap>
-        ) : (
-          <div style={{ width: '100%', height: '100%', minHeight: 300, background: 'var(--k-card2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 24, height: 24, border: '3px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          </div>
-        )}
+          <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom">
+            <PinMarkerEl color="#F56565" emoji="🏁" />
+          </Marker>
+        </Map>
 
-        {/* Hint GPS belum aktif */}
         {showGpsHint && (
           <div style={{
             position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
@@ -563,20 +458,18 @@ export default function TrackingPage() {
       }}>
         <div style={{ padding: '16px 16px 28px', overflowY: 'auto', maxHeight: 340 }}>
 
-          {/* Progress status */}
           {!isCancelled && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 8 }}>
                 {STATUS_STEPS.filter(s => !['completed'].includes(s.key)).map((s, i, arr) => {
-                  const stepIdx  = STATUS_STEPS.findIndex(x => x.key === s.key)
-                  const isActive = stepIdx === currentStep
+                  const stepIdx   = STATUS_STEPS.findIndex(x => x.key === s.key)
+                  const isActive  = stepIdx === currentStep
                   const isDoneStep = stepIdx < currentStep
                   return (
                     <div key={s.key} style={{ display: 'flex', alignItems: 'center', flex: i < arr.length - 1 ? 1 : 'none' }}>
                       <div style={{
                         width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 12,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
                         background: isDoneStep ? 'var(--k-accent)' : isActive ? 'rgba(0,200,150,0.2)' : 'var(--k-card2)',
                         border: `2px solid ${isDoneStep ? 'var(--k-accent)' : isActive ? 'var(--k-accent)' : 'var(--k-border)'}`,
                         transition: 'all 0.3s',
@@ -584,11 +477,7 @@ export default function TrackingPage() {
                         {isDoneStep ? '✓' : s.emoji}
                       </div>
                       {i < arr.length - 1 && (
-                        <div style={{
-                          flex: 1, height: 2, marginLeft: 0,
-                          background: isDoneStep ? 'var(--k-accent)' : 'var(--k-border)',
-                          transition: 'background 0.3s',
-                        }} />
+                        <div style={{ flex: 1, height: 2, background: isDoneStep ? 'var(--k-accent)' : 'var(--k-border)', transition: 'background 0.3s' }} />
                       )}
                     </div>
                   )
@@ -601,20 +490,12 @@ export default function TrackingPage() {
           )}
 
           {isCancelled && (
-            <div style={{
-              background: 'rgba(245,101,101,0.08)', border: '1px solid rgba(245,101,101,0.2)',
-              borderRadius: 14, padding: '12px 14px', marginBottom: 14,
-              color: 'var(--k-danger)', fontSize: 14, fontWeight: 700,
-            }}>
+            <div style={{ background: 'rgba(245,101,101,0.08)', border: '1px solid rgba(245,101,101,0.2)', borderRadius: 14, padding: '12px 14px', marginBottom: 14, color: 'var(--k-danger)', fontSize: 14, fontWeight: 700 }}>
               ❌ Order Dibatalkan
             </div>
           )}
 
-          {/* Rute */}
-          <div style={{
-            background: 'var(--k-card)', border: '1px solid var(--k-border)',
-            borderRadius: 16, padding: '12px 14px', marginBottom: 12,
-          }}>
+          <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '12px 14px', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3 }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--k-accent)', flexShrink: 0 }} />
@@ -622,8 +503,7 @@ export default function TrackingPage() {
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#F56565', flexShrink: 0 }} />
               </div>
               <div style={{ flex: 1 }}>
-                <MapsLink lat={order.pickup_lat} lng={order.pickup_lng} address={order.pickup_address}
-                  style={{ marginBottom: 10 }} />
+                <MapsLink lat={order.pickup_lat} lng={order.pickup_lng} address={order.pickup_address} style={{ marginBottom: 10 }} />
                 <MapsLink lat={order.dropoff_lat} lng={order.dropoff_lng} address={order.dropoff_address} />
               </div>
             </div>
@@ -641,12 +521,8 @@ export default function TrackingPage() {
             </div>
           </div>
 
-          {/* Diskon JastipQu */}
           {order.jastip_discount_applied > 0 && (
-            <div style={{
-              background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.2)',
-              borderRadius: 14, padding: '10px 14px', marginBottom: 12,
-            }}>
+            <div style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: 14, padding: '10px 14px', marginBottom: 12 }}>
               <p style={{ color: 'var(--k-accent)', fontSize: 13, fontWeight: 700, marginBottom: 2 }}>
                 ⚡ Diskon JastipQu: {formatRp(order.jastip_discount_applied)}
               </p>
@@ -656,39 +532,23 @@ export default function TrackingPage() {
             </div>
           )}
 
-          {/* Info mitra */}
           {order.mitra && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              background: 'var(--k-card)', border: '1px solid var(--k-border)',
-              borderRadius: 16, padding: '12px 14px',
-            }}>
-              <div style={{
-                width: 42, height: 42, borderRadius: '50%',
-                background: 'rgba(59,130,246,0.15)', border: '2px solid rgba(59,130,246,0.3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 700, color: 'var(--k-info)', flexShrink: 0,
-              }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '12px 14px' }}>
+              <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(59,130,246,0.15)', border: '2px solid rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'var(--k-info)', flexShrink: 0 }}>
                 {order.mitra.name[0].toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
-                <p style={{ color: 'var(--k-text)', fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
-                  {order.mitra.name}
-                </p>
+                <p style={{ color: 'var(--k-text)', fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{order.mitra.name}</p>
                 <p style={{ color: 'var(--k-muted)', fontSize: 12, textTransform: 'capitalize' }}>
                   {order.vehicle_type === 'motor' ? '🏍️ Motor' : '🚗 Mobil'}
                 </p>
               </div>
               {gpsActive && (
-                <span style={{
-                  padding: '4px 10px', borderRadius: 100, fontSize: 11, fontWeight: 700,
-                  background: 'rgba(0,200,150,0.1)', color: 'var(--k-accent)',
-                }}>Online</span>
+                <span style={{ padding: '4px 10px', borderRadius: 100, fontSize: 11, fontWeight: 700, background: 'rgba(0,200,150,0.1)', color: 'var(--k-accent)' }}>Online</span>
               )}
             </div>
           )}
 
-          {/* Foto bukti pengiriman */}
           <PhotoViewer photos={order.photos} orderId={order.id} />
         </div>
       </div>
