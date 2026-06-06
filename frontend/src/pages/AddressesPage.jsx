@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 import useAddresses from '../hooks/useAddresses'
+import LocationSearch from '../components/LocationSearch'
+import { getPosition } from '../utils/geo'
 
 const LABELS = ['Rumah', 'Kantor', 'Lainnya']
 const LABEL_COLOR = {
@@ -16,13 +18,37 @@ const EMPTY_FORM = {
   recipient_name: '',
   recipient_phone: '',
   address: '',
+  lat: null,
+  lng: null,
   notes: '',
   is_default: false,
 }
 
 function AddressForm({ initial, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(initial ?? EMPTY_FORM)
-  const [err, setErr] = useState('')
+  const [form,      setForm]      = useState(initial ?? EMPTY_FORM)
+  const [err,       setErr]       = useState('')
+  const [nearLat,   setNearLat]   = useState(initial?.lat ?? null)
+  const [nearLng,   setNearLng]   = useState(initial?.lng ?? null)
+  const [gpsLoading, setGpsLoading] = useState(false)
+
+  // Ambil GPS diam-diam sebagai hint viewbox saat tambah baru
+  useEffect(() => {
+    if (initial?.lat) return
+    getPosition()
+      .then(({ lat, lng }) => { setNearLat(lat); setNearLng(lng) })
+      .catch(() => {})
+  }, []) // eslint-disable-line
+
+  async function handleGPS() {
+    setGpsLoading(true)
+    try {
+      const { lat, lng } = await getPosition()
+      setNearLat(lat); setNearLng(lng)
+      setForm(f => ({ ...f, lat, lng }))
+    } catch {
+      alert('Gagal mendapatkan lokasi GPS.')
+    } finally { setGpsLoading(false) }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -81,11 +107,27 @@ function AddressForm({ initial, onSave, onCancel, saving }) {
 
       {/* Alamat lengkap */}
       <div>
-        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Alamat Lengkap</label>
-        <textarea value={form.address}
-          onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-          placeholder="Jl. Contoh No. 1, RT/RW, Kelurahan, Kecamatan, Kota"
-          rows={3} style={{ ...inp, resize: 'vertical' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Alamat Lengkap</label>
+          <button type="button" onClick={handleGPS} disabled={gpsLoading}
+            style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: gpsLoading ? 0.6 : 1 }}>
+            {gpsLoading ? 'Mendeteksi...' : '📍 Gunakan GPS'}
+          </button>
+        </div>
+        <LocationSearch
+          value={form.address}
+          onChange={val => setForm(f => ({ ...f, address: val, lat: null, lng: null }))}
+          onSelect={({ lat, lng, display }) => setForm(f => ({ ...f, address: display, lat, lng }))}
+          nearLat={nearLat}
+          nearLng={nearLng}
+          placeholder="Ketik nama tempat, jalan, atau daerah..."
+          confirmed={!!(form.lat && form.lng)}
+        />
+        {form.lat && form.lng && (
+          <p style={{ fontSize: 10, color: 'var(--k-accent)', marginTop: 4 }}>
+            📍 Koordinat tersimpan ({parseFloat(form.lat).toFixed(5)}, {parseFloat(form.lng).toFixed(5)})
+          </p>
+        )}
       </div>
 
       {/* Catatan */}

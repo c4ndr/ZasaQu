@@ -1,4 +1,7 @@
-// MapLibre GL style — Esri satellite + label overlay (sama seperti SatelliteTiles Leaflet)
+// OSM vector tile style via OpenFreeMap — tampilkan nama warung, gang, masjid, dll
+export const OSM_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
+
+// MapLibre GL style — Esri satellite + label overlay (untuk mitra/admin)
 export const SATELLITE_STYLE = {
   version: 8,
   sources: {

@@ -1,3 +1,27 @@
+import { isNative } from './nativePlatform'
+
+async function _getCurrent(opts) {
+  if (isNative) {
+    const { Geolocation } = await import('@capacitor/geolocation')
+    return Geolocation.getCurrentPosition(opts)
+  }
+  return new Promise((resolve, reject) =>
+    navigator.geolocation.getCurrentPosition(resolve, reject, opts)
+  )
+}
+
+// Coba coarse dulu (cepat, boleh pakai cache), fallback ke high accuracy.
+// Pakai Capacitor di native Android, browser API di web.
+export async function getPosition() {
+  try {
+    const pos = await _getCurrent({ enableHighAccuracy: false, timeout: 6000, maximumAge: 30000 })
+    return { lat: pos.coords.latitude, lng: pos.coords.longitude }
+  } catch {
+    const pos = await _getCurrent({ enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 })
+    return { lat: pos.coords.latitude, lng: pos.coords.longitude }
+  }
+}
+
 // Hitung jarak antara dua koordinat dalam meter (haversine formula)
 export function distanceMeter(lat1, lng1, lat2, lng2) {
   const R    = 6371000
