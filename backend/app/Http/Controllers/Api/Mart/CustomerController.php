@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Mart;
 
+use App\Events\MartOrderCreatedForSeller;
 use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
 use App\Models\MartCart;
@@ -12,6 +13,7 @@ use App\Models\MartProduct;
 use App\Models\MartReview;
 use App\Models\MartSeller;
 use App\Models\Wallet;
+use App\Services\NotificationService;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -231,6 +233,22 @@ class CustomerController extends Controller
 
             return $order;
         });
+
+        $order->loadMissing(['seller.user', 'items']);
+
+        // Notifikasi ke penjual (in-app + push FCM, agar muncul walau aplikasi di background)
+        if ($order->seller?->user) {
+            app(NotificationService::class)->send(
+                $order->seller->user,
+                'mart_new_order',
+                'Pesanan Baru Masuk!',
+                "Ada pesanan baru #{$order->order_number} dari {$order->delivery_name}.",
+                ['mart_order_id' => $order->id, 'order_number' => $order->order_number]
+            );
+        }
+
+        // Broadcast real-time ke penjual (WebSocket) — untuk chime saat aplikasi terbuka
+        broadcast(new MartOrderCreatedForSeller($order))->toOthers();
 
         return response()->json($order->load('items'), 201);
     }

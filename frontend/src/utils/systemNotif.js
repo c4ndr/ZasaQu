@@ -26,20 +26,41 @@ export function showOrderStatusNotif({ emoji, message, order_number }) {
 }
 
 // ── Bunyi notifikasi order masuk (merchant) — berbunyi 3x ─────────────────────
+// AudioContext browser hanya bisa "running" jika dibuka dari gesture user
+// (klik/tap/keydown). Event order baru datang dari WebSocket di background,
+// jadi context harus di-unlock LEBIH DULU dari interaksi pertama merchant —
+// sama seperti pola di useAdminAlert.js — baru aman diputar dari listener WS.
 let _chimeCtx = null
-function getChimeCtx() {
+let _chimeUnlockAdded = false
+
+function unlockChimeCtx() {
   const AC = window.AudioContext || window.webkitAudioContext
-  if (!AC) return null
+  if (!AC) return
   if (!_chimeCtx) _chimeCtx = new AC()
-  return _chimeCtx
+  if (_chimeCtx.state !== 'running') _chimeCtx.resume().catch(() => {})
+}
+
+export function setupChimeUnlock() {
+  if (_chimeUnlockAdded) return
+  _chimeUnlockAdded = true
+  const handler = () => unlockChimeCtx()
+  document.addEventListener('click',      handler, { once: true, capture: true })
+  document.addEventListener('touchstart', handler, { once: true, capture: true })
+  document.addEventListener('keydown',    handler, { once: true, capture: true })
+}
+
+async function getChimeCtx() {
+  if (!_chimeCtx) return null                         // belum ada gesture, hentikan
+  if (_chimeCtx.state !== 'running') {
+    try { await _chimeCtx.resume() } catch {}
+  }
+  return _chimeCtx.state === 'running' ? _chimeCtx : null
 }
 
 export async function playNewOrderChime() {
   try {
-    const ctx = getChimeCtx()
+    const ctx = await getChimeCtx()
     if (!ctx) return
-    if (ctx.state === 'suspended') await ctx.resume().catch(() => {})
-    if (ctx.state !== 'running') return
     const gain = ctx.createGain()
     gain.connect(ctx.destination)
     // "Ding-dong" diulang 3 kali agar merchant pasti dengar walau tidak menatap layar

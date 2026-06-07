@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import MartSellerLayout from '../../components/MartSellerLayout'
 import api from '../../services/api'
+import echo from '../../services/echo'
+import { useAuth } from '../../context/AuthContext'
+import { playNewOrderChime, setupChimeUnlock } from '../../utils/systemNotif'
 
 const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const fmtDate = (d) => new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -63,6 +66,7 @@ export default function SellerOrdersPage() {
   const [cancelId,  setCancelId]  = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [toast,     setToast]     = useState(null)
+  const { user }    = useAuth()
 
   const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3000) }
 
@@ -74,6 +78,14 @@ export default function SellerOrdersPage() {
   }, [tab])
 
   useEffect(() => { load() }, [load])
+
+  // Notifikasi order baru — bunyi 3x agar penjual pasti dengar walau tidak menatap layar
+  useEffect(() => {
+    setupChimeUnlock()
+    const ch = echo.channel(`App.Models.User.${user?.id}`)
+    ch.listen('.mart.order.created', () => { playNewOrderChime(); load() })
+    return () => echo.leave(`App.Models.User.${user?.id}`)
+  }, [load, user?.id])
 
   // Fetch counts for tab badges
   useEffect(() => {

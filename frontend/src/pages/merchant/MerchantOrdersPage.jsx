@@ -3,7 +3,7 @@ import MerchantLayout from '../../components/MerchantLayout'
 import api from '../../services/api'
 import echo from '../../services/echo'
 import { useAuth } from '../../context/AuthContext'
-import { playNewOrderChime } from '../../utils/systemNotif'
+import { playNewOrderChime, setupChimeUnlock } from '../../utils/systemNotif'
 
 function fmtRp(v)   { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 function fmtTime(d) { return new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }
@@ -449,6 +449,7 @@ export default function MerchantOrdersPage() {
   }, [])
 
   useEffect(() => {
+    setupChimeUnlock()
     load()
     const ch = echo.channel(`App.Models.User.${user?.id}`)
     ch.listen('.food.order.created', () => { playNewOrderChime(); load() })

@@ -1,20 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MartSellerLayout from '../../components/MartSellerLayout'
 import api from '../../services/api'
+import echo from '../../services/echo'
+import { useAuth } from '../../context/AuthContext'
+import { playNewOrderChime, setupChimeUnlock } from '../../utils/systemNotif'
 
 const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
 export default function SellerDashboardPage() {
   const navigate = useNavigate()
+  const { user }   = useAuth()
   const [profile,  setProfile]  = useState(null)
   const [stats,    setStats]    = useState(null)
   const [wallet,   setWallet]   = useState(null)
   const [pending,  setPending]  = useState([])
   const [toggling, setToggling] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api.get('/mart/seller/profile').then(r => setProfile(r.data))
     api.get('/wallet/summary').then(r => setWallet(r.data)).catch(() => {})
     // Stats: ambil beberapa tab order untuk hitung
@@ -39,6 +43,14 @@ export default function SellerDashboardPage() {
       })
     })
   }, [])
+
+  useEffect(() => {
+    setupChimeUnlock()
+    load()
+    const ch = echo.channel(`App.Models.User.${user?.id}`)
+    ch.listen('.mart.order.created', () => { playNewOrderChime(); load() })
+    return () => echo.leave(`App.Models.User.${user?.id}`)
+  }, [load, user?.id])
 
   const toggleOpen = async () => {
     if (!profile) return

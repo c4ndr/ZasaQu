@@ -4,7 +4,7 @@ import MerchantLayout from '../../components/MerchantLayout'
 import api, { storageUrl } from '../../services/api'
 import echo from '../../services/echo'
 import { useAuth } from '../../context/AuthContext'
-import { playNewOrderChime } from '../../utils/systemNotif'
+import { playNewOrderChime, setupChimeUnlock } from '../../utils/systemNotif'
 
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 
@@ -32,6 +32,7 @@ export default function MerchantDashboardPage() {
   }, [])
 
   useEffect(() => {
+    setupChimeUnlock()
     load()
     // Real-time update pending count
     const ch = echo.channel(`App.Models.User.${user?.id}`)
