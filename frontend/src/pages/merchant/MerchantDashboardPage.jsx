@@ -4,6 +4,7 @@ import MerchantLayout from '../../components/MerchantLayout'
 import api, { storageUrl } from '../../services/api'
 import echo from '../../services/echo'
 import { useAuth } from '../../context/AuthContext'
+import { playNewOrderChime } from '../../utils/systemNotif'
 
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 
@@ -34,7 +35,7 @@ export default function MerchantDashboardPage() {
     load()
     // Real-time update pending count
     const ch = echo.channel(`App.Models.User.${user?.id}`)
-    ch.listen('.food.order.created', () => load())
+    ch.listen('.food.order.created', () => { playNewOrderChime(); load() })
     ch.listen('.food.order.status',  () => load())
     return () => echo.leave(`App.Models.User.${user?.id}`)
   }, [load, user?.id])
