@@ -7,26 +7,19 @@ const STUN_SERVERS = [
   { urls: 'stun:stun1.l.google.com:19302' },
 ]
 
-/**
- * WebRTC voice call tanpa expose nomor HP.
- * Signaling dikirim via backend → Reverb → pihak lain.
- *
- * @param {number|string} orderId
- * @param {'zasago'|'zasafood'|'zasamart'} orderType
- * @param {number} currentUserId
- */
 export default function useVoiceCall(orderId, orderType = 'zasago', currentUserId) {
   const [callState, setCallState] = useState('idle') // idle | ringing | active | ended
   const [isMuted,   setIsMuted]   = useState(false)
   const [duration,  setDuration]  = useState(0)
 
-  const pcRef         = useRef(null)   // RTCPeerConnection
-  const localStream   = useRef(null)
-  const remoteStream  = useRef(null)
-  const remoteAudio   = useRef(null)   // <audio> element ref (set dari luar)
-  const channelRef    = useRef(null)
-  const timerRef      = useRef(null)
-  const isCallerRef   = useRef(false)
+  const pcRef              = useRef(null)
+  const localStream        = useRef(null)
+  const remoteAudio        = useRef(null)
+  const channelRef         = useRef(null)
+  const timerRef           = useRef(null)
+  const isCallerRef        = useRef(false)
+  const pendingOfferRef    = useRef(null)   // offer masuk, tunggu user tap Angkat
+  const iceCandidateQueue  = useRef([])     // ICE candidates yang datang sebelum remoteDesc di-set
 
   const channelName = `call.${orderType}.${orderId}`
 
@@ -41,6 +34,20 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
     } catch {}
   }, [orderId, orderType])
 
+  // Cleanup internal tanpa perlu memanggil sendSignal (untuk disconnect callback)
+  const cleanupPc = useCallback(() => {
+    clearInterval(timerRef.current)
+    pcRef.current?.close()
+    pcRef.current = null
+    localStream.current?.getTracks().forEach(t => t.stop())
+    localStream.current = null
+    pendingOfferRef.current = null
+    iceCandidateQueue.current = []
+    setCallState('idle')
+    setDuration(0)
+    setIsMuted(false)
+  }, [])
+
   const createPc = useCallback(() => {
     const pc = new RTCPeerConnection({ iceServers: STUN_SERVERS })
 
@@ -49,39 +56,31 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
     }
 
     pc.ontrack = (e) => {
-      remoteStream.current = e.streams[0]
       if (remoteAudio.current) {
         remoteAudio.current.srcObject = e.streams[0]
         remoteAudio.current.play().catch(() => {})
       }
     }
 
+    // Gunakan cleanupPc (stable ref) bukan endCall agar tidak stale closure
     pc.onconnectionstatechange = () => {
       if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
-        endCall()
+        cleanupPc()
       }
     }
 
     return pc
-  }, [sendSignal]) // eslint-disable-line
+  }, [sendSignal, cleanupPc])
 
   const startTimer = useCallback(() => {
     setDuration(0)
     timerRef.current = setInterval(() => setDuration(d => d + 1), 1000)
   }, [])
 
-  const stopTimer = useCallback(() => {
-    clearInterval(timerRef.current)
-  }, [])
-
   const getMic = useCallback(async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
     localStream.current = stream
     return stream
-  }, [])
-
-  const addTracks = useCallback((pc, stream) => {
-    stream.getTracks().forEach(t => pc.addTrack(t, stream))
   }, [])
 
   /** Mulai panggilan (sebagai caller) */
@@ -95,66 +94,71 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
       const stream = await getMic()
       const pc = createPc()
       pcRef.current = pc
-      addTracks(pc, stream)
+      stream.getTracks().forEach(t => pc.addTrack(t, stream))
 
       const offer = await pc.createOffer({ offerToReceiveAudio: true })
       await pc.setLocalDescription(offer)
       await sendSignal('offer', offer)
     } catch {
-      setCallState('idle')
+      cleanupPc()
     }
-  }, [orderId, callState, sendSignal, getMic, createPc, addTracks])
+  }, [orderId, callState, sendSignal, getMic, createPc, cleanupPc])
 
-  /** Terima panggilan masuk */
-  const answerCall = useCallback(async (offer) => {
+  /**
+   * Terima panggilan masuk — dipanggil saat user tap tombol Angkat.
+   * Offer sudah disimpan di pendingOfferRef saat diterima dari Reverb.
+   */
+  const answerCall = useCallback(async () => {
+    const offer = pendingOfferRef.current
+    if (!offer) return
     try {
       isCallerRef.current = false
       const stream = await getMic()
       const pc = createPc()
       pcRef.current = pc
-      addTracks(pc, stream)
+      stream.getTracks().forEach(t => pc.addTrack(t, stream))
 
       await pc.setRemoteDescription(new RTCSessionDescription(offer))
+
+      // Flush ICE candidates yang sudah antri sebelum remote desc di-set
+      for (const c of iceCandidateQueue.current) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(c)) } catch {}
+      }
+      iceCandidateQueue.current = []
+
       const answer = await pc.createAnswer()
       await pc.setLocalDescription(answer)
       await sendSignal('answer', answer)
 
+      pendingOfferRef.current = null
       setCallState('active')
       startTimer()
     } catch {
-      setCallState('idle')
+      cleanupPc()
     }
-  }, [getMic, createPc, addTracks, sendSignal, startTimer])
+  }, [getMic, createPc, sendSignal, startTimer, cleanupPc])
 
   /** Akhiri panggilan */
   const endCall = useCallback(() => {
     sendSignal('end')
-    pcRef.current?.close()
-    pcRef.current = null
-    localStream.current?.getTracks().forEach(t => t.stop())
-    localStream.current = null
-    stopTimer()
-    setCallState('idle')
-    setDuration(0)
-    setIsMuted(false)
-  }, [sendSignal, stopTimer])
+    cleanupPc()
+  }, [sendSignal, cleanupPc])
 
   /** Toggle mute */
   const toggleMute = useCallback(() => {
     if (!localStream.current) return
-    const enabled = !isMuted
-    localStream.current.getAudioTracks().forEach(t => { t.enabled = enabled })
-    setIsMuted(!enabled)
+    localStream.current.getAudioTracks().forEach(t => { t.enabled = isMuted })
+    setIsMuted(m => !m)
   }, [isMuted])
 
-  // Subscribe ke Reverb channel untuk menerima sinyal
+  // Subscribe ke Reverb channel
   useEffect(() => {
     if (!orderId) return
     const ch = echo.private(channelName)
     channelRef.current = ch
 
     ch.listen('.call.signal', async ({ signal_type, data, sender_id }) => {
-      if (sender_id === currentUserId) return // abaikan sinyal dari diri sendiri
+      if (sender_id === currentUserId) return
 
       if (signal_type === 'ring') {
         setCallState('ringing')
@@ -162,31 +166,36 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
       }
 
       if (signal_type === 'offer') {
-        await answerCall(data)
+        // Simpan offer, tampilkan UI "Ada panggilan masuk" — user harus tap Angkat
+        pendingOfferRef.current = data
+        setCallState('ringing')
         return
       }
 
       if (signal_type === 'answer' && pcRef.current) {
         await pcRef.current.setRemoteDescription(new RTCSessionDescription(data))
+        // Flush ICE candidates yang antri
+        for (const c of iceCandidateQueue.current) {
+          try { await pcRef.current.addIceCandidate(new RTCIceCandidate(c)) } catch {}
+        }
+        iceCandidateQueue.current = []
         setCallState('active')
         startTimer()
         return
       }
 
-      if (signal_type === 'ice-candidate' && pcRef.current) {
-        try { await pcRef.current.addIceCandidate(new RTCIceCandidate(data)) } catch {}
+      if (signal_type === 'ice-candidate') {
+        if (pcRef.current?.remoteDescription) {
+          try { await pcRef.current.addIceCandidate(new RTCIceCandidate(data)) } catch {}
+        } else {
+          // Remote desc belum di-set, antri dulu
+          iceCandidateQueue.current.push(data)
+        }
         return
       }
 
       if (signal_type === 'end') {
-        pcRef.current?.close()
-        pcRef.current = null
-        localStream.current?.getTracks().forEach(t => t.stop())
-        localStream.current = null
-        stopTimer()
-        setCallState('idle')
-        setDuration(0)
-        setIsMuted(false)
+        cleanupPc()
       }
     })
 
@@ -194,13 +203,14 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
       echo.leave(channelName)
       channelRef.current = null
     }
-  }, [orderId, channelName, currentUserId]) // eslint-disable-line
+  }, [orderId, channelName, currentUserId, startTimer, cleanupPc]) // eslint-disable-line
 
   return {
     callState,
     isMuted,
     duration,
-    remoteAudio,  // assign ke ref <audio ref={remoteAudio} />
+    remoteAudio,
+    isCaller: isCallerRef.current,
     startCall,
     answerCall,
     endCall,

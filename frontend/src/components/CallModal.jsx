@@ -11,7 +11,7 @@ function formatDuration(secs) {
  * Tidak menampilkan atau menyimpan nomor telepon.
  */
 export default function CallModal({ callState, isMuted, duration, remoteAudio,
-                                    otherName, onAnswer, onEnd, onMute }) {
+                                    otherName, isCaller, onAnswer, onEnd, onMute }) {
   const audioRef = useRef(null)
 
   // Sambungkan ref audio ke hook
@@ -66,7 +66,11 @@ export default function CallModal({ callState, isMuted, duration, remoteAudio,
 
       {/* Status */}
       <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', marginBottom: 32, textAlign: 'center' }}>
-        {isActive ? `🔴 ${formatDuration(duration)}` : 'Menghubungi...'}
+        {isActive
+          ? `🔴 ${formatDuration(duration)}`
+          : isRinging && !isCaller
+            ? 'Panggilan masuk...'
+            : 'Menghubungi...'}
       </p>
 
       {/* Tombol aksi */}
@@ -84,8 +88,8 @@ export default function CallModal({ callState, isMuted, duration, remoteAudio,
           </button>
         )}
 
-        {/* Angkat telepon (incoming ring, bukan caller) */}
-        {isRinging && onAnswer && (
+        {/* Angkat telepon — hanya callee saat ringing */}
+        {isRinging && !isCaller && onAnswer && (
           <button onClick={onAnswer} style={{
             width: 72, height: 72, borderRadius: '50%',
             background: 'linear-gradient(135deg, #00C896, #00A87D)',
