@@ -51,3 +51,8 @@ Broadcast::channel('call.{orderType}.{orderId}', function ($user, $orderType, $o
     if (!$order) return false;
     return $user->id === $order->customer_id || $user->id === $order->mitra_id;
 });
+
+// Personal call channel — menerima ring/offer meski tidak di ChatPage
+Broadcast::channel('call.user.{userId}', function ($user, $userId) {
+    return (int) $user->id === (int) $userId;
+});

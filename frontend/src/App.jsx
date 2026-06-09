@@ -1,7 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import ApkPopup from './components/ApkPopup'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import useFcmToken from './hooks/useFcmToken'
+import echo from './services/echo'
+import api from './services/api'
+import { storeIncomingCall, popIncomingCall } from './services/callBuffer'
 import { useJsApiLoader } from '@react-google-maps/api'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
@@ -381,6 +384,108 @@ function NotifBridge() {
   )
 }
 
+// Resolve URL chat dari role user + orderType + orderId
+function resolveChatPath(role, orderType, orderId) {
+  const isMitra = role?.startsWith('mitra')
+  if (orderType === 'zasafood') return isMitra ? `/mitra/food/orders/${orderId}/chat` : `/food/orders/${orderId}/chat`
+  if (orderType === 'zasamart') return isMitra ? `/mitra/mart/orders/${orderId}/chat` : `/mart/orders/${orderId}/chat`
+  return isMitra ? `/mitra/orders/${orderId}/chat` : `/orders/${orderId}/chat`
+}
+
+// Overlay panggilan masuk — muncul dari manapun, bukan hanya di ChatPage
+function IncomingCallOverlay({ onAnswer, onDecline }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 20000,
+      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 24, padding: 32,
+    }}>
+      <div style={{ fontSize: 64, animation: 'phonePulse 0.9s ease-in-out infinite' }}>📞</div>
+      <p style={{ color: '#fff', fontSize: 22, fontWeight: 800, textAlign: 'center' }}>Panggilan Masuk</p>
+      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, textAlign: 'center' }}>Tap Angkat untuk menerima</p>
+      <div style={{ display: 'flex', gap: 28 }}>
+        <button onClick={onDecline} style={{
+          width: 70, height: 70, borderRadius: '50%', border: 'none', cursor: 'pointer',
+          background: '#EF4444', fontSize: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 20px rgba(239,68,68,0.5)',
+        }}>📵</button>
+        <button onClick={onAnswer} style={{
+          width: 70, height: 70, borderRadius: '50%', border: 'none', cursor: 'pointer',
+          background: '#00C896', fontSize: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 20px rgba(0,200,150,0.5)',
+          animation: 'phonePulse 0.9s ease-in-out infinite',
+        }}>📲</button>
+      </div>
+      <style>{`@keyframes phonePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }`}</style>
+    </div>
+  )
+}
+
+// Subscriber global panggilan masuk — aktif selama user login, bukan hanya di ChatPage
+function VoiceCallBridge() {
+  const { user }  = useAuth()
+  const navigate  = useNavigate()
+  const location  = useLocation()
+  const [incoming, setIncoming] = useState(null)
+
+  // Pakai ref agar listener tidak basi saat location berubah
+  const locationRef = useRef(location)
+  useEffect(() => { locationRef.current = location }, [location])
+
+  useEffect(() => {
+    if (!user) return
+    const ch = echo.private(`call.user.${user.id}`)
+
+    ch.listen('.call.signal', ({ signal_type, data, sender_id }) => {
+      const orderId   = data?.order_id
+      const orderType = data?.order_type
+      if (!orderId || !orderType) return
+
+      // Jangan tampilkan overlay jika user sudah berada di ChatPage order ini
+      const chatPath  = resolveChatPath(user.role, orderType, orderId)
+      const onChat    = locationRef.current.pathname === chatPath
+
+      if (signal_type === 'ring' && !onChat) {
+        setIncoming({ orderId, orderType, senderId: sender_id })
+      }
+
+      if (signal_type === 'offer' && !onChat) {
+        // Buffer SDP agar bisa diambil useVoiceCall saat ChatPage mount
+        storeIncomingCall({ orderId, orderType, offer: data.sdp, senderId: sender_id })
+        setIncoming(prev => prev ?? { orderId, orderType, senderId: sender_id })
+      }
+
+      if (signal_type === 'end') {
+        setIncoming(prev => (String(prev?.orderId) === String(orderId) ? null : prev))
+      }
+    })
+
+    return () => { echo.leave(`call.user.${user.id}`) }
+  }, [user?.id]) // eslint-disable-line
+
+  const handleAnswer = useCallback(() => {
+    if (!incoming) return
+    const path = resolveChatPath(user.role, incoming.orderType, incoming.orderId)
+    navigate(path)
+    setIncoming(null)
+  }, [incoming, user?.role, navigate])
+
+  const handleDecline = useCallback(() => {
+    if (!incoming) return
+    api.post('/call/signal', {
+      order_id:    incoming.orderId,
+      order_type:  incoming.orderType,
+      signal_type: 'end',
+      data:        null,
+    }).catch(() => {})
+    setIncoming(null)
+  }, [incoming])
+
+  if (!incoming) return null
+  return <IncomingCallOverlay onAnswer={handleAnswer} onDecline={handleDecline} />
+}
+
 export default function App() {
   useEffect(() => {
     const unlock = () => { unlockAudio() }
@@ -394,6 +499,7 @@ export default function App() {
       <AuthProvider>
         <MitraGpsProvider>
           <NotifBridge />
+          <VoiceCallBridge />
           <AppRoutes />
           <ApkPopup />
         </MitraGpsProvider>

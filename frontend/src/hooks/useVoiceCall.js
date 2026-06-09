@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import echo from '../services/echo'
 import api from '../services/api'
+import { popIncomingCall } from '../services/callBuffer'
 
 // Plugin lokal untuk meminta izin RECORD_AUDIO lewat Android API
 // Hanya dipakai di Android native, web/iOS pakai getUserMedia langsung
@@ -56,6 +57,17 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
   const startingRef        = useRef(false)  // lock agar double-tap tidak trigger dua kali
 
   const channelName = `call.${orderType}.${orderId}`
+
+  // Jika user baru masuk ChatPage setelah menerima ring via VoiceCallBridge,
+  // offer SDP sudah di-buffer — ambil dan set langsung tanpa tunggu order channel
+  useEffect(() => {
+    if (!orderId) return
+    const buffered = popIncomingCall()
+    if (buffered && String(buffered.orderId) === String(orderId) && buffered.orderType === orderType) {
+      if (buffered.offer) pendingOfferRef.current = buffered.offer
+      setCallState('ringing')
+    }
+  }, []) // eslint-disable-line — hanya saat mount
 
   const sendSignal = useCallback(async (signalType, data = null) => {
     try {

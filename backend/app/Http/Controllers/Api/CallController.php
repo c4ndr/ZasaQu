@@ -41,6 +41,29 @@ class CallController extends Controller
             $user->id,
         ));
 
+        // ring/offer/end juga dikirim ke channel personal penerima agar bisa diterima
+        // meski penerima tidak sedang berada di halaman ChatPage
+        $receiverId = ($order->customer_id === $user->id)
+            ? $order->mitra_id
+            : $order->customer_id;
+
+        if ($receiverId && in_array($data['signal_type'], ['ring', 'offer', 'end'])) {
+            $ctxData = [
+                'order_id'   => $data['order_id'],
+                'order_type' => $data['order_type'],
+            ];
+            // Sertakan SDP offer agar callee tidak perlu berlangganan order channel dulu
+            if ($data['signal_type'] === 'offer') {
+                $ctxData['sdp'] = $data['data'];
+            }
+            broadcast(new CallSignal(
+                "call.user.{$receiverId}",
+                $data['signal_type'],
+                $ctxData,
+                $user->id,
+            ));
+        }
+
         return response()->json(['ok' => true]);
     }
 
