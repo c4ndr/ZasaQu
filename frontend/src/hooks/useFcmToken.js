@@ -1,13 +1,15 @@
 import { useEffect } from 'react'
 import api from '../services/api'
+import { isNative } from '../utils/nativePlatform'
 
 const FCM_SW_PATH = '/firebase-messaging-sw.js'
 
-// Daftarkan FCM token ke backend setelah login.
-// Membutuhkan VITE_FIREBASE_VAPID_KEY dan VITE_FIREBASE_CONFIG di .env frontend.
+// Daftarkan FCM token ke backend setelah login (browser saja).
+// Native Android pakai Capacitor PushNotifications di nativePlatform.js.
 export default function useFcmToken(user) {
   useEffect(() => {
     if (!user) return
+    if (isNative) return   // native pakai Capacitor PushNotifications
 
     const vapidKey    = import.meta.env.VITE_FIREBASE_VAPID_KEY
     const firebaseConfig = import.meta.env.VITE_FIREBASE_CONFIG

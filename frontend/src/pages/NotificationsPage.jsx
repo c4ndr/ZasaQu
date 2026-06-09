@@ -29,6 +29,9 @@ const TYPE_ICON = {
   food_rating_request:        '⭐',
   food_jastip_session_closed: '🔴',
   mitra_gps_lost:             '📡',
+  mart_mitra_accepted:        '🛵',
+  mart_status_on_delivery:    '🚀',
+  mart_status_completed:      '🛒',
 }
 
 const TYPE_COLOR = {
@@ -56,6 +59,9 @@ const TYPE_COLOR = {
   food_rating_request:        '#F6AD55',
   food_jastip_session_closed: '#F56565',
   mitra_gps_lost:             '#F6AD55',
+  mart_mitra_accepted:        '#7C3AED',
+  mart_status_on_delivery:    '#7C3AED',
+  mart_status_completed:      '#7C3AED',
 }
 
 function formatTime(dateStr) {
@@ -106,9 +112,10 @@ export default function NotificationsPage() {
       if (isMitra)    return '/mitra/food/orders'
     }
     // Navigasi berbasis data
-    if (notif.data?.food_order_id) return `/food/orders/${notif.data.food_order_id}`
-    if (notif.data?.order_id)      return `/orders/${notif.data.order_id}/tracking`
-    if (notif.data?.order_number)  return '/orders'
+    if (notif.data?.food_order_id)              return `/food/orders/${notif.data.food_order_id}`
+    if (notif.data?.module === 'zasamart' && notif.data?.order_id) return `/mart/orders/${notif.data.order_id}`
+    if (notif.data?.order_id)                   return `/orders/${notif.data.order_id}/tracking`
+    if (notif.data?.order_number)               return '/orders'
     return null
   }
 

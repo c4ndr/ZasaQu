@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import ApkPopup from './components/ApkPopup'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import useFcmToken from './hooks/useFcmToken'
 import { useJsApiLoader } from '@react-google-maps/api'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
@@ -310,24 +311,81 @@ function AppRoutes() {
   )
 }
 
+// Navigasi URL dari data notifikasi FCM
+function resolveNotifUrl(data = {}) {
+  const { type = '', order_id, module } = data
+  if (type.startsWith('food_') || module === 'zasafood')   return order_id ? `/food/orders/${order_id}`  : '/food/orders'
+  if (type.startsWith('mart_') || module === 'zasamart')   return order_id ? `/mart/orders/${order_id}`  : '/mart/orders'
+  if (order_id) return `/orders/${order_id}/tracking`
+  return '/notifications'
+}
+
+// Banner notifikasi foreground (native Android — FCM tidak auto-show saat app buka)
+function ForegroundBanner({ notif, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 5000)
+    return () => clearTimeout(t)
+  }, [onClose])
+  if (!notif) return null
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10000,
+      background: 'linear-gradient(135deg, #1A1A2E, #16213E)',
+      borderBottom: '2px solid var(--k-accent)',
+      padding: '14px 18px', cursor: 'pointer',
+      display: 'flex', alignItems: 'center', gap: 12,
+      boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+      animation: 'slideDownNotif 0.3s ease',
+    }}>
+      <style>{`@keyframes slideDownNotif { from{transform:translateY(-100%)} to{transform:translateY(0)} }`}</style>
+      <span style={{ fontSize: 24 }}>{notif.data?.emoji ?? '🔔'}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 2 }}>{notif.title}</p>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{notif.body}</p>
+      </div>
+      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }}>×</span>
+    </div>
+  )
+}
+
+// Jembatan notifikasi — dipasang di dalam AuthProvider agar bisa akses user
+function NotifBridge() {
+  const { user } = useAuth()
+  const navigate  = useNavigate()
+  const [foregroundNotif, setForegroundNotif] = useState(null)
+
+  // Web push: daftarkan FCM token (hanya browser, bukan native)
+  useFcmToken(user)
+
+  useEffect(() => {
+    if (!isNative) return
+
+    initPushNotifications({
+      onForeground: (notif) => {
+        // Di foreground, tampilkan banner manual (FCM tidak auto-show)
+        setForegroundNotif(notif)
+      },
+      onTap: (notif) => {
+        // User tap notif dari background/killed — navigasi ke halaman relevan
+        const url = resolveNotifUrl(notif?.data ?? {})
+        navigate(url)
+      },
+    }).catch(() => {})
+  }, [navigate])
+
+  return (
+    <ForegroundBanner
+      notif={foregroundNotif}
+      onClose={() => setForegroundNotif(null)}
+    />
+  )
+}
+
 export default function App() {
   useEffect(() => {
     const unlock = () => { unlockAudio() }
     window.addEventListener('touchstart', unlock, { once: true })
     window.addEventListener('click',      unlock, { once: true })
-
-    // Init Capacitor native features (hanya di APK Android/iOS)
-    if (isNative) {
-      initPushNotifications({
-        onForeground: (notif) => {
-          // Notif masuk saat app terbuka — bunyi sudah ditangani Capacitor
-          console.log('Push foreground:', notif.title)
-        },
-        onTap: (notif) => {
-          // User tap notif dari luar app — navigasi ditangani di NotificationsPage
-        },
-      }).catch(() => {})
-    }
   }, [])
 
   return (
@@ -335,6 +393,7 @@ export default function App() {
       <ThemeInitializer />
       <AuthProvider>
         <MitraGpsProvider>
+          <NotifBridge />
           <AppRoutes />
           <ApkPopup />
         </MitraGpsProvider>
