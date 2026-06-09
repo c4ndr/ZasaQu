@@ -302,25 +302,32 @@ class FoodOrderService
                 throw new \Exception("Transisi status dari {$locked->status} ke {$newStatus} tidak valid.");
             }
 
+            // Auto-complete: mitra selesaikan → langsung completed, tidak perlu konfirmasi customer
+            $actualStatus = $newStatus === 'delivered' ? 'completed' : $newStatus;
+
             $timestamps = [
-                'picked_up'   => ['picked_up_at'   => now()],
-                'on_delivery' => ['on_delivery_at'  => now()],
-                'delivered'   => ['delivered_at'    => now()],
+                'picked_up'   => ['picked_up_at'  => now()],
+                'on_delivery' => ['on_delivery_at' => now()],
+                'completed'   => ['delivered_at'  => now(), 'completed_at' => now()],
             ];
 
             $prevStatus = $locked->status;
-            $locked->update(array_merge(['status' => $newStatus], $timestamps[$newStatus] ?? []));
+            $locked->update(array_merge(['status' => $actualStatus], $timestamps[$actualStatus] ?? []));
+
+            if ($actualStatus === 'completed') {
+                $this->settleWallet($locked);
+            }
 
             broadcast(new FoodOrderStatusUpdated($locked->fresh(), $prevStatus))->toOthers();
 
             $notifs = [
-                'picked_up'   => ['food_picked_up',  'Pesanan Diambil', "Mitra sudah mengambil pesanan #{$locked->order_number} dari merchant."],
-                'on_delivery' => ['food_on_delivery', 'Pesanan Dalam Perjalanan', "Pesanan #{$locked->order_number} sedang diantar ke lokasimu."],
-                'delivered'   => ['food_delivered',   'Pesanan Tiba!', "Pesanan #{$locked->order_number} sudah diantar. Konfirmasi terima dalam 2 jam."],
+                'picked_up'   => ['food_picked_up',  'Pesanan Diambil',           "Mitra sudah mengambil pesanan #{$locked->order_number} dari merchant."],
+                'on_delivery' => ['food_on_delivery', 'Pesanan Dalam Perjalanan',  "Pesanan #{$locked->order_number} sedang diantar ke lokasimu."],
+                'completed'   => ['food_completed',   'Pesanan Selesai!',          "Pesanan #{$locked->order_number} sudah diantar dan selesai."],
             ];
 
-            if (isset($notifs[$newStatus])) {
-                [$type, $title, $body] = $notifs[$newStatus];
+            if (isset($notifs[$actualStatus])) {
+                [$type, $title, $body] = $notifs[$actualStatus];
                 $this->notifService->send(
                     $locked->customer, $type, $title, $body,
                     ['food_order_id' => $locked->id, 'order_number' => $locked->order_number]

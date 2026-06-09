@@ -7,6 +7,7 @@ use App\Models\AdminSetting;
 use App\Models\MartOrder;
 use App\Models\Wallet;
 use App\Services\NotificationService;
+use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -132,23 +133,57 @@ class MitraMartController extends Controller
             return response()->json(['message' => "Tidak bisa update dari {$order->status} ke {$data['status']}."], 422);
         }
 
+        // Auto-complete: mitra selesaikan → langsung completed, tidak perlu konfirmasi customer
+        $actualStatus = $data['status'] === 'delivered' ? 'completed' : $data['status'];
+
         $timestamps = [
             'on_delivery' => [],
-            'delivered'   => ['delivered_at' => now()],
+            'completed'   => ['delivered_at' => now(), 'completed_at' => now()],
         ];
 
-        $order->update(array_merge(['status' => $data['status']], $timestamps[$data['status']] ?? []));
+        DB::transaction(function () use ($order, $actualStatus, $timestamps, $mitra) {
+            $locked = MartOrder::lockForUpdate()->findOrFail($order->id);
+            $locked->update(array_merge(['status' => $actualStatus], $timestamps[$actualStatus] ?? []));
 
-        // Notifikasi
+            if ($actualStatus === 'completed') {
+                $sellerUser = $locked->seller?->user;
+
+                if ($locked->payment_method === 'wallet') {
+                    if ($sellerUser && $locked->seller_income > 0) {
+                        app(WalletService::class)->credit(
+                            $sellerUser,
+                            $locked->seller_income,
+                            'order_income',
+                            "Pendapatan ZasaMart #{$locked->order_number}",
+                            $locked,
+                            'zasamart'
+                        );
+                    }
+                } else {
+                    // COD: debit komisi platform dari wallet mitra
+                    if ($locked->platform_commission > 0) {
+                        app(WalletService::class)->debitForce(
+                            $mitra,
+                            $locked->platform_commission,
+                            'platform_commission',
+                            "Komisi platform COD ZasaMart #{$locked->order_number}",
+                            $locked,
+                            'zasamart'
+                        );
+                    }
+                }
+            }
+        });
+
         $msgs = [
-            'on_delivery' => ['Pesanan dikirim 🚀', "Kurir sedang mengantarkan pesanan {$order->order_number}."],
-            'delivered'   => ['Pesanan tiba! 🎉', "Pesanan {$order->order_number} sudah diterima. Jangan lupa konfirmasi!"],
+            'on_delivery' => ['Pesanan dikirim 🚀',  "Kurir sedang mengantarkan pesanan {$order->order_number}."],
+            'completed'   => ['Pesanan selesai! 🎉', "Pesanan {$order->order_number} sudah diantar dan selesai."],
         ];
-        if (isset($msgs[$data['status']]) && $order->customer) {
-            [$title, $body] = $msgs[$data['status']];
+        if (isset($msgs[$actualStatus]) && $order->customer) {
+            [$title, $body] = $msgs[$actualStatus];
             app(NotificationService::class)->send(
                 $order->customer,
-                'mart_status_' . $data['status'],
+                'mart_status_' . $actualStatus,
                 $title, $body,
                 ['order_id' => $order->id, 'module' => 'zasamart']
             );

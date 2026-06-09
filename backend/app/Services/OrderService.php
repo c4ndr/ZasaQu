@@ -221,6 +221,12 @@ class OrderService
             }
         }
 
+        // Auto-complete: mitra menandai selesai → langsung completed, tidak perlu konfirmasi customer
+        $requestedStatus = $newStatus;
+        if ($newStatus === 'delivered') {
+            $newStatus = 'completed';
+        }
+
         $timestamps = [
             'on_pickup'   => 'on_pickup_at',
             'picked_up'   => 'picked_up_at',
@@ -229,19 +235,23 @@ class OrderService
             'completed'   => 'completed_at',
         ];
 
-        $prevStatus = DB::transaction(function () use ($order, $newStatus, $timestamps) {
+        $prevStatus = DB::transaction(function () use ($order, $requestedStatus, $newStatus, $timestamps) {
             // Lock baris order agar concurrent request (mis. mitra double-tap + admin force-complete)
             // tidak bisa keduanya lolos validasi status dan double-trigger finalizeOrder
             $locked = Order::lockForUpdate()->findOrFail($order->id);
 
             $allowed = $this->allowedNextStatus($locked->status);
-            if (!in_array($newStatus, $allowed)) {
-                throw new \Exception("Tidak bisa ubah status dari '{$locked->status}' ke '{$newStatus}'.");
+            if (!in_array($requestedStatus, $allowed)) {
+                throw new \Exception("Tidak bisa ubah status dari '{$locked->status}' ke '{$requestedStatus}'.");
             }
 
             $updateData = ['status' => $newStatus];
             if (!empty($timestamps[$newStatus])) {
                 $updateData[$timestamps[$newStatus]] = now();
+            }
+            // Jika skip delivered → completed, isi delivered_at juga
+            if ($requestedStatus === 'delivered' && $newStatus === 'completed') {
+                $updateData['delivered_at'] = now();
             }
 
             $prev = $locked->status;
@@ -265,7 +275,6 @@ class OrderService
             'on_pickup'   => $this->notifService->orderOnPickup($customer, $order->order_number, $order->id),
             'picked_up'   => $this->notifService->orderPickedUp($customer, $order->order_number, $order->id),
             'on_delivery' => $this->notifService->orderOnDelivery($customer, $order->order_number, $order->id),
-            'delivered'   => $this->notifService->orderDelivered($customer, $order->order_number, $order->id),
             'completed'   => $this->notifService->orderCompleted($customer, $order->mitra, $order->order_number, $order->id),
             default       => null,
         };
