@@ -669,7 +669,12 @@ function ActiveCard({ order, onUpdate, onRefresh, loading, hasUnreadChat, gpsLoc
           {/* Footer */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ChatButton to={`/mitra/orders/${order.id}/chat`} hasUnread={hasUnreadChat} size={40} />
+              <ChatButton
+                to={`/mitra/orders/${order.id}/chat`}
+                state={{ otherName: order.customer?.name }}
+                hasUnread={hasUnreadChat}
+                size={40}
+              />
             </div>
             {STATUS_NEXT[order.status] && (
               <button

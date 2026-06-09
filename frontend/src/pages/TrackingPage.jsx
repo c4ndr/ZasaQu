@@ -342,13 +342,11 @@ export default function TrackingPage() {
           }} title={follow ? 'Berhenti ikuti mitra' : 'Ikuti mitra'}>🎯</button>
 
           {order.mitra && (
-            <Link to={`/orders/${id}/chat`} style={{
-              width: 40, height: 40, borderRadius: 12,
-              background: 'linear-gradient(135deg, #00C896, #00A87D)',
-              boxShadow: '0 4px 16px rgba(0,200,150,0.45)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              textDecoration: 'none', fontSize: 20,
-            }}>💬</Link>
+            <Link
+              to={`/orders/${id}/chat`}
+              state={{ otherName: order.mitra?.name }}
+              style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#00C896,#00A87D)', boxShadow: '0 4px 16px rgba(0,200,150,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', fontSize: 20 }}
+            >💬</Link>
           )}
         </div>
       </nav>

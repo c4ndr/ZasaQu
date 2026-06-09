@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import Map, { Marker } from 'react-map-gl/maplibre'
 import { SATELLITE_STYLE } from '../../utils/mapStyle'
 import { fitPoints, distanceMeter } from '../../utils/geo'
@@ -377,18 +378,19 @@ export default function MitraMartOrdersPage() {
                             </div>
                           </div>
 
-                          {/* Info customer + telepon */}
-                          {(order.delivery_phone || order.customer?.phone) && (
+                          {/* Info customer + tombol chat */}
+                          {order.customer && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'var(--k-input)', border: '1px solid var(--k-border)', marginBottom: 14 }}>
                               <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>👤</div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontWeight: 700, fontSize: 13 }}>{order.delivery_name || order.customer?.name || 'Customer'}</div>
-                                <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>{order.delivery_phone || order.customer?.phone}</div>
+                                <div style={{ fontSize: 11, color: 'var(--k-sub)' }}>Pelanggan</div>
                               </div>
-                              <a href={`tel:${order.delivery_phone || order.customer?.phone}`}
-                                style={{ padding: '8px 14px', borderRadius: 10, background: 'rgba(0,200,150,0.12)', color: '#027A48', fontSize: 13, fontWeight: 700, textDecoration: 'none', border: '1px solid rgba(0,200,150,0.25)', flexShrink: 0 }}>
-                                📞 Telepon
-                              </a>
+                              <Link
+                                to={`/mitra/mart/orders/${order.id}/chat`}
+                                state={{ otherName: order.delivery_name || order.customer?.name }}
+                                style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(0,200,150,0.12)', border: '1px solid rgba(0,200,150,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, textDecoration: 'none', flexShrink: 0 }}
+                              >💬</Link>
                             </div>
                           )}
 

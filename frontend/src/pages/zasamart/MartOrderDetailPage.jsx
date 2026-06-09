@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import api from '../../services/api'
 
 const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
@@ -124,6 +124,22 @@ export default function MartOrderDetailPage() {
             </div>
           ))}
         </div>
+
+        {/* Kurir (mitra) — tampil saat sudah ada mitra dan sedang proses pengiriman */}
+        {order.mitra && ['picking_up','on_delivery','delivered'].includes(order.status) && (
+          <div style={{ background: 'var(--k-card)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--k-border)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(99,102,241,0.1)', border: '1.5px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🛵</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)' }}>{order.mitra?.name ?? 'Kurir'}</p>
+              <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>Kurir ZasaShop</p>
+            </div>
+            <Link
+              to={`/mart/orders/${id}/chat`}
+              state={{ otherName: order.mitra?.name }}
+              style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, textDecoration: 'none' }}
+            >💬</Link>
+          </div>
+        )}
 
         {/* Delivery */}
         <div style={{ background: 'var(--k-card)', borderRadius: 14, padding: '14px', border: '1px solid var(--k-border)', marginBottom: 14 }}>

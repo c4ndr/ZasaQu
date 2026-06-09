@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 
 // Tombol chat yang menonjol dengan badge notifikasi
-export default function ChatButton({ to, hasUnread = false, size = 40 }) {
+export default function ChatButton({ to, state, hasUnread = false, size = 40 }) {
   return (
-    <Link to={to} style={{
+    <Link to={to} state={state} style={{
       position: 'relative',
       width: size, height: size, borderRadius: 13, flexShrink: 0,
       background: hasUnread

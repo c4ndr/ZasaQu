@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import Map, { Marker } from 'react-map-gl/maplibre'
 import { OSM_STYLE } from '../../utils/mapStyle'
 import { fitPoints, distanceMeter } from '../../utils/geo'
@@ -397,16 +397,19 @@ export default function FoodTrackingPage() {
           {order.mitra && ['mitra_on_pickup','picked_up','on_delivery','delivered'].includes(order.status) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14 }}>
               <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(249,115,22,0.12)', border: '1.5px solid rgba(249,115,22,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🏍️</div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)' }}>{order.mitra?.name ?? 'Mitra'}</p>
                 <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{order.mitra?.role === 'mitra_motor' ? 'Motor' : 'Mobil'} · Mitra Delivery</p>
+                {distToTarget !== null && (
+                  <p style={{ fontSize: 11, fontWeight: 700, color: '#F97316', marginTop: 2 }}>{fmtDist(distToTarget)} dari Anda</p>
+                )}
               </div>
-              {distToTarget !== null && (
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: '#F97316' }}>{fmtDist(distToTarget)}</p>
-                  <p style={{ fontSize: 10, color: 'var(--k-muted)' }}>dari lokasi Anda</p>
-                </div>
-              )}
+              {/* Tombol chat */}
+              <Link
+                to={`/food/orders/${id}/chat`}
+                state={{ otherName: order.mitra?.name }}
+                style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, textDecoration: 'none' }}
+              >💬</Link>
             </div>
           )}
 

@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useParams, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import useChatRoom from '../hooks/useChatRoom'
+import useVoiceCall from '../hooks/useVoiceCall'
+import CallModal from '../components/CallModal'
 
 function formatTime(d) {
   return new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
@@ -172,13 +174,27 @@ function playNotif() {
   } catch {}
 }
 
+// Derive orderType + backTo dari pathname
+function deriveContext(pathname, orderId) {
+  const p = pathname
+  if (p.startsWith('/mitra/food/')) return { orderType: 'zasafood', isMitra: true,  backTo: '/mitra/food/orders' }
+  if (p.startsWith('/mitra/mart/')) return { orderType: 'zasamart', isMitra: true,  backTo: '/mitra/mart/orders' }
+  if (p.startsWith('/mitra/'))     return { orderType: 'zasago',   isMitra: true,  backTo: '/mitra/orders' }
+  if (p.startsWith('/food/'))      return { orderType: 'zasafood', isMitra: false, backTo: `/food/orders/${orderId}` }
+  if (p.startsWith('/mart/'))      return { orderType: 'zasamart', isMitra: false, backTo: `/mart/orders/${orderId}` }
+  return                                   { orderType: 'zasago',   isMitra: false, backTo: `/orders/${orderId}/tracking` }
+}
+
 export default function ChatPage() {
   const { id: orderId } = useParams()
   const { user }        = useAuth()
   const location        = useLocation()
-  const isMitra         = location.pathname.startsWith('/mitra/')
-  const backTo          = isMitra ? '/mitra/orders' : `/orders/${orderId}/tracking`
-  const { room, messages, templates, loading, sendMessage, suspended } = useChatRoom(orderId)
+  const { orderType, backTo } = deriveContext(location.pathname, orderId)
+  const otherName = location.state?.otherName ?? null
+
+  const { room, messages, templates, loading, sendMessage, suspended } = useChatRoom(orderId, orderType)
+  const { callState, isMuted, duration, remoteAudio, startCall, answerCall, endCall, toggleMute } =
+    useVoiceCall(orderId, orderType, user?.id)
 
   const [input,         setInput]         = useState('')
   const [sending,       setSending]       = useState(false)
@@ -284,16 +300,33 @@ export default function ChatPage() {
           </p>
         </div>
 
-        {/* Badge keamanan */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          padding: '5px 10px', borderRadius: 100, flexShrink: 0,
-          background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.2)',
-        }}>
-          <span style={{ fontSize: 12 }}>🔒</span>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-accent)' }}>Aman</span>
-        </div>
+        {/* Tombol telepon in-app */}
+        <button
+          onClick={callState === 'idle' ? startCall : endCall}
+          style={{
+            width: 38, height: 38, borderRadius: 12, flexShrink: 0, border: 'none',
+            background: callState !== 'idle'
+              ? 'linear-gradient(135deg,#EF4444,#DC2626)'
+              : 'rgba(0,200,150,0.12)',
+            border: '1px solid ' + (callState !== 'idle' ? 'transparent' : 'rgba(0,200,150,0.25)'),
+            cursor: 'pointer', fontSize: 18,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          {callState !== 'idle' ? '📵' : '📞'}
+        </button>
       </nav>
+
+      <CallModal
+        callState={callState}
+        isMuted={isMuted}
+        duration={duration}
+        remoteAudio={remoteAudio}
+        otherName={otherName}
+        onAnswer={() => {}}
+        onEnd={endCall}
+        onMute={toggleMute}
+      />
 
       {/* ── Warning banner ── */}
       {warning && (

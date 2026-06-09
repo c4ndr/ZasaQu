@@ -12,9 +12,9 @@ function isActive(order, module) {
   return false
 }
 
-async function fetchModule(endpoint, module, features) {
+async function fetchModule(endpoint, module, params = {}) {
   try {
-    const r = await api.get(endpoint, { params: { per_page: 10 } })
+    const r = await api.get(endpoint, { params: { per_page: 20, ...params } })
     const orders = r.data?.data ?? r.data ?? []
     return orders
       .filter(o => isActive(o, module))
@@ -28,9 +28,9 @@ export default function useActiveOrders(enabled = true, features = {}) {
   const load = useCallback(async () => {
     if (!enabled) { setOrders([]); return }
     const results = await Promise.all([
-      features?.zasago  !== false ? fetchModule('/orders', 'zasago', features)    : [],
-      features?.zasafood !== false ? fetchModule('/food/orders', 'zasafood', features) : [],
-      features?.zasamart !== false ? fetchModule('/mart/orders', 'zasamart', features) : [],
+      features?.zasago  !== false ? fetchModule('/orders', 'zasago')                              : [],
+      features?.zasafood !== false ? fetchModule('/food/orders', 'zasafood', { active_only: 1 }) : [],
+      features?.zasamart !== false ? fetchModule('/mart/orders', 'zasamart')                      : [],
     ])
     setOrders(results.flat())
   }, [enabled, features?.zasago, features?.zasafood, features?.zasamart]) // eslint-disable-line

@@ -222,6 +222,10 @@ function AppRoutes() {
       <Route path="/orders/:id/tracking" element={<PrivateRoute><TrackingPage /></PrivateRoute>} />
       <Route path="/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/mitra/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/food/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/mitra/food/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/mart/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/mitra/mart/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/jastip" element={<PrivateRoute><JastipPage /></PrivateRoute>} />
       <Route path="/mitra/jastip" element={<PrivateRoute><MitraJastipPage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />

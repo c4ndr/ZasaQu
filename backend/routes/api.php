@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Mitra\OnboardingController as MitraOnboardingContro
 use App\Http\Controllers\Api\Mitra\OrderController as MitraOrderController;
 use App\Http\Controllers\Api\Mitra\GpsController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\CallController;
 use App\Http\Controllers\Api\Admin\TopUpController as AdminTopUpController;
 use App\Http\Controllers\Api\Admin\WithdrawController as AdminWithdrawController;
 use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
@@ -182,6 +183,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('rooms/{roomId}/messages', [ChatController::class, 'sendMessage']);
         Route::get('templates', [ChatController::class, 'templates']);
     });
+
+    // Voice call — WebRTC signaling relay (tanpa expose nomor HP)
+    Route::post('call/signal', [CallController::class, 'signal']);
 
     // Onboarding mitra (boleh diakses pending_review)
     Route::prefix('mitra/onboarding')->middleware('role:mitra_motor,mitra_mobil')->group(function () {

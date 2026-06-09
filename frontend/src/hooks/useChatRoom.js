@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import echo from '../services/echo'
 import api from '../services/api'
 
-export default function useChatRoom(orderId) {
+export default function useChatRoom(orderId, orderType = 'zasago') {
   const [room,      setRoom]      = useState(null)
   const [messages,  setMessages]  = useState([])
   const [templates, setTemplates] = useState([])
@@ -15,7 +15,7 @@ export default function useChatRoom(orderId) {
   useEffect(() => {
     if (!orderId) return
     setLoading(true)
-    api.get(`/chat/orders/${orderId}`)
+    api.get(`/chat/orders/${orderId}`, { params: { type: orderType } })
       .then(r => {
         setRoom(r.data.room)
         setMessages(r.data.messages)
@@ -25,7 +25,7 @@ export default function useChatRoom(orderId) {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [orderId])
+  }, [orderId, orderType]) // eslint-disable-line
 
   // Subscribe WebSocket real-time
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function useChatRoom(orderId) {
     const timer = setInterval(() => {
       const r = roomRef.current
       if (!r) return
-      api.get(`/chat/orders/${orderId}`)
+      api.get(`/chat/orders/${orderId}`, { params: { type: orderType } })
         .then(res => {
           setMessages(prev => {
             const existingIds = new Set(prev.map(m => m.id))
@@ -55,7 +55,7 @@ export default function useChatRoom(orderId) {
         .catch(() => {})
     }, 5000)
     return () => clearInterval(timer)
-  }, [orderId])
+  }, [orderId, orderType]) // eslint-disable-line
 
   const sendMessage = async (content, type = 'text') => {
     if (!room || !content.trim()) return null

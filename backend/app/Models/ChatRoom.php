@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ChatRoom extends Model
 {
-    protected $fillable = ['order_id', 'violation_count', 'is_suspended', 'suspended_at'];
+    protected $fillable = ['order_id', 'order_type', 'violation_count', 'is_suspended', 'suspended_at'];
 
     protected function casts(): array
     {
@@ -14,6 +14,16 @@ class ChatRoom extends Model
     }
 
     public function order()    { return $this->belongsTo(Order::class); }
+
+    /** Ambil instance order lintas modul tanpa FK constraint */
+    public function resolveOrder(): ?\Illuminate\Database\Eloquent\Model
+    {
+        return match($this->order_type) {
+            'zasafood' => \App\Models\FoodOrder::with(['customer', 'mitra'])->find($this->order_id),
+            'zasamart' => \App\Models\MartOrder::with(['customer', 'mitra'])->find($this->order_id),
+            default    => \App\Models\Order::with(['customer', 'mitra'])->find($this->order_id),
+        };
+    }
     public function messages() { return $this->hasMany(ChatMessage::class, 'room_id')->orderBy('created_at'); }
 
     public function isSuspended(): bool { return $this->is_suspended; }

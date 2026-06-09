@@ -6,6 +6,8 @@ use App\Events\NewChatMessage;
 use App\Http\Controllers\Controller;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
+use App\Models\FoodOrder;
+use App\Models\MartOrder;
 use App\Models\Order;
 use App\Services\NotificationService;
 use App\Services\PhoneDetectionService;
@@ -15,7 +17,6 @@ use Illuminate\Http\Request;
 
 class ChatController extends Controller
 {
-    // Template pesan siap pakai
     const TEMPLATES = [
         ['id' => 1, 'text' => 'Saya sudah menuju lokasi pickup.'],
         ['id' => 2, 'text' => 'Barang sudah diambil, sedang dalam perjalanan.'],
@@ -33,16 +34,27 @@ class ChatController extends Controller
         private NotificationService   $notifService,
     ) {}
 
+    /** Resolve order lintas modul berdasarkan type */
+    private function resolveOrder(int $orderId, string $type): \Illuminate\Database\Eloquent\Model
+    {
+        return match($type) {
+            'zasafood' => FoodOrder::with(['customer', 'mitra'])->findOrFail($orderId),
+            'zasamart' => MartOrder::with(['customer', 'mitra'])->findOrFail($orderId),
+            default    => Order::with(['customer', 'mitra'])->findOrFail($orderId),
+        };
+    }
+
     public function getOrCreateRoom(int $orderId, Request $request): JsonResponse
     {
-        $order = Order::findOrFail($orderId);
+        $type  = $request->get('type', 'zasago');
+        $order = $this->resolveOrder($orderId, $type);
         $user  = $request->user();
 
         if ($order->customer_id !== $user->id && $order->mitra_id !== $user->id) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        $room = ChatRoom::firstOrCreate(['order_id' => $orderId]);
+        $room = ChatRoom::firstOrCreate(['order_id' => $orderId, 'order_type' => $type]);
 
         return response()->json([
             'room'           => $room,
@@ -54,18 +66,17 @@ class ChatController extends Controller
 
     public function sendMessage(Request $request, int $roomId): JsonResponse
     {
-        $room = ChatRoom::findOrFail($roomId);
-        $user = $request->user();
-        $order = $room->order;
+        $room  = ChatRoom::findOrFail($roomId);
+        $user  = $request->user();
+        $order = $this->resolveOrder($room->order_id, $room->order_type ?? 'zasago');
 
         if ($order->customer_id !== $user->id && $order->mitra_id !== $user->id) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        // Cek apakah chat room sudah disuspend
         if ($room->isSuspended()) {
             return response()->json([
-                'message' => 'Chat room ini disuspend karena pelanggaran berulang. Hubungi admin.',
+                'message'        => 'Chat room ini disuspend karena pelanggaran berulang. Hubungi admin.',
                 'room_suspended' => true,
             ], 403);
         }
@@ -81,17 +92,14 @@ class ChatController extends Controller
         $blockedReason = null;
         $violation     = null;
 
-        // Deteksi nomor HP / link bypass
         if ($type !== 'template' && $this->phoneDetector->containsPhone($content)) {
             $isBlocked     = true;
             $blockedReason = $this->phoneDetector->getReason($content);
             $violation     = $this->violationService->record($user);
 
-            // Eskalasi pelanggaran di room ini
             $room->increment('violation_count');
             $room->refresh();
 
-            // Suspend room setelah 5 pelanggaran kumulatif
             if ($room->violation_count >= 5 && !$room->is_suspended) {
                 $room->update(['is_suspended' => true, 'suspended_at' => now()]);
             }
@@ -108,10 +116,8 @@ class ChatController extends Controller
 
         $message->load('sender:id,name,role');
 
-        // Broadcast ke channel chat room
         broadcast(new NewChatMessage($message));
 
-        // Push notification ke pihak lain (bukan pengirim)
         if (!$isBlocked) {
             $recipient = ($user->id === $order->customer_id) ? $order->mitra : $order->customer;
             if ($recipient) {
@@ -122,10 +128,10 @@ class ChatController extends Controller
         $response = ['message' => 'Pesan terkirim.', 'data' => $message];
 
         if ($isBlocked) {
-            $isSuspendedNow = $room->fresh()->is_suspended;
-            $response['message']      = $isSuspendedNow ? 'Chat disuspend karena pelanggaran berulang.' : 'Pesan diblokir.';
-            $response['warning']      = $violation['message'];
-            $response['violation']    = $violation;
+            $isSuspendedNow        = $room->fresh()->is_suspended;
+            $response['message']   = $isSuspendedNow ? 'Chat disuspend karena pelanggaran berulang.' : 'Pesan diblokir.';
+            $response['warning']   = $violation['message'];
+            $response['violation'] = $violation;
             $response['room_suspended'] = $isSuspendedNow;
         }
 

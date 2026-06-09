@@ -2,6 +2,7 @@
 
 use App\Models\ChatRoom;
 use App\Models\FoodOrder;
+use App\Models\MartOrder;
 use App\Models\Order;
 use Illuminate\Support\Facades\Broadcast;
 
@@ -33,8 +34,20 @@ Broadcast::channel('mitra.{vehicleType}', function ($user, $vehicleType) {
 });
 
 Broadcast::channel('chat.{roomId}', function ($user, $roomId) {
-    $room = ChatRoom::with('order:id,customer_id,mitra_id')->find($roomId);
+    $room = ChatRoom::find($roomId);
     if (!$room) return false;
-    return $user->id === $room->order->customer_id
-        || $user->id === $room->order->mitra_id;
+    $order = $room->resolveOrder();
+    if (!$order) return false;
+    return $user->id === $order->customer_id || $user->id === $order->mitra_id;
+});
+
+// WebRTC call channel — hanya customer & mitra order tersebut
+Broadcast::channel('call.{orderType}.{orderId}', function ($user, $orderType, $orderId) {
+    $order = match($orderType) {
+        'zasafood' => FoodOrder::find($orderId),
+        'zasamart' => MartOrder::find($orderId),
+        default    => Order::find($orderId),
+    };
+    if (!$order) return false;
+    return $user->id === $order->customer_id || $user->id === $order->mitra_id;
 });
