@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import echo from '../services/echo'
 import api from '../services/api'
+
+// Plugin lokal untuk meminta izin RECORD_AUDIO lewat Android API
+// Hanya dipakai di Android native, web/iOS pakai getUserMedia langsung
+const MicrophonePermission = registerPlugin('MicrophonePermission')
 
 const STUN_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -97,6 +102,20 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
   }, [])
 
   const getMic = useCallback(async () => {
+    // Di Android native, minta izin RECORD_AUDIO lewat Capacitor plugin
+    // sebelum getUserMedia agar permission dialog muncul dari OS
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      try {
+        const { granted } = await MicrophonePermission.request()
+        if (!granted) {
+          throw Object.assign(new Error('Permission denied'), { name: 'NotAllowedError' })
+        }
+      } catch (e) {
+        if (e.name === 'NotAllowedError') throw e
+        // Plugin tidak tersedia atau error lain — lanjut ke getUserMedia
+      }
+    }
+
     if (!navigator.mediaDevices?.getUserMedia) {
       throw Object.assign(new Error('mediaDevices not available'), { name: 'NotSupportedError' })
     }
