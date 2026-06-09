@@ -7,9 +7,18 @@ import api from '../services/api'
 // Hanya dipakai di Android native, web/iOS pakai getUserMedia langsung
 const MicrophonePermission = registerPlugin('MicrophonePermission')
 
-const STUN_SERVERS = [
+const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
+  // TURN relay — diperlukan saat kedua pihak di belakang NAT berbeda (jaringan 4G/berbeda ISP)
+  {
+    urls: [
+      'turn:202.73.27.118:3478?transport=udp',
+      'turn:202.73.27.118:3478?transport=tcp',
+    ],
+    username:   'zasaqu',
+    credential: '214017cd3f05c4840e2c9fa69f9a4d94',
+  },
 ]
 
 function parseMicError(err) {
@@ -73,7 +82,7 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
   }, [])
 
   const createPc = useCallback(() => {
-    const pc = new RTCPeerConnection({ iceServers: STUN_SERVERS })
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
 
     pc.onicecandidate = (e) => {
       if (e.candidate) sendSignal('ice-candidate', e.candidate)
