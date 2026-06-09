@@ -333,17 +333,18 @@ export default function ChatPage() {
       {/* ── Error panggilan ── */}
       {callError && (
         <div style={{
-          position: 'fixed', bottom: 80, left: 16, right: 16, zIndex: 999,
-          background: 'rgba(239,68,68,0.95)', borderRadius: 14,
-          padding: '12px 16px',
+          position: 'fixed', top: 70, left: 12, right: 12, zIndex: 9998,
+          background: '#DC2626', borderRadius: 14,
+          padding: '14px 16px',
           display: 'flex', alignItems: 'flex-start', gap: 10,
-          boxShadow: '0 4px 20px rgba(239,68,68,0.3)',
+          boxShadow: '0 8px 30px rgba(239,68,68,0.45)',
         }}>
-          <span style={{ fontSize: 18, flexShrink: 0 }}>🎤</span>
-          <p style={{ color: '#fff', fontSize: 13, lineHeight: 1.5, flex: 1 }}>{callError}</p>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>🎤</span>
+          <p style={{ color: '#fff', fontSize: 13, fontWeight: 600, lineHeight: 1.55, flex: 1 }}>{callError}</p>
           <button onClick={clearCallError} style={{
-            background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)',
-            cursor: 'pointer', fontSize: 18, flexShrink: 0, padding: 0,
+            background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff',
+            cursor: 'pointer', fontSize: 16, fontWeight: 700,
+            flexShrink: 0, padding: '2px 8px', borderRadius: 8,
           }}>×</button>
         </div>
       )}

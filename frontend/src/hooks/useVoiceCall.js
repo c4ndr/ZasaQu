@@ -38,6 +38,7 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
   const isCallerRef        = useRef(false)
   const pendingOfferRef    = useRef(null)   // offer masuk, tunggu user tap Angkat
   const iceCandidateQueue  = useRef([])     // ICE candidates yang datang sebelum remoteDesc di-set
+  const startingRef        = useRef(false)  // lock agar double-tap tidak trigger dua kali
 
   const channelName = `call.${orderType}.${orderId}`
 
@@ -106,7 +107,8 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
 
   /** Mulai panggilan (sebagai caller) */
   const startCall = useCallback(async () => {
-    if (!orderId || callState !== 'idle') return
+    if (!orderId || callState !== 'idle' || startingRef.current) return
+    startingRef.current = true
     setCallError(null)
     try {
       isCallerRef.current = true
@@ -124,6 +126,8 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
     } catch (err) {
       cleanupPc()
       setCallError(parseMicError(err))
+    } finally {
+      startingRef.current = false
     }
   }, [orderId, callState, sendSignal, getMic, createPc, cleanupPc])
 
