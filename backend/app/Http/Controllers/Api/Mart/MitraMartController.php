@@ -57,20 +57,20 @@ class MitraMartController extends Controller
         $mitra = $request->user();
 
         $minBalance = (float) (AdminSetting::where('key', 'wallet_minimum_mitra')->value('value') ?? 0);
-        if ($minBalance > 0) {
-            $wallet    = Wallet::where('user_id', $mitra->id)->first();
-            $available = $wallet ? $wallet->availableBalance() : 0;
-            if ($available < $minBalance) {
-                return response()->json([
-                    'message' => 'Saldo tidak mencukupi untuk menerima pengiriman. '
-                        . 'Minimum: Rp ' . number_format($minBalance, 0, ',', '.') . '. '
-                        . 'Saldo Anda: Rp ' . number_format($available, 0, ',', '.') . '.',
-                ], 422);
-            }
-        }
 
         try {
-            DB::transaction(function () use ($mitra, $id) {
+            DB::transaction(function () use ($mitra, $id, $minBalance) {
+                // Cek saldo minimum dengan lock agar tidak lolos concurrent accept
+                if ($minBalance > 0) {
+                    $wallet    = Wallet::where('user_id', $mitra->id)->lockForUpdate()->first();
+                    $available = $wallet ? $wallet->availableBalance() : 0;
+                    if ($available < $minBalance) {
+                        throw new \Exception('Saldo tidak mencukupi untuk menerima pengiriman. '
+                            . 'Minimum: Rp ' . number_format($minBalance, 0, ',', '.') . '. '
+                            . 'Saldo Anda: Rp ' . number_format($available, 0, ',', '.') . '.');
+                    }
+                }
+
                 // Cek mitra sudah punya order aktif
                 $active = MartOrder::where('mitra_id', $mitra->id)
                     ->whereNotIn('status', ['delivered', 'completed', 'cancelled'])

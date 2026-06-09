@@ -271,17 +271,24 @@ class TopUpController extends Controller
             $status = strtolower($result['Data']['Status'] ?? '');
 
             if ($status === 'berhasil' || $status === 'sukses') {
-                DB::transaction(function () use ($topUp) {
-                    $topUp->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+                $credited = false;
+                DB::transaction(function () use ($topUpId, &$credited) {
+                    // Re-fetch dengan lock agar tidak double-credit jika ada request concurrent
+                    $locked = TopUpRequest::lockForUpdate()->findOrFail($topUpId);
+                    if ($locked->status !== 'pending') return; // sudah diproses
+                    $locked->update(['status' => 'confirmed', 'confirmed_at' => now()]);
                     $this->walletService->credit(
-                        $topUp->user,
-                        (float) $topUp->amount,
+                        $locked->user,
+                        (float) $locked->amount,
                         'top_up',
-                        'Top up via iPaymu (' . strtoupper($topUp->ipaymu_channel) . ')',
-                        $topUp
+                        'Top up via iPaymu (' . strtoupper($locked->ipaymu_channel) . ')',
+                        $locked
                     );
+                    $credited = true;
                 });
-                return response()->json(['status' => 'confirmed', 'message' => 'Pembayaran berhasil.']);
+                if ($credited) {
+                    return response()->json(['status' => 'confirmed', 'message' => 'Pembayaran berhasil.']);
+                }
             }
         }
 
