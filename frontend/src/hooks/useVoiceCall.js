@@ -39,10 +39,11 @@ function parseMicError(err) {
 }
 
 export default function useVoiceCall(orderId, orderType = 'zasago', currentUserId) {
-  const [callState, setCallState] = useState('idle') // idle | ringing | active | ended
-  const [isMuted,   setIsMuted]   = useState(false)
-  const [duration,  setDuration]  = useState(0)
-  const [callError, setCallError] = useState(null)   // pesan error yang ditampilkan ke user
+  const [callState,   setCallState]   = useState('idle') // idle | ringing | active | ended
+  const [isMuted,     setIsMuted]     = useState(false)
+  const [duration,    setDuration]    = useState(0)
+  const [callError,   setCallError]   = useState(null)
+  const [iceState,    setIceState]    = useState('')    // debug: ICE connection state
 
   const pcRef              = useRef(null)
   const localStream        = useRef(null)
@@ -95,8 +96,12 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
       }
     }
 
-    // Gunakan cleanupPc (stable ref) bukan endCall agar tidak stale closure
+    pc.oniceconnectionstatechange = () => {
+      setIceState(pc.iceConnectionState)
+    }
+
     pc.onconnectionstatechange = () => {
+      setIceState(pc.connectionState)
       if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
         cleanupPc()
       }
@@ -152,6 +157,8 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
       await pc.setLocalDescription(offer)
       await sendSignal('offer', offer)
     } catch (err) {
+      // Beritahu callee bahwa panggilan gagal (agar modal-nya tidak stuck)
+      sendSignal('end')
       cleanupPc()
       setCallError(parseMicError(err))
     } finally {
@@ -165,7 +172,10 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
    */
   const answerCall = useCallback(async () => {
     const offer = pendingOfferRef.current
-    if (!offer) return
+    if (!offer) {
+      setCallError('Panggilan tidak diterima dengan benar. Coba minta penelepon untuk menelepon ulang.')
+      return
+    }
     setCallError(null)
     try {
       isCallerRef.current = false
@@ -266,6 +276,7 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
     callState,
     isMuted,
     duration,
+    iceState,
     remoteAudio,
     isCaller: isCallerRef.current,
     callError,

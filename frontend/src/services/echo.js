@@ -9,21 +9,18 @@ const dummy   = { channel: () => noop, private: () => noop, leave: () => {} }
 // Di Capacitor native, window.location adalah file:// — pakai env var eksplisit
 const isNative = !!(window.Capacitor?.isNativePlatform?.())
 
-const wsHost   = isNative
-  ? (import.meta.env.VITE_REVERB_HOST || '202.73.27.118')
-  : window.location.hostname
+const apiBase  = import.meta.env.VITE_API_URL || 'https://zasaqu.uk'
 
-const isHttps  = isNative
-  ? (import.meta.env.VITE_REVERB_SCHEME === 'https')
-  : window.location.protocol === 'https:'
+const wsHost   = import.meta.env.VITE_REVERB_HOST || 'zasaqu.uk'
+const isHttps  = (import.meta.env.VITE_REVERB_SCHEME || 'https') === 'https'
+const wsPort   = parseInt(import.meta.env.VITE_REVERB_PORT || '443')
 
-const wsPort   = isNative
-  ? parseInt(import.meta.env.VITE_REVERB_PORT || '8080')
-  : (window.location.port ? parseInt(window.location.port) : (isHttps ? 443 : 80))
+// authEndpoint harus URL absolut agar bisa dipakai dari native Android (file://)
+const authEndpoint = `${apiBase}/broadcasting/auth`
 
-let instance
-try {
-  instance = new Echo({
+function makeEcho() {
+  const token = localStorage.getItem('token')
+  return new Echo({
     broadcaster:       'reverb',
     key:               import.meta.env.VITE_REVERB_APP_KEY || 'zasaqu-key',
     wsHost,
@@ -32,7 +29,19 @@ try {
     forceTLS:          isHttps,
     enabledTransports: ['ws', 'wss'],
     disableStats:      true,
+    authEndpoint,
+    auth: {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : '',
+        Accept: 'application/json',
+      },
+    },
   })
+}
+
+let instance
+try {
+  instance = makeEcho()
 } catch (e) {
   console.warn('Echo init failed:', e)
   instance = dummy

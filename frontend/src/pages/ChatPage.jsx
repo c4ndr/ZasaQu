@@ -193,7 +193,7 @@ export default function ChatPage() {
   const otherName = location.state?.otherName ?? null
 
   const { room, messages, templates, loading, sendMessage, suspended } = useChatRoom(orderId, orderType)
-  const { callState, isMuted, duration, remoteAudio, isCaller, callError, clearCallError,
+  const { callState, isMuted, duration, iceState, remoteAudio, isCaller, callError, clearCallError,
           startCall, answerCall, endCall, toggleMute } =
     useVoiceCall(orderId, orderType, user?.id)
 
@@ -322,6 +322,7 @@ export default function ChatPage() {
         callState={callState}
         isMuted={isMuted}
         duration={duration}
+        iceState={iceState}
         remoteAudio={remoteAudio}
         otherName={otherName}
         isCaller={isCaller}

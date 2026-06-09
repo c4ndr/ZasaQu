@@ -4,7 +4,7 @@ namespace App\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -12,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
  * Sinyal WebRTC (offer / answer / ice-candidate / end) diteruskan via Reverb.
  * Tidak ada penyimpanan DB — hanya relay real-time antar dua pihak.
  */
-class CallSignal implements ShouldBroadcast
+class CallSignal implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

@@ -10,7 +10,7 @@ function formatDuration(secs) {
  * Modal panggilan suara WebRTC — muncul saat callState !== 'idle'.
  * Tidak menampilkan atau menyimpan nomor telepon.
  */
-export default function CallModal({ callState, isMuted, duration, remoteAudio,
+export default function CallModal({ callState, isMuted, duration, iceState, remoteAudio,
                                     otherName, isCaller, onAnswer, onEnd, onMute }) {
   const audioRef = useRef(null)
 
@@ -113,7 +113,12 @@ export default function CallModal({ callState, isMuted, duration, remoteAudio,
         </button>
       </div>
 
-      <p style={{ marginTop: 24, fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
+      {iceState && (
+        <p style={{ marginTop: 12, fontSize: 11, color: 'rgba(255,255,255,0.45)', textAlign: 'center' }}>
+          ICE: {iceState}
+        </p>
+      )}
+      <p style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
         Panggilan aman — nomor telepon tidak dibagikan
       </p>
     </div>
