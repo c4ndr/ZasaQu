@@ -5,6 +5,9 @@ const DONE_GO   = ['completed', 'cancelled', 'rejected']
 const DONE_FOOD = ['completed', 'cancelled', 'rejected']
 const DONE_MART = ['completed', 'cancelled']
 
+// Cache modul-level: card langsung muncul saat user re-navigate ke dashboard
+let ordersCache = []
+
 function isActive(order, module) {
   if (module === 'zasago')   return !DONE_GO.includes(order.status)
   if (module === 'zasafood') return !DONE_FOOD.includes(order.status)
@@ -14,25 +17,46 @@ function isActive(order, module) {
 
 async function fetchModule(endpoint, module, params = {}) {
   try {
-    const r = await api.get(endpoint, { params: { per_page: 20, ...params } })
+    const r = await api.get(endpoint, { params: { per_page: 50, ...params } })
     const orders = r.data?.data ?? r.data ?? []
     return orders
       .filter(o => isActive(o, module))
       .map(o => ({ ...o, _module: module }))
-  } catch { return [] }
+  } catch {
+    return null  // null = gagal, bukan kosong
+  }
 }
 
 export default function useActiveOrders(enabled = true, features = {}) {
-  const [orders, setOrders] = useState([])
+  const [orders, setOrders] = useState(ordersCache)
 
   const load = useCallback(async () => {
-    if (!enabled) { setOrders([]); return }
+    if (!enabled) {
+      ordersCache = []
+      setOrders([])
+      return
+    }
     const results = await Promise.all([
       features?.zasago  !== false ? fetchModule('/orders', 'zasago')                              : [],
       features?.zasafood !== false ? fetchModule('/food/orders', 'zasafood', { active_only: 1 }) : [],
       features?.zasamart !== false ? fetchModule('/mart/orders', 'zasamart')                      : [],
     ])
-    setOrders(results.flat())
+    // Jika ada modul yang gagal (null), pertahankan cache lama dari modul itu
+    const failed = results.some(r => r === null)
+    if (failed) {
+      // Gabungkan: modul yang berhasil replace, modul yang gagal pakai cache lama
+      const modules = ['zasago', 'zasafood', 'zasamart']
+      const merged = modules.map((mod, i) => {
+        if (results[i] === null) return ordersCache.filter(o => o._module === mod)
+        return results[i]
+      }).flat()
+      ordersCache = merged
+      setOrders(merged)
+    } else {
+      const fresh = results.flat()
+      ordersCache = fresh
+      setOrders(fresh)
+    }
   }, [enabled, features?.zasago, features?.zasafood, features?.zasamart]) // eslint-disable-line
 
   useEffect(() => {
