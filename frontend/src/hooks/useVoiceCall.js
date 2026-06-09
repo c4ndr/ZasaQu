@@ -7,10 +7,28 @@ const STUN_SERVERS = [
   { urls: 'stun:stun1.l.google.com:19302' },
 ]
 
+function parseMicError(err) {
+  const name = err?.name ?? ''
+  if (!navigator.mediaDevices?.getUserMedia || name === 'NotSupportedError') {
+    return 'Mikrofon tidak bisa diakses. Pastikan app berjalan lewat HTTPS/localhost.'
+  }
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    return 'Izin mikrofon ditolak. Buka Pengaturan → Aplikasi → ZasaQu → Izin → aktifkan Mikrofon.'
+  }
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return 'Mikrofon tidak ditemukan di perangkat ini.'
+  }
+  if (name === 'NotReadableError' || name === 'TrackStartError') {
+    return 'Mikrofon sedang dipakai aplikasi lain.'
+  }
+  return `Gagal mengakses mikrofon: ${name || err?.message || 'error tidak diketahui'}`
+}
+
 export default function useVoiceCall(orderId, orderType = 'zasago', currentUserId) {
   const [callState, setCallState] = useState('idle') // idle | ringing | active | ended
   const [isMuted,   setIsMuted]   = useState(false)
   const [duration,  setDuration]  = useState(0)
+  const [callError, setCallError] = useState(null)   // pesan error yang ditampilkan ke user
 
   const pcRef              = useRef(null)
   const localStream        = useRef(null)
@@ -78,6 +96,9 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
   }, [])
 
   const getMic = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw Object.assign(new Error('mediaDevices not available'), { name: 'NotSupportedError' })
+    }
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
     localStream.current = stream
     return stream
@@ -86,6 +107,7 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
   /** Mulai panggilan (sebagai caller) */
   const startCall = useCallback(async () => {
     if (!orderId || callState !== 'idle') return
+    setCallError(null)
     try {
       isCallerRef.current = true
       setCallState('ringing')
@@ -99,8 +121,9 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
       const offer = await pc.createOffer({ offerToReceiveAudio: true })
       await pc.setLocalDescription(offer)
       await sendSignal('offer', offer)
-    } catch {
+    } catch (err) {
       cleanupPc()
+      setCallError(parseMicError(err))
     }
   }, [orderId, callState, sendSignal, getMic, createPc, cleanupPc])
 
@@ -111,6 +134,7 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
   const answerCall = useCallback(async () => {
     const offer = pendingOfferRef.current
     if (!offer) return
+    setCallError(null)
     try {
       isCallerRef.current = false
       const stream = await getMic()
@@ -133,8 +157,9 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
       pendingOfferRef.current = null
       setCallState('active')
       startTimer()
-    } catch {
+    } catch (err) {
       cleanupPc()
+      setCallError(parseMicError(err))
     }
   }, [getMic, createPc, sendSignal, startTimer, cleanupPc])
 
@@ -211,6 +236,8 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
     duration,
     remoteAudio,
     isCaller: isCallerRef.current,
+    callError,
+    clearCallError: () => setCallError(null),
     startCall,
     answerCall,
     endCall,

@@ -193,7 +193,8 @@ export default function ChatPage() {
   const otherName = location.state?.otherName ?? null
 
   const { room, messages, templates, loading, sendMessage, suspended } = useChatRoom(orderId, orderType)
-  const { callState, isMuted, duration, remoteAudio, isCaller, startCall, answerCall, endCall, toggleMute } =
+  const { callState, isMuted, duration, remoteAudio, isCaller, callError, clearCallError,
+          startCall, answerCall, endCall, toggleMute } =
     useVoiceCall(orderId, orderType, user?.id)
 
   const [input,         setInput]         = useState('')
@@ -328,6 +329,24 @@ export default function ChatPage() {
         onEnd={endCall}
         onMute={toggleMute}
       />
+
+      {/* ── Error panggilan ── */}
+      {callError && (
+        <div style={{
+          position: 'fixed', bottom: 80, left: 16, right: 16, zIndex: 999,
+          background: 'rgba(239,68,68,0.95)', borderRadius: 14,
+          padding: '12px 16px',
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          boxShadow: '0 4px 20px rgba(239,68,68,0.3)',
+        }}>
+          <span style={{ fontSize: 18, flexShrink: 0 }}>🎤</span>
+          <p style={{ color: '#fff', fontSize: 13, lineHeight: 1.5, flex: 1 }}>{callError}</p>
+          <button onClick={clearCallError} style={{
+            background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)',
+            cursor: 'pointer', fontSize: 18, flexShrink: 0, padding: 0,
+          }}>×</button>
+        </div>
+      )}
 
       {/* ── Warning banner ── */}
       {warning && (
