@@ -146,9 +146,14 @@ function AuthedImg({ src, alt, style }) {
   )
 }
 
-function PhotoViewer({ photos, orderId }) {
+function PhotoViewer({ photos, orderId, status }) {
   const [preview, setPreview] = useState(null)
-  if (!photos?.length) return null
+  const isDelivered = ['delivered', 'completed'].includes(status)
+
+  // Tampilkan section jika ada foto, ATAU jika sudah terkirim (menunggu foto mitra)
+  if (!photos?.length && !isDelivered) return null
+
+  const deliveryPhoto = photos?.find(p => p.stage === 'delivery')
 
   return (
     <>
@@ -168,30 +173,51 @@ function PhotoViewer({ photos, orderId }) {
       )}
       <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '12px 14px', marginTop: 12 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
-          📸 Foto Bukti Pengiriman
+          📸 Bukti Pengiriman
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          {['pickup', 'packing', 'delivery'].map(stage => {
-            const hasPhoto = photos.some(p => p.stage === stage)
-            const url      = hasPhoto ? `/orders/${orderId}/photos/${stage}` : null
-            return (
-              <div key={stage}>
-                {url ? (
-                  <button onClick={() => setPreview(url)} style={{ width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}>
-                    <AuthedImg src={url} alt={PHOTO_LABELS[stage]} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 10, border: '2px solid rgba(0,200,150,0.3)' }} />
-                  </button>
-                ) : (
-                  <div style={{ width: '100%', aspectRatio: '1', background: 'var(--k-card2)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--k-border)' }}>
-                    <span style={{ fontSize: 22, opacity: 0.4 }}>📷</span>
-                  </div>
-                )}
-                <p style={{ fontSize: 10, color: url ? 'var(--k-accent)' : 'var(--k-muted)', textAlign: 'center', marginTop: 4, fontWeight: url ? 700 : 400 }}>
-                  {url ? '✓' : '—'} {PHOTO_LABELS[stage].split(' ').slice(1).join(' ')}
-                </p>
-              </div>
-            )
-          })}
-        </div>
+
+        {/* Foto bukti sampai — tampil besar di atas */}
+        {deliveryPhoto ? (
+          <button onClick={() => setPreview(`/orders/${orderId}/photos/delivery`)} style={{ width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer', marginBottom: 10 }}>
+            <AuthedImg
+              src={`/orders/${orderId}/photos/delivery`}
+              alt="Bukti sampai"
+              style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 12, border: '2px solid rgba(0,200,150,0.35)' }}
+            />
+            <p style={{ fontSize: 11, color: 'var(--k-accent)', fontWeight: 700, textAlign: 'center', marginTop: 4 }}>✓ Paket Sudah Sampai</p>
+          </button>
+        ) : (
+          <div style={{ width: '100%', padding: '24px 0', background: 'var(--k-card2)', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 10, border: '1px dashed var(--k-border)' }}>
+            <span style={{ fontSize: 32, opacity: 0.3 }}>📷</span>
+            <p style={{ fontSize: 12, color: 'var(--k-muted)', textAlign: 'center' }}>Foto bukti pengiriman belum tersedia</p>
+          </div>
+        )}
+
+        {/* Foto pickup & packing — tampil kecil di bawah jika ada */}
+        {photos?.some(p => ['pickup', 'packing'].includes(p.stage)) && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+            {['pickup', 'packing'].map(stage => {
+              const hasPhoto = photos.some(p => p.stage === stage)
+              const url      = hasPhoto ? `/orders/${orderId}/photos/${stage}` : null
+              return (
+                <div key={stage}>
+                  {url ? (
+                    <button onClick={() => setPreview(url)} style={{ width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}>
+                      <AuthedImg src={url} alt={PHOTO_LABELS[stage]} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 10, border: '1px solid rgba(0,200,150,0.2)' }} />
+                    </button>
+                  ) : (
+                    <div style={{ width: '100%', aspectRatio: '1', background: 'var(--k-card2)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--k-border)' }}>
+                      <span style={{ fontSize: 18, opacity: 0.3 }}>📷</span>
+                    </div>
+                  )}
+                  <p style={{ fontSize: 10, color: url ? 'var(--k-accent)' : 'var(--k-muted)', textAlign: 'center', marginTop: 4, fontWeight: url ? 700 : 400 }}>
+                    {url ? '✓' : '—'} {PHOTO_LABELS[stage].split(' ').slice(1).join(' ')}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </>
   )
@@ -547,7 +573,7 @@ export default function TrackingPage() {
             </div>
           )}
 
-          <PhotoViewer photos={order.photos} orderId={order.id} />
+          <PhotoViewer photos={order.photos} orderId={order.id} status={order.status} />
         </div>
       </div>
     </div>

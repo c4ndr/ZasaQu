@@ -324,6 +324,23 @@ function getCurrentPosition() {
 }
 
 // targetLat/Lng: koordinat yang harus didekati sebelum foto diizinkan
+function AuthedImg({ src, alt, style = {} }) {
+  const [url, setUrl] = useState(null)
+  useEffect(() => {
+    let active = true
+    api.get(src, { responseType: 'blob' })
+      .then(r => { if (active) setUrl(URL.createObjectURL(r.data)) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [src])
+  if (!url) return (
+    <div style={{ ...style, background: 'var(--k-card2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ opacity: 0.3, fontSize: 22 }}>📷</span>
+    </div>
+  )
+  return <img src={url} alt={alt} style={style} />
+}
+
 function PhotoSlot({ orderId, stage, label, emoji, desc, initialDone, onUploaded, targetLat, targetLng }) {
   const [done,       setDone]       = useState(initialDone)
   const [busy,       setBusy]       = useState(false)
@@ -641,6 +658,34 @@ function ActiveCard({ order, onUpdate, onRefresh, loading, hasUnreadChat, gpsLoc
 
           {/* Panel detail order */}
           <OrderDetailPanel order={order} />
+
+          {/* Foto bukti sampai — opsional untuk SEMUA order saat on_delivery */}
+          {order.status === 'on_delivery' && !gateStage && (
+            <div style={{
+              background: 'var(--k-card2)', border: '1px solid rgba(0,200,150,0.2)',
+              borderRadius: 14, padding: 12, marginTop: 12,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <p style={{ color: 'var(--k-sub)', fontSize: 12, fontWeight: 700 }}>📸 Foto Bukti Sampai</p>
+                {uploadedStages.has('delivery')
+                  ? <span style={{ color: 'var(--k-accent)', fontSize: 11, fontWeight: 600 }}>✓ Terupload</span>
+                  : <span style={{ color: 'var(--k-muted)', fontSize: 11 }}>Opsional</span>
+                }
+              </div>
+              <PhotoSlot
+                key={`${order.id}-delivery-opt`}
+                orderId={order.id}
+                stage="delivery"
+                label="Sampai Tujuan"
+                emoji="🏁"
+                desc="Foto bukti pengiriman ke pelanggan"
+                initialDone={uploadedStages.has('delivery')}
+                onUploaded={onRefresh}
+                targetLat={parseFloat(order.dropoff_lat)}
+                targetLng={parseFloat(order.dropoff_lng)}
+              />
+            </div>
+          )}
 
           {/* Slot foto wajib sesuai status saat ini */}
           {gateStage && (
@@ -1271,6 +1316,16 @@ function HistoryCard({ order }) {
             )}
           </div>
         </div>
+        {order.photos?.some(p => p.stage === 'delivery') && (
+          <div style={{ marginTop: 10 }}>
+            <p style={{ fontSize: 11, color: 'var(--k-muted)', fontWeight: 600, marginBottom: 6 }}>📸 Bukti Sampai</p>
+            <AuthedImg
+              src={`/orders/${order.id}/photos/delivery`}
+              alt="Bukti pengiriman"
+              style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--k-border)' }}
+            />
+          </div>
+        )}
         {showRateBtn && (
           <button onClick={() => setShowRating(true)} style={{
             marginTop: 10, width: '100%', padding: '9px', borderRadius: 12, fontSize: 12, fontWeight: 700,
