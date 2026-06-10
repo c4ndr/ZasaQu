@@ -383,7 +383,8 @@ function NotifBridge() {
         if (res?.orderId && res?.orderType) {
           storeIncomingCall({ orderId: res.orderId, orderType: res.orderType, callerName: res.callerName || null })
           if (res.autoAnswer) markAutoAnswer()
-          navigate(resolveChatPath(user.role, res.orderType, res.orderId))
+          const targetPath = resolveChatPath(user.role, res.orderType, res.orderId)
+          navigate(targetPath)
         }
       } catch {}
     }
@@ -490,6 +491,14 @@ function VoiceCallBridge() {
   // Pakai ref agar listener tidak basi saat location berubah
   const locationRef = useRef(location)
   useEffect(() => { locationRef.current = location }, [location])
+
+  // Hapus overlay otomatis saat user sudah berada di halaman chat panggilan ini
+  // (misal: checkPending di NotifBridge navigasi ke ChatPage saat overlay masih tampil)
+  useEffect(() => {
+    if (!incoming) return
+    const chatPath = resolveChatPath(user?.role, incoming.orderType, incoming.orderId)
+    if (location.pathname === chatPath) setIncoming(null)
+  }, [location.pathname, incoming, user?.role])
 
   useEffect(() => {
     if (!user) return
