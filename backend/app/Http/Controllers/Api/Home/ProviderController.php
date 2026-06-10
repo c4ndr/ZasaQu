@@ -178,7 +178,8 @@ class ProviderController extends Controller
 
         if ($status) $query->where('status', $status);
 
-        return response()->json($query->paginate(20));
+        $perPage = min((int) ($request->per_page ?? 20), 100);
+        return response()->json($query->paginate($perPage));
     }
 
     public function updateOrderStatus(Request $request, HomeOrder $order): JsonResponse
