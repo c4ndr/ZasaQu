@@ -334,7 +334,7 @@ export default function ChatPage() {
       {/* ── Error panggilan ── */}
       {callError && (
         <div style={{
-          position: 'fixed', top: 70, left: 12, right: 12, zIndex: 9998,
+          position: 'fixed', top: 70, left: 12, right: 12, zIndex: 10001,
           background: '#DC2626', borderRadius: 14,
           padding: '14px 16px',
           display: 'flex', alignItems: 'flex-start', gap: 10,

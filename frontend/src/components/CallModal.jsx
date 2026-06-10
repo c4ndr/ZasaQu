@@ -11,7 +11,7 @@ function formatDuration(secs) {
  * Tidak menampilkan atau menyimpan nomor telepon.
  */
 export default function CallModal({ callState, isMuted, duration, iceState, remoteAudio,
-                                    otherName, isCaller, onAnswer, onEnd, onMute }) {
+                                    otherName, isCaller, onAnswer, onEnd, onMute, callError, onClearError }) {
   const audioRef = useRef(null)
 
   // Sambungkan ref audio ke hook
@@ -27,10 +27,10 @@ export default function CallModal({ callState, isMuted, duration, iceState, remo
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'rgba(10,10,20,0.92)',
+      background: 'rgba(10,10,20,0.95)',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      padding: 24,
+      padding: 24, touchAction: 'manipulation',
     }}>
       <style>{`
         @keyframes callPulse {
@@ -90,25 +90,34 @@ export default function CallModal({ callState, isMuted, duration, iceState, remo
 
         {/* Angkat telepon — hanya callee saat ringing */}
         {isRinging && !isCaller && onAnswer && (
-          <button onClick={onAnswer} style={{
-            width: 72, height: 72, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #00C896, #00A87D)',
-            border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28, boxShadow: '0 4px 20px rgba(0,200,150,0.5)',
-          }}>
+          <button
+            onClick={(e) => { e.preventDefault(); onAnswer() }}
+            onTouchEnd={(e) => { e.preventDefault(); onAnswer() }}
+            style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #00C896, #00A87D)',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 28, boxShadow: '0 4px 20px rgba(0,200,150,0.5)',
+              touchAction: 'manipulation',
+              // Tidak ada animation/transform langsung di tombol — CSS transform menggeser hit area di Android
+            }}>
             📞
           </button>
         )}
 
         {/* Tutup telepon */}
-        <button onClick={onEnd} style={{
-          width: 72, height: 72, borderRadius: '50%',
-          background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-          border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 28, boxShadow: '0 4px 20px rgba(239,68,68,0.4)',
-        }}>
+        <button
+          onClick={(e) => { e.preventDefault(); onEnd() }}
+          onTouchEnd={(e) => { e.preventDefault(); onEnd() }}
+          style={{
+            width: 72, height: 72, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 28, boxShadow: '0 4px 20px rgba(239,68,68,0.4)',
+            touchAction: 'manipulation',
+          }}>
           📵
         </button>
       </div>

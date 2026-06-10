@@ -31,6 +31,12 @@ use Illuminate\Support\Facades\Route;
 // ─── Health Check ──────────────────────────────────────────────────────────
 Route::get('health', \App\Http\Controllers\Api\HealthController::class);
 
+// ─── Broadcasting Auth (Sanctum) ───────────────────────────────────────────
+// Route default /broadcasting/auth menggunakan web guard (session).
+// Route ini override dengan Sanctum agar Bearer token dari mobile app dikenali.
+Route::post('broadcasting/auth', [\App\Http\Controllers\Api\BroadcastingAuthController::class, 'authenticate'])
+    ->middleware('auth:sanctum');
+
 // ─── Auth ──────────────────────────────────────────────────────────────────
 Route::prefix('auth')->group(function () {
     // Max 10 percobaan per menit per IP — cegah brute force

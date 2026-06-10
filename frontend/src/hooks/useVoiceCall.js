@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import echo from '../services/echo'
 import api from '../services/api'
-import { popIncomingCall } from '../services/callBuffer'
+import { popIncomingCall, onIncomingCallUpdate, consumeAutoAnswer } from '../services/callBuffer'
+import { startRingtone, stopRingtone } from '../utils/ringtone'
 
 // Plugin lokal untuk meminta izin RECORD_AUDIO lewat Android API
 // Hanya dipakai di Android native, web/iOS pakai getUserMedia langsung
@@ -34,7 +35,10 @@ function parseMicError(err) {
     return 'Mikrofon tidak ditemukan di perangkat ini.'
   }
   if (name === 'NotReadableError' || name === 'TrackStartError') {
-    return 'Mikrofon sedang dipakai aplikasi lain.'
+    return 'Mikrofon sedang dipakai aplikasi lain. Tutup aplikasi lain lalu coba lagi.'
+  }
+  if (name === 'OperationError' || name === 'AbortError') {
+    return 'Mikrofon gagal diakses. Coba tap Angkat sekali lagi.'
   }
   return `Gagal mengakses mikrofon: ${name || err?.message || 'error tidak diketahui'}`
 }
@@ -55,18 +59,35 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
   const pendingOfferRef    = useRef(null)   // offer masuk, tunggu user tap Angkat
   const iceCandidateQueue  = useRef([])     // ICE candidates yang datang sebelum remoteDesc di-set
   const startingRef        = useRef(false)  // lock agar double-tap tidak trigger dua kali
+  const autoAnswerRef      = useRef(false)  // flag: jawab otomatis setelah navigate dari overlay
 
   const channelName = `call.${orderType}.${orderId}`
 
-  // Jika user baru masuk ChatPage setelah menerima ring via VoiceCallBridge,
-  // offer SDP sudah di-buffer — ambil dan set langsung tanpa tunggu order channel
+  // Tangkap offer dari buffer saat mount, dan via listener jika datang setelah mount
   useEffect(() => {
     if (!orderId) return
+
+    // Cek buffer yang sudah ada saat mount
     const buffered = popIncomingCall()
     if (buffered && String(buffered.orderId) === String(orderId) && buffered.orderType === orderType) {
       if (buffered.offer) pendingOfferRef.current = buffered.offer
+      // Konsumsi flag auto-answer (set saat user tap Angkat di overlay)
+      autoAnswerRef.current = consumeAutoAnswer()
       setCallState('ringing')
     }
+
+    // Subscribe listener untuk offer yang datang setelah mount
+    // (race condition: caller masih getMic saat user tap Angkat di overlay)
+    const unsub = onIncomingCallUpdate((data) => {
+      if (String(data.orderId) === String(orderId) && data.orderType === orderType) {
+        if (data.offer) pendingOfferRef.current = data.offer
+        // Konsumsi flag hanya jika belum di-set dari path lain
+        if (!autoAnswerRef.current) autoAnswerRef.current = consumeAutoAnswer()
+        setCallState('ringing')
+      }
+    })
+
+    return unsub
   }, []) // eslint-disable-line — hanya saat mount
 
   const sendSignal = useCallback(async (signalType, data = null) => {
@@ -80,19 +101,24 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
     } catch {}
   }, [orderId, orderType])
 
-  // Cleanup internal tanpa perlu memanggil sendSignal (untuk disconnect callback)
-  const cleanupPc = useCallback(() => {
+  // Bersihkan resource (PC + stream) tanpa mengubah callState
+  const cleanupResources = useCallback(() => {
     clearInterval(timerRef.current)
     pcRef.current?.close()
     pcRef.current = null
     localStream.current?.getTracks().forEach(t => t.stop())
     localStream.current = null
-    pendingOfferRef.current = null
     iceCandidateQueue.current = []
+  }, [])
+
+  // Cleanup penuh: resource + reset state ke idle
+  const cleanupPc = useCallback(() => {
+    cleanupResources()
+    pendingOfferRef.current = null
     setCallState('idle')
     setDuration(0)
     setIsMuted(false)
-  }, [])
+  }, [cleanupResources])
 
   const createPc = useCallback(() => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
@@ -145,9 +171,22 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
     if (!navigator.mediaDevices?.getUserMedia) {
       throw Object.assign(new Error('mediaDevices not available'), { name: 'NotSupportedError' })
     }
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-    localStream.current = stream
-    return stream
+
+    // Coba getUserMedia — jika OperationError, tunggu 1 detik dan retry
+    // (Audio hardware Android butuh waktu setelah ringtone AudioContext di-close)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      localStream.current = stream
+      return stream
+    } catch (err) {
+      if (err.name === 'OperationError' || err.name === 'AbortError') {
+        await new Promise(r => setTimeout(r, 1000))
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        localStream.current = stream
+        return stream
+      }
+      throw err
+    }
   }, [])
 
   /** Mulai panggilan (sebagai caller) */
@@ -155,6 +194,7 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
     if (!orderId || callState !== 'idle' || startingRef.current) return
     startingRef.current = true
     setCallError(null)
+    await stopRingtone() // pastikan tidak ada audio conflict sebelum getMic
     try {
       isCallerRef.current = true
       setCallState('ringing')
@@ -183,12 +223,19 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
    * Offer sudah disimpan di pendingOfferRef saat diterima dari Reverb.
    */
   const answerCall = useCallback(async () => {
+    // Guard: prevent double-fire dari onTouchEnd + onClick
+    if (startingRef.current) return
     const offer = pendingOfferRef.current
     if (!offer) {
       setCallError('Panggilan tidak diterima dengan benar. Coba minta penelepon untuk menelepon ulang.')
       return
     }
+    startingRef.current = true
     setCallError(null)
+    // Await close AudioContext SEBELUM getMic — cegah audio session conflict
+    await stopRingtone()
+    // Beri waktu Android untuk release audio session dari ringtone
+    await new Promise(r => setTimeout(r, 300))
     try {
       isCallerRef.current = false
       const stream = await getMic()
@@ -212,10 +259,14 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
       setCallState('active')
       startTimer()
     } catch (err) {
-      cleanupPc()
+      // Jangan reset ke idle — biarkan modal tetap di state ringing
+      // agar user bisa tap Angkat lagi setelah memberi izin mikrofon
+      cleanupResources()
       setCallError(parseMicError(err))
+    } finally {
+      startingRef.current = false
     }
-  }, [getMic, createPc, sendSignal, startTimer, cleanupPc])
+  }, [getMic, createPc, sendSignal, startTimer, cleanupPc, cleanupResources])
 
   /** Akhiri panggilan */
   const endCall = useCallback(() => {
@@ -283,6 +334,25 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
       channelRef.current = null
     }
   }, [orderId, channelName, currentUserId, startTimer, cleanupPc]) // eslint-disable-line
+
+  // Nada dering: aktif saat callee dalam state ringing, berhenti saat answered/ended.
+  // Tidak dimulai jika auto-answer aktif (user sudah dengar ringtone di overlay).
+  useEffect(() => {
+    if (callState === 'ringing' && !isCallerRef.current && !autoAnswerRef.current) {
+      startRingtone()
+    } else {
+      stopRingtone()
+    }
+    return () => stopRingtone()
+  }, [callState]) // eslint-disable-line
+
+  // Auto-answer: jawab otomatis jika user sudah tap Angkat di IncomingCallOverlay
+  useEffect(() => {
+    if (callState === 'ringing' && autoAnswerRef.current) {
+      autoAnswerRef.current = false
+      answerCall()
+    }
+  }, [callState]) // eslint-disable-line
 
   return {
     callState,

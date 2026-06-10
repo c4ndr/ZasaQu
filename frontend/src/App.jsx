@@ -4,7 +4,8 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import useFcmToken from './hooks/useFcmToken'
 import echo from './services/echo'
 import api from './services/api'
-import { storeIncomingCall, popIncomingCall } from './services/callBuffer'
+import { storeIncomingCall, markAutoAnswer } from './services/callBuffer'
+import { startRingtone, stopRingtone } from './utils/ringtone'
 import { useJsApiLoader } from '@react-google-maps/api'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
@@ -315,8 +316,11 @@ function AppRoutes() {
 }
 
 // Navigasi URL dari data notifikasi FCM
-function resolveNotifUrl(data = {}) {
-  const { type = '', order_id, module } = data
+function resolveNotifUrl(data = {}, userRole = '') {
+  const { type = '', order_id, order_type, module } = data
+  if (type === 'incoming_call' && order_id && order_type) {
+    return resolveChatPath(userRole, order_type, order_id)
+  }
   if (type.startsWith('food_') || module === 'zasafood')   return order_id ? `/food/orders/${order_id}`  : '/food/orders'
   if (type.startsWith('mart_') || module === 'zasamart')   return order_id ? `/mart/orders/${order_id}`  : '/mart/orders'
   if (order_id) return `/orders/${order_id}/tracking`
@@ -370,7 +374,7 @@ function NotifBridge() {
       },
       onTap: (notif) => {
         // User tap notif dari background/killed — navigasi ke halaman relevan
-        const url = resolveNotifUrl(notif?.data ?? {})
+        const url = resolveNotifUrl(notif?.data ?? {}, user?.role)
         navigate(url)
       },
     }).catch(() => {})
@@ -394,30 +398,42 @@ function resolveChatPath(role, orderType, orderId) {
 
 // Overlay panggilan masuk — muncul dari manapun, bukan hanya di ChatPage
 function IncomingCallOverlay({ onAnswer, onDecline }) {
+  // onTouchEnd sebagai backup onClick — Android WebView kadang delay 300ms pada onClick
+  const handleAnswer  = (e) => { e.preventDefault(); onAnswer() }
+  const handleDecline = (e) => { e.preventDefault(); onDecline() }
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 20000,
-      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+      background: 'rgba(0,0,0,0.85)',
+      // backdropFilter dihapus — menyebabkan touch event blocking di Android WebView
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 24, padding: 32,
+      touchAction: 'manipulation',
     }}>
       <div style={{ fontSize: 64, animation: 'phonePulse 0.9s ease-in-out infinite' }}>📞</div>
       <p style={{ color: '#fff', fontSize: 22, fontWeight: 800, textAlign: 'center' }}>Panggilan Masuk</p>
       <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, textAlign: 'center' }}>Tap Angkat untuk menerima</p>
       <div style={{ display: 'flex', gap: 28 }}>
-        <button onClick={onDecline} style={{
-          width: 70, height: 70, borderRadius: '50%', border: 'none', cursor: 'pointer',
-          background: '#EF4444', fontSize: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(239,68,68,0.5)',
-        }}>📵</button>
-        <button onClick={onAnswer} style={{
-          width: 70, height: 70, borderRadius: '50%', border: 'none', cursor: 'pointer',
-          background: '#00C896', fontSize: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(0,200,150,0.5)',
-          animation: 'phonePulse 0.9s ease-in-out infinite',
-        }}>📲</button>
+        <button
+          onClick={handleDecline}
+          onTouchEnd={handleDecline}
+          style={{
+            width: 70, height: 70, borderRadius: '50%', border: 'none', cursor: 'pointer',
+            background: '#EF4444', fontSize: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 20px rgba(239,68,68,0.5)', touchAction: 'manipulation',
+          }}>📵</button>
+        <button
+          onClick={handleAnswer}
+          onTouchEnd={handleAnswer}
+          style={{
+            width: 70, height: 70, borderRadius: '50%', border: 'none', cursor: 'pointer',
+            background: '#00C896', fontSize: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            touchAction: 'manipulation',
+            // Animasi box-shadow — tidak menggeser hit area (tidak pakai transform)
+            animation: 'ringPulse 1.2s ease-out infinite',
+          }}>📲</button>
       </div>
-      <style>{`@keyframes phonePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }`}</style>
+      <style>{`@keyframes ringPulse { 0%{box-shadow:0 0 0 0 rgba(0,200,150,0.6)} 70%{box-shadow:0 0 0 18px rgba(0,200,150,0)} 100%{box-shadow:0 0 0 0 rgba(0,200,150,0)} }`}</style>
     </div>
   )
 }
@@ -435,7 +451,7 @@ function VoiceCallBridge() {
 
   useEffect(() => {
     if (!user) return
-    const ch = echo.private(`call.user.${user.id}`)
+    const ch = echo.private(`user.${user.id}`)
 
     ch.listen('.call.signal', ({ signal_type, data, sender_id }) => {
       const orderId   = data?.order_id
@@ -450,10 +466,12 @@ function VoiceCallBridge() {
         setIncoming({ orderId, orderType, senderId: sender_id })
       }
 
-      if (signal_type === 'offer' && !onChat) {
-        // Buffer SDP agar bisa diambil useVoiceCall saat ChatPage mount
+      if (signal_type === 'offer') {
+        // Selalu buffer SDP — mencegah race condition saat ChatPage baru mount
+        // onChat=true: useVoiceCall tangkap via listener, tidak tampilkan overlay
+        // onChat=false: tampilkan overlay juga
         storeIncomingCall({ orderId, orderType, offer: data.sdp, senderId: sender_id })
-        setIncoming(prev => prev ?? { orderId, orderType, senderId: sender_id })
+        if (!onChat) setIncoming(prev => prev ?? { orderId, orderType, senderId: sender_id })
       }
 
       if (signal_type === 'end') {
@@ -461,11 +479,25 @@ function VoiceCallBridge() {
       }
     })
 
-    return () => { echo.leave(`call.user.${user.id}`) }
+    return () => { echo.leave(`user.${user.id}`) }
   }, [user?.id]) // eslint-disable-line
 
-  const handleAnswer = useCallback(() => {
+  // Nada dering saat overlay panggilan masuk tampil (user tidak di ChatPage)
+  useEffect(() => {
+    if (incoming) {
+      startRingtone()
+    } else {
+      stopRingtone()
+    }
+    return () => stopRingtone()
+  }, [incoming])
+
+  const handleAnswer = useCallback(async () => {
     if (!incoming) return
+    // Await close AudioContext dulu sebelum navigate — hindari konflik audio di ChatPage
+    await stopRingtone()
+    // Tandai agar ChatPage auto-jawab tanpa butuh tap Angkat kedua kali
+    markAutoAnswer()
     const path = resolveChatPath(user.role, incoming.orderType, incoming.orderId)
     navigate(path)
     setIncoming(null)
@@ -473,6 +505,7 @@ function VoiceCallBridge() {
 
   const handleDecline = useCallback(() => {
     if (!incoming) return
+    stopRingtone()
     api.post('/call/signal', {
       order_id:    incoming.orderId,
       order_type:  incoming.orderType,

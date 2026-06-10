@@ -53,6 +53,7 @@ Broadcast::channel('call.{orderType}.{orderId}', function ($user, $orderType, $o
 });
 
 // Personal call channel — menerima ring/offer meski tidak di ChatPage
-Broadcast::channel('call.user.{userId}', function ($user, $userId) {
+// Nama sengaja TIDAK dimulai dengan "call." agar tidak konflik dengan pattern call.{orderType}.{orderId}
+Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
 });

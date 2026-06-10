@@ -8,6 +8,8 @@ use App\Models\ChatRoom;
 use App\Models\FoodOrder;
 use App\Models\MartOrder;
 use App\Models\Order;
+use App\Models\User;
+use App\Services\FcmService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -57,11 +59,31 @@ class CallController extends Controller
                 $ctxData['sdp'] = $data['data'];
             }
             broadcast(new CallSignal(
-                "call.user.{$receiverId}",
+                "user.{$receiverId}",
                 $data['signal_type'],
                 $ctxData,
                 $user->id,
             ));
+
+            // FCM push agar penerima yang app-nya closed/background tetap dapat notifikasi
+            if ($data['signal_type'] === 'ring') {
+                try {
+                    $receiver = User::find($receiverId);
+                    if ($receiver) {
+                        app(FcmService::class)->sendToUser(
+                            $receiver,
+                            'Panggilan Masuk',
+                            $user->name . ' sedang menghubungi Anda',
+                            [
+                                'type'       => 'incoming_call',
+                                'order_id'   => (string) $data['order_id'],
+                                'order_type' => $data['order_type'],
+                                'caller_id'  => (string) $user->id,
+                            ]
+                        );
+                    }
+                } catch (\Throwable) {}
+            }
         }
 
         return response()->json(['ok' => true]);
