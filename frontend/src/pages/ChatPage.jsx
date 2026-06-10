@@ -193,8 +193,8 @@ export default function ChatPage() {
   const otherName = location.state?.otherName ?? null
 
   const { room, messages, templates, loading, sendMessage, suspended } = useChatRoom(orderId, orderType)
-  const { callState, isMuted, duration, iceState, remoteAudio, isCaller, callError, clearCallError,
-          startCall, answerCall, endCall, toggleMute } =
+  const { callState, isMuted, isSpeaker, duration, iceState, remoteAudio, isCaller, callError, clearCallError,
+          startCall, answerCall, endCall, toggleMute, toggleSpeaker } =
     useVoiceCall(orderId, orderType, user?.id)
 
   const [input,         setInput]         = useState('')
@@ -321,6 +321,7 @@ export default function ChatPage() {
       <CallModal
         callState={callState}
         isMuted={isMuted}
+        isSpeaker={isSpeaker}
         duration={duration}
         iceState={iceState}
         remoteAudio={remoteAudio}
@@ -329,6 +330,7 @@ export default function ChatPage() {
         onAnswer={answerCall}
         onEnd={endCall}
         onMute={toggleMute}
+        onSpeaker={toggleSpeaker}
       />
 
       {/* ── Error panggilan ── */}

@@ -1,29 +1,39 @@
-// Nada dering panggilan masuk — Web Audio API
-// Singleton agar tidak ada dua dering bersamaan dari komponen berbeda.
+// Singleton audio manager untuk ringtone & ringback.
+// Pada Android native, gunakan AudioManager via Capacitor (lebih keras, ring stream).
+// Fallback: Web Audio API untuk web/debug.
 
-let audioCtx  = null
-let loopTimer = null
-let active    = false
+import { Capacitor } from '@capacitor/core'
 
-function getCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
-  return audioCtx
+const IS_ANDROID = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+
+// ─── RINGTONE (callee) ───────────────────────────────────────────────────────
+
+let ringCtx   = null
+let ringTimer = null
+let ringActive = false
+
+function getRingCtx() {
+  if (!ringCtx || ringCtx.state === 'closed') {
+    ringCtx = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  return ringCtx
 }
 
-// Satu siklus nada: naik 3 nada (Do-Mi-Sol) lalu jeda — mirip nada dering HP modern
-async function playCycle() {
+async function playRingCycle() {
   try {
-    const ctx = getCtx()
+    const ctx = getRingCtx()
     if (ctx.state === 'suspended') await ctx.resume().catch(() => {})
     if (ctx.state !== 'running') return
 
     const now   = ctx.currentTime
+    // Nada lebih keras (gain 0.9) dan lebih panjang
     const notes = [
       { freq: 523, t: 0.00 },  // C5
-      { freq: 659, t: 0.18 },  // E5
-      { freq: 784, t: 0.36 },  // G5
-      { freq: 659, t: 0.54 },  // E5 (turun)
-      { freq: 784, t: 0.72 },  // G5
+      { freq: 659, t: 0.20 },  // E5
+      { freq: 784, t: 0.40 },  // G5
+      { freq: 659, t: 0.60 },  // E5
+      { freq: 784, t: 0.80 },  // G5
+      { freq: 1047, t: 1.00 }, // C6
     ]
 
     notes.forEach(({ freq, t }) => {
@@ -31,17 +41,14 @@ async function playCycle() {
       const gain = ctx.createGain()
       osc.connect(gain)
       gain.connect(ctx.destination)
-
-      osc.type          = 'sine'
+      osc.type = 'triangle'  // lebih keras dari 'sine'
       osc.frequency.value = freq
-
       const start = now + t
-      const end   = start + 0.25
+      const end   = start + 0.28
       gain.gain.setValueAtTime(0, start)
-      gain.gain.linearRampToValueAtTime(0.35, start + 0.02)
-      gain.gain.setValueAtTime(0.35, end - 0.03)
+      gain.gain.linearRampToValueAtTime(0.85, start + 0.02)
+      gain.gain.setValueAtTime(0.85, end - 0.04)
       gain.gain.linearRampToValueAtTime(0, end)
-
       osc.start(start)
       osc.stop(end)
     })
@@ -49,31 +56,89 @@ async function playCycle() {
 }
 
 export function startRingtone() {
-  if (active) return
-  active = true
+  if (ringActive) return
+  ringActive = true
 
-  // Getar pola panggilan masuk
-  try { navigator.vibrate?.([400, 200, 400, 600]) } catch {}
+  // Getar kuat pola panggilan masuk
+  try { navigator.vibrate?.([600, 200, 600, 200, 600, 800]) } catch {}
 
-  playCycle()
-  // Ulangi setiap 1.8 detik (siklus 0.97 detik + jeda ~0.83 detik)
-  loopTimer = setInterval(() => {
-    if (!active) return
-    try { navigator.vibrate?.([400, 200, 400, 600]) } catch {}
-    playCycle()
-  }, 1800)
+  playRingCycle()
+  ringTimer = setInterval(() => {
+    if (!ringActive) return
+    try { navigator.vibrate?.([600, 200, 600, 200, 600, 800]) } catch {}
+    playRingCycle()
+  }, 2200)
 }
 
 export function stopRingtone() {
-  active = false
-  clearInterval(loopTimer)
-  loopTimer = null
+  ringActive = false
+  clearInterval(ringTimer)
+  ringTimer = null
   try { navigator.vibrate?.(0) } catch {}
-  // Tutup AudioContext sepenuhnya agar tidak konflik dengan WebRTC getUserMedia.
-  // Mengembalikan Promise agar pemanggil bisa await sebelum getUserMedia.
-  if (audioCtx && audioCtx.state !== 'closed') {
-    const p = audioCtx.close().catch(() => {})
-    audioCtx = null
+  if (ringCtx && ringCtx.state !== 'closed') {
+    const p = ringCtx.close().catch(() => {})
+    ringCtx = null
+    return p
+  }
+  return Promise.resolve()
+}
+
+// ─── RINGBACK (caller — nada tunggu "tut...tut...tut...") ───────────────────
+
+let rbCtx    = null
+let rbTimer  = null
+let rbActive = false
+
+function getRbCtx() {
+  if (!rbCtx || rbCtx.state === 'closed') {
+    rbCtx = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  return rbCtx
+}
+
+async function playRingbackBeep() {
+  try {
+    const ctx = getRbCtx()
+    if (ctx.state === 'suspended') await ctx.resume().catch(() => {})
+    if (ctx.state !== 'running') return
+
+    const now = ctx.currentTime
+    // Dua beep pendek — "tut-tut"
+    ;[0, 0.6].forEach(offset => {
+      const osc  = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.value = 425  // nada dial standar
+      const t = now + offset
+      gain.gain.setValueAtTime(0, t)
+      gain.gain.linearRampToValueAtTime(0.4, t + 0.02)
+      gain.gain.setValueAtTime(0.4, t + 0.38)
+      gain.gain.linearRampToValueAtTime(0, t + 0.40)
+      osc.start(t)
+      osc.stop(t + 0.45)
+    })
+  } catch {}
+}
+
+export function startRingback() {
+  if (rbActive) return
+  rbActive = true
+  playRingbackBeep()
+  rbTimer = setInterval(() => {
+    if (!rbActive) return
+    playRingbackBeep()
+  }, 3500)
+}
+
+export function stopRingback() {
+  rbActive = false
+  clearInterval(rbTimer)
+  rbTimer = null
+  if (rbCtx && rbCtx.state !== 'closed') {
+    const p = rbCtx.close().catch(() => {})
+    rbCtx = null
     return p
   }
   return Promise.resolve()

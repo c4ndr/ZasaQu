@@ -65,20 +65,19 @@ class CallController extends Controller
                 $user->id,
             ));
 
-            // FCM push agar penerima yang app-nya closed/background tetap dapat notifikasi
+            // Data-only FCM → ZasaQuFcmService tampilkan layar penuh incoming call
             if ($data['signal_type'] === 'ring') {
                 try {
                     $receiver = User::find($receiverId);
-                    if ($receiver) {
-                        app(FcmService::class)->sendToUser(
-                            $receiver,
-                            'Panggilan Masuk',
-                            $user->name . ' sedang menghubungi Anda',
+                    if ($receiver && !empty($receiver->fcm_token)) {
+                        app(FcmService::class)->sendDataOnly(
+                            $receiver->fcm_token,
                             [
-                                'type'       => 'incoming_call',
-                                'order_id'   => (string) $data['order_id'],
-                                'order_type' => $data['order_type'],
-                                'caller_id'  => (string) $user->id,
+                                'type'        => 'incoming_call',
+                                'order_id'    => (string) $data['order_id'],
+                                'order_type'  => $data['order_type'],
+                                'caller_id'   => (string) $user->id,
+                                'caller_name' => $user->name,
                             ]
                         );
                     }

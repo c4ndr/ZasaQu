@@ -58,4 +58,9 @@ return [
         'is_production' => env('IPAYMU_IS_PRODUCTION', true),
     ],
 
+    'agora' => [
+        'app_id'          => env('AGORA_APP_ID'),
+        'app_certificate' => env('AGORA_APP_CERTIFICATE'),
+    ],
+
 ];

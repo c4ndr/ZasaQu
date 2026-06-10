@@ -30,5 +30,9 @@ Thumbs.db
 # Storage uploads (tidak di-track di git)
 backend/storage/app/public/order-photos/
 
-# APK binary (terlalu besar untuk GitHub, host di server langsung)
+# APK binary — disajikan nginx dari /releases/, tidak masuk git (245MB)
 frontend/public/*.apk
+releases/
+
+# Build artifacts web — di-generate ulang saat deploy, tidak perlu di git
+backend/public/assets/

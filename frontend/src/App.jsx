@@ -15,6 +15,8 @@ import { useTheme } from './hooks/useTheme'
 import { unlockAudio } from './hooks/useNewOrderNotif'
 import { isNative, initPushNotifications } from './utils/nativePlatform'
 import { App as CapApp } from '@capacitor/app'
+import { registerPlugin } from '@capacitor/core'
+const AgoraVoice = registerPlugin('AgoraVoice')
 import useAppInfo from './hooks/useAppInfo'
 
 // Guard route modul — redirect ke dashboard jika modul dinonaktifkan admin
@@ -364,17 +366,52 @@ function NotifBridge() {
   // Web push: daftarkan FCM token (hanya browser, bukan native)
   useFcmToken(user)
 
+  // Simpan API config ke native agar IncomingCallActivity bisa decline
+  useEffect(() => {
+    if (!isNative || !user) return
+    const token = localStorage.getItem('token') || ''
+    const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '') + '/api'
+    AgoraVoice.setCallConfig({ baseUrl, token }).catch(() => {})
+  }, [user?.id])
+
+  // Cek pending call dari IncomingCallActivity (saat app kembali aktif setelah user angkat)
+  useEffect(() => {
+    if (!isNative || !user) return
+    const checkPending = async () => {
+      try {
+        const res = await AgoraVoice.getPendingCall()
+        if (res?.orderId && res?.orderType) {
+          storeIncomingCall({ orderId: res.orderId, orderType: res.orderType })
+          if (res.autoAnswer) markAutoAnswer()
+          navigate(resolveChatPath(user.role, res.orderType, res.orderId))
+        }
+      } catch {}
+    }
+    checkPending()
+    const sub = CapApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) checkPending()
+    })
+    return () => { sub.then(h => h.remove()).catch(() => {}) }
+  }, [user?.id, navigate])
+
   useEffect(() => {
     if (!isNative) return
 
     initPushNotifications({
       onForeground: (notif) => {
         // Di foreground, tampilkan banner manual (FCM tidak auto-show)
-        setForegroundNotif(notif)
+        // incoming_call ditangani ZasaQuFcmService + VoiceCallBridge, tidak perlu banner
+        const data = notif?.data ?? {}
+        if (data.type !== 'incoming_call') setForegroundNotif(notif)
       },
       onTap: (notif) => {
-        // User tap notif dari background/killed — navigasi ke halaman relevan
-        const url = resolveNotifUrl(notif?.data ?? {}, user?.role)
+        const data = notif?.data ?? {}
+        // Fallback: jika user tap notif biasa (bukan full-screen), isi callBuffer manual
+        if (data.type === 'incoming_call' && data.order_id && data.order_type) {
+          storeIncomingCall({ orderId: data.order_id, orderType: data.order_type })
+          markAutoAnswer()
+        }
+        const url = resolveNotifUrl(data, user?.role)
         navigate(url)
       },
     }).catch(() => {})

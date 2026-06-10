@@ -10,8 +10,8 @@ function formatDuration(secs) {
  * Modal panggilan suara WebRTC — muncul saat callState !== 'idle'.
  * Tidak menampilkan atau menyimpan nomor telepon.
  */
-export default function CallModal({ callState, isMuted, duration, iceState, remoteAudio,
-                                    otherName, isCaller, onAnswer, onEnd, onMute, callError, onClearError }) {
+export default function CallModal({ callState, isMuted, isSpeaker, duration, iceState, remoteAudio,
+                                    otherName, isCaller, onAnswer, onEnd, onMute, onSpeaker, callError, onClearError }) {
   const audioRef = useRef(null)
 
   // Sambungkan ref audio ke hook
@@ -75,16 +75,27 @@ export default function CallModal({ callState, isMuted, duration, iceState, remo
 
       {/* Tombol aksi */}
       <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-        {/* Mute — hanya saat aktif */}
+        {/* Mute & Speaker — hanya saat aktif */}
         {isActive && (
           <button onClick={onMute} style={{
             width: 60, height: 60, borderRadius: '50%',
             background: isMuted ? '#EF4444' : 'rgba(255,255,255,0.15)',
             border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 22,
+            fontSize: 22, touchAction: 'manipulation',
           }}>
             {isMuted ? '🔇' : '🎤'}
+          </button>
+        )}
+        {isActive && (
+          <button onClick={onSpeaker} style={{
+            width: 60, height: 60, borderRadius: '50%',
+            background: isSpeaker ? '#6366F1' : 'rgba(255,255,255,0.15)',
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 22, touchAction: 'manipulation',
+          }}>
+            {isSpeaker ? '🔊' : '🔈'}
           </button>
         )}
 

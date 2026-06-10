@@ -26,6 +26,44 @@ class FcmService
         return $this->send($user->fcm_token, $title, $body, $data);
     }
 
+    /**
+     * Data-only FCM — onMessageReceived selalu dipanggil meski app background/killed.
+     * Digunakan untuk incoming_call agar ZasaQuFcmService bisa tampilkan layar penuh.
+     */
+    public function sendDataOnly(string $token, array $data = []): bool
+    {
+        if (empty($this->projectId) || empty($this->serviceAccountPath)) {
+            return false;
+        }
+
+        try {
+            $accessToken = $this->getAccessToken();
+            if (!$accessToken) return false;
+
+            $payload = [
+                'message' => [
+                    'token'   => $token,
+                    'data'    => array_map('strval', $data),
+                    'android' => ['priority' => 'high'],
+                ],
+            ];
+
+            $response = Http::withToken($accessToken)
+                ->timeout(10)
+                ->post("https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send", $payload);
+
+            if (!$response->successful()) {
+                Log::warning('FCM sendDataOnly failed', ['status' => $response->status(), 'body' => $response->body()]);
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('FCM sendDataOnly exception', ['error' => $e->getMessage()]);
+            return false;
+        }
+    }
+
     public function send(string $token, string $title, string $body, array $data = []): bool
     {
         if (empty($this->projectId) || empty($this->serviceAccountPath)) {

@@ -31,6 +31,10 @@ use Illuminate\Support\Facades\Route;
 // ─── Health Check ──────────────────────────────────────────────────────────
 Route::get('health', \App\Http\Controllers\Api\HealthController::class);
 
+// ─── Agora Token (Sanctum) ────────────────────────────────────────────────
+Route::post('call/agora-token', [\App\Http\Controllers\Api\AgoraController::class, 'token'])
+    ->middleware('auth:sanctum');
+
 // ─── Broadcasting Auth (Sanctum) ───────────────────────────────────────────
 // Route default /broadcasting/auth menggunakan web guard (session).
 // Route ini override dengan Sanctum agar Bearer token dari mobile app dikenali.
