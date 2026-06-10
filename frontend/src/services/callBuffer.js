@@ -1,7 +1,7 @@
 // Buffer module-level untuk incoming call yang datang saat user tidak di ChatPage.
 // Bertahan melewati navigasi (tidak di-reset saat komponen unmount).
 
-let _pending    = null   // { orderId, orderType, offer, senderId }
+let _pending    = null   // { orderId, orderType, offer, senderId, callerName }
 let _autoAnswer = false  // flag: user sudah tap Angkat di overlay, jawab otomatis di ChatPage
 const _listeners = new Set()
 

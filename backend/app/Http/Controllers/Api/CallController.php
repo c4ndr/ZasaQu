@@ -50,9 +50,13 @@ class CallController extends Controller
             : $order->customer_id;
 
         if ($receiverId && in_array($data['signal_type'], ['ring', 'offer', 'end'])) {
+            // Format nama pemanggil — mitra mendapat label agar penerima tahu konteksnya
+            $callerLabel = $this->formatCallerName($user);
+
             $ctxData = [
-                'order_id'   => $data['order_id'],
-                'order_type' => $data['order_type'],
+                'order_id'    => $data['order_id'],
+                'order_type'  => $data['order_type'],
+                'caller_name' => $callerLabel,
             ];
             // Sertakan SDP offer agar callee tidak perlu berlangganan order channel dulu
             if ($data['signal_type'] === 'offer') {
@@ -77,7 +81,7 @@ class CallController extends Controller
                                 'order_id'    => (string) $data['order_id'],
                                 'order_type'  => $data['order_type'],
                                 'caller_id'   => (string) $user->id,
-                                'caller_name' => $user->name,
+                                'caller_name' => $callerLabel,
                             ]
                         );
                     }
@@ -95,5 +99,15 @@ class CallController extends Controller
             'zasamart' => MartOrder::findOrFail($orderId),
             default    => Order::findOrFail($orderId),
         };
+    }
+
+    /** Format nama pemanggil — mitra mendapat label "(Mitra ZasaQu)" */
+    private function formatCallerName(User $user): string
+    {
+        $role = $user->role ?? '';
+        if (str_starts_with($role, 'mitra')) {
+            return $user->name . ' (Mitra ZasaQu)';
+        }
+        return $user->name;
     }
 }

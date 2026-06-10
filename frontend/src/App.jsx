@@ -381,7 +381,7 @@ function NotifBridge() {
       try {
         const res = await AgoraVoice.getPendingCall()
         if (res?.orderId && res?.orderType) {
-          storeIncomingCall({ orderId: res.orderId, orderType: res.orderType })
+          storeIncomingCall({ orderId: res.orderId, orderType: res.orderType, callerName: res.callerName || null })
           if (res.autoAnswer) markAutoAnswer()
           navigate(resolveChatPath(user.role, res.orderType, res.orderId))
         }
@@ -408,7 +408,7 @@ function NotifBridge() {
         const data = notif?.data ?? {}
         // Fallback: jika user tap notif biasa (bukan full-screen), isi callBuffer manual
         if (data.type === 'incoming_call' && data.order_id && data.order_type) {
-          storeIncomingCall({ orderId: data.order_id, orderType: data.order_type })
+          storeIncomingCall({ orderId: data.order_id, orderType: data.order_type, callerName: data.caller_name || null })
           markAutoAnswer()
         }
         const url = resolveNotifUrl(data, user?.role)
@@ -434,7 +434,7 @@ function resolveChatPath(role, orderType, orderId) {
 }
 
 // Overlay panggilan masuk — muncul dari manapun, bukan hanya di ChatPage
-function IncomingCallOverlay({ onAnswer, onDecline }) {
+function IncomingCallOverlay({ onAnswer, onDecline, callerName }) {
   // onTouchEnd sebagai backup onClick — Android WebView kadang delay 300ms pada onClick
   const handleAnswer  = (e) => { e.preventDefault(); onAnswer() }
   const handleDecline = (e) => { e.preventDefault(); onDecline() }
@@ -448,7 +448,12 @@ function IncomingCallOverlay({ onAnswer, onDecline }) {
       touchAction: 'manipulation',
     }}>
       <div style={{ fontSize: 64, animation: 'phonePulse 0.9s ease-in-out infinite' }}>📞</div>
-      <p style={{ color: '#fff', fontSize: 22, fontWeight: 800, textAlign: 'center' }}>Panggilan Masuk</p>
+      <p style={{ color: '#fff', fontSize: 22, fontWeight: 800, textAlign: 'center' }}>
+        {callerName || 'Panggilan Masuk'}
+      </p>
+      {callerName && (
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginTop: -16 }}>Panggilan Masuk</p>
+      )}
       <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, textAlign: 'center' }}>Tap Angkat untuk menerima</p>
       <div style={{ display: 'flex', gap: 28 }}>
         <button
@@ -491,8 +496,9 @@ function VoiceCallBridge() {
     const ch = echo.private(`user.${user.id}`)
 
     ch.listen('.call.signal', ({ signal_type, data, sender_id }) => {
-      const orderId   = data?.order_id
-      const orderType = data?.order_type
+      const orderId    = data?.order_id
+      const orderType  = data?.order_type
+      const callerName = data?.caller_name || null
       if (!orderId || !orderType) return
 
       // Jangan tampilkan overlay jika user sudah berada di ChatPage order ini
@@ -500,15 +506,18 @@ function VoiceCallBridge() {
       const onChat    = locationRef.current.pathname === chatPath
 
       if (signal_type === 'ring' && !onChat) {
-        setIncoming({ orderId, orderType, senderId: sender_id })
+        setIncoming({ orderId, orderType, senderId: sender_id, callerName })
+        // Simpan ke buffer agar useVoiceCall di ChatPage bisa auto-answer saat user angkat dari overlay
+        storeIncomingCall({ orderId, orderType, senderId: sender_id, callerName })
+      }
+
+      if (signal_type === 'ring' && onChat) {
+        storeIncomingCall({ orderId, orderType, senderId: sender_id, callerName })
       }
 
       if (signal_type === 'offer') {
-        // Selalu buffer SDP — mencegah race condition saat ChatPage baru mount
-        // onChat=true: useVoiceCall tangkap via listener, tidak tampilkan overlay
-        // onChat=false: tampilkan overlay juga
-        storeIncomingCall({ orderId, orderType, offer: data.sdp, senderId: sender_id })
-        if (!onChat) setIncoming(prev => prev ?? { orderId, orderType, senderId: sender_id })
+        storeIncomingCall({ orderId, orderType, offer: data.sdp, senderId: sender_id, callerName })
+        if (!onChat) setIncoming(prev => prev ?? { orderId, orderType, senderId: sender_id, callerName })
       }
 
       if (signal_type === 'end') {
@@ -553,7 +562,7 @@ function VoiceCallBridge() {
   }, [incoming])
 
   if (!incoming) return null
-  return <IncomingCallOverlay onAnswer={handleAnswer} onDecline={handleDecline} />
+  return <IncomingCallOverlay onAnswer={handleAnswer} onDecline={handleDecline} callerName={incoming.callerName} />
 }
 
 export default function App() {

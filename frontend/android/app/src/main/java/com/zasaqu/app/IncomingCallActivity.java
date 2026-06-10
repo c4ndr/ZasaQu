@@ -41,6 +41,7 @@ public class IncomingCallActivity extends AppCompatActivity {
 
     private String orderId;
     private String orderType;
+    private String callerNamePref;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,10 +63,11 @@ public class IncomingCallActivity extends AppCompatActivity {
             if (km != null) km.requestDismissKeyguard(this, null);
         }
 
-        orderId   = getIntent().getStringExtra("order_id");
-        orderType = getIntent().getStringExtra("order_type");
+        orderId        = getIntent().getStringExtra("order_id");
+        orderType      = getIntent().getStringExtra("order_type");
         String callerName = getIntent().getStringExtra("caller_name");
         if (callerName == null || callerName.isEmpty()) callerName = "Pengguna ZasaQu";
+        callerNamePref = callerName;
 
         buildUI(callerName);
         startRingtone();
@@ -165,6 +167,7 @@ public class IncomingCallActivity extends AppCompatActivity {
         getSharedPreferences("zasaqu_call", MODE_PRIVATE).edit()
             .putString("pending_order_id",    orderId)
             .putString("pending_order_type",  orderType)
+            .putString("pending_caller_name", callerNamePref)
             .putBoolean("pending_auto_answer", true)
             .apply();
 

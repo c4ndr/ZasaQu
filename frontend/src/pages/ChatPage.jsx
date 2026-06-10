@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import useChatRoom from '../hooks/useChatRoom'
 import useVoiceCall from '../hooks/useVoiceCall'
 import CallModal from '../components/CallModal'
+import { peekIncomingCall } from '../services/callBuffer'
 
 function formatTime(d) {
   return new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
@@ -190,7 +191,7 @@ export default function ChatPage() {
   const { user }        = useAuth()
   const location        = useLocation()
   const { orderType, backTo } = deriveContext(location.pathname, orderId)
-  const otherName = location.state?.otherName ?? null
+  const otherName = location.state?.otherName ?? peekIncomingCall()?.callerName ?? null
 
   const { room, messages, templates, loading, sendMessage, suspended } = useChatRoom(orderId, orderType)
   const { callState, isMuted, isSpeaker, duration, iceState, remoteAudio, isCaller, callError, clearCallError,

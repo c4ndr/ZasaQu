@@ -160,15 +160,19 @@ public class AgoraVoicePlugin extends Plugin {
         String orderType  = prefs.getString("pending_order_type",  null);
         boolean autoAnswer = prefs.getBoolean("pending_auto_answer", false);
 
+        String callerName = prefs.getString("pending_caller_name", null);
+
         JSObject r = new JSObject();
         if (orderId != null) {
             r.put("orderId",    orderId);
             r.put("orderType",  orderType);
             r.put("autoAnswer", autoAnswer);
+            if (callerName != null && !callerName.isEmpty()) r.put("callerName", callerName);
             // Hapus agar tidak terbaca dua kali
             prefs.edit()
                 .remove("pending_order_id")
                 .remove("pending_order_type")
+                .remove("pending_caller_name")
                 .remove("pending_auto_answer")
                 .apply();
         }
