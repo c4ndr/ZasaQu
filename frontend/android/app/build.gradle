@@ -21,6 +21,10 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            // Hanya ARM — x86/x86_64 hanya untuk emulator, tidak perlu di APK distribusi
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -42,6 +46,12 @@ android {
             signingConfig signingConfigs.release
         }
     }
+    packagingOptions {
+        // Extension Agora yang tidak dibutuhkan untuk voice call sederhana
+        exclude 'lib/*/libagora_lip_sync_extension.so'      // deteksi lip sync video
+        exclude 'lib/*/libagora_spatial_audio_extension.so' // audio 3D posisi ruang
+        exclude 'lib/*/libagora-ffmpeg.so'                  // media demuxer (untuk video player)
+    }
 }
 
 repositories {
@@ -56,7 +66,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
-    implementation 'io.agora.rtc:full-sdk:4.4.0'
+    implementation 'io.agora.rtc:voice-sdk:4.4.0'
     implementation 'com.google.firebase:firebase-messaging:23.4.1'
     implementation 'androidx.core:core:1.12.0'
     testImplementation "junit:junit:$junitVersion"
