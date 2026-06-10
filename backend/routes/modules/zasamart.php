@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Mart\CustomerController;
 use App\Http\Controllers\Api\Mart\SellerController;
 use App\Http\Controllers\Api\Mart\MitraMartController;
 use App\Http\Controllers\Api\Admin\MartController;
+use App\Http\Controllers\Api\DeliveryPhotoController;
 use Illuminate\Support\Facades\Route;
 
 // ── Customer routes ──────────────────────────────────────────────────────────
@@ -24,8 +25,9 @@ Route::prefix('mart')->middleware('auth:sanctum')->group(function () {
     Route::get('orders',                [CustomerController::class, 'myOrders']);
     Route::get('orders/{id}',           [CustomerController::class, 'orderDetail']);
     Route::post('orders/{id}/cancel',   [CustomerController::class, 'cancelOrder']);
-    Route::post('orders/{id}/receive',  [CustomerController::class, 'receiveOrder']);
-    Route::post('reviews',              [CustomerController::class, 'submitReview']);
+    Route::post('orders/{id}/receive',       [CustomerController::class, 'receiveOrder']);
+    Route::post('reviews',                   [CustomerController::class, 'submitReview']);
+    Route::get('orders/{id}/delivery-photo', [DeliveryPhotoController::class, 'serveMart']);
 });
 
 // ── Seller routes ─────────────────────────────────────────────────────────────
@@ -59,7 +61,8 @@ Route::prefix('mart/mitra')->middleware(['auth:sanctum', 'role:mitra_motor,mitra
     Route::get('orders/my',               [MitraMartController::class, 'myOrders']);
     Route::get('orders/history',          [MitraMartController::class, 'history']);
     Route::post('orders/{id}/accept',     [MitraMartController::class, 'accept']);
-    Route::patch('orders/{id}/status',    [MitraMartController::class, 'updateStatus']);
+    Route::patch('orders/{id}/status',         [MitraMartController::class, 'updateStatus']);
+    Route::post('orders/{id}/delivery-photo',  [DeliveryPhotoController::class, 'uploadMart']);
 });
 
 // ── Admin Mart routes ─────────────────────────────────────────────────────────

@@ -2,6 +2,19 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import api from '../../services/api'
 
+function AuthedImg({ src, alt, style = {} }) {
+  const [url, setUrl] = useState(null)
+  useEffect(() => {
+    let active = true
+    api.get(src, { responseType: 'blob' })
+      .then(r => { if (active) setUrl(URL.createObjectURL(r.data)) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [src])
+  if (!url) return <div style={{ ...style, background: 'var(--k-card2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 28 }}>📷</span></div>
+  return <img src={url} alt={alt} style={{ ...style, objectFit: 'cover' }} />
+}
+
 const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const fmtDate = (d) => new Date(d).toLocaleString('id-ID')
 const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
@@ -149,6 +162,15 @@ export default function MartOrderDetailPage() {
           {order.delivery_phone && <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 4 }}>{order.delivery_phone}</p>}
           {order.notes && <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 6, fontStyle: 'italic' }}>"{order.notes}"</p>}
         </div>
+
+        {/* Foto bukti pengiriman — saat delivered/completed */}
+        {['delivered', 'completed'].includes(order.status) && order.delivery_photo && (
+          <div style={{ background: 'var(--k-card)', borderRadius: 14, border: '1px solid var(--k-border)', marginBottom: 14, overflow: 'hidden' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', padding: '12px 14px 0', textTransform: 'uppercase', letterSpacing: '0.07em' }}>📸 Bukti Pengiriman</p>
+            <AuthedImg src={`/mart/orders/${id}/delivery-photo`} alt="Bukti pengiriman"
+              style={{ width: '100%', maxHeight: 220, display: 'block', marginTop: 10 }} />
+          </div>
+        )}
 
         {/* Payment summary */}
         <div style={{ background: 'var(--k-card)', borderRadius: 14, padding: '14px', border: '1px solid var(--k-border)', marginBottom: 14 }}>

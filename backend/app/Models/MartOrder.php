@@ -15,6 +15,7 @@ class MartOrder extends Model
         'subtotal', 'shipping_fee', 'total',
         'commission_rate', 'platform_commission', 'seller_income',
         'packed_at', 'picked_up_at', 'delivered_at', 'completed_at', 'cancelled_at',
+        'delivery_photo',
     ];
 
     protected $casts = [

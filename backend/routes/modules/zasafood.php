@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Food\FoodOrderController;
 use App\Http\Controllers\Api\Food\FoodMitraController;
 use App\Http\Controllers\Api\Food\FoodJastipController;
+use App\Http\Controllers\Api\DeliveryPhotoController;
 use App\Http\Controllers\Api\Merchant\ProfileController as MerchantProfileController;
 use App\Http\Controllers\Api\Merchant\MenuController as MerchantMenuController;
 use App\Http\Controllers\Api\Merchant\FoodOrderController as MerchantFoodOrderController;
@@ -23,6 +24,7 @@ Route::prefix('food')->group(function () {
     Route::post('orders/{id}/rate',            [FoodOrderController::class, 'rate']);
     Route::get('orders/{id}/rating',           [FoodOrderController::class, 'getRating']);
     Route::get('orders/{id}/mitra-location',   [FoodOrderController::class, 'mitraLocation']);
+    Route::get('orders/{id}/delivery-photo',   [DeliveryPhotoController::class, 'serveFood']);
 });
 
 // ── Food Jastip: Sesi Hemat Ongkir ───────────────────────────────────────
@@ -51,7 +53,8 @@ Route::prefix('food/mitra')
     Route::get('orders/available',         [FoodMitraController::class, 'available']);
     Route::get('orders/my',                [FoodMitraController::class, 'myOrders']);
     Route::post('orders/{id}/accept',      [FoodMitraController::class, 'accept']);
-    Route::patch('orders/{id}/status',     [FoodMitraController::class, 'updateStatus']);
+    Route::patch('orders/{id}/status',          [FoodMitraController::class, 'updateStatus']);
+    Route::post('orders/{id}/delivery-photo',   [DeliveryPhotoController::class, 'uploadFood']);
 });
 
 // ── Merchant (role: merchant) ──────────────────────────────────────────────

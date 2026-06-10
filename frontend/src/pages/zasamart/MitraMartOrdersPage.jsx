@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { Link } from 'react-router-dom'
 import Map, { Marker } from 'react-map-gl/maplibre'
 import { SATELLITE_STYLE } from '../../utils/mapStyle'
@@ -12,6 +12,72 @@ const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const fmtTime = (d) => new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const fmtDist = (m) => !m && m !== 0 ? null : m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m'
 const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
+
+function AuthedImg({ src, alt, style = {} }) {
+  const [url, setUrl] = useState(null)
+  useEffect(() => {
+    let active = true
+    api.get(src, { responseType: 'blob' })
+      .then(r => { if (active) setUrl(URL.createObjectURL(r.data)) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [src])
+  if (!url) return <div style={{ ...style, background: 'var(--k-card2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span>📷</span></div>
+  return <img src={url} alt={alt} style={{ ...style, objectFit: 'cover' }} />
+}
+
+function DeliveryPhotoSlot({ orderId, uploaded, onUploaded, uploadUrl }) {
+  const inputId       = useId()
+  const [busy, setBusy]     = useState(false)
+  const [done, setDone]     = useState(uploaded)
+  const [preview, setPreview] = useState(null)
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPreview(URL.createObjectURL(file))
+    setBusy(true)
+    try {
+      const fd = new FormData()
+      fd.append('photo', file)
+      await api.post(uploadUrl, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      setDone(true)
+      onUploaded?.()
+    } catch { setPreview(null) }
+    finally { setBusy(false) }
+  }
+
+  return (
+    <div style={{ background: 'var(--k-card2)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 14, padding: 12, marginTop: 12 }}>
+      <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-sub)', marginBottom: 8 }}>
+        📸 Foto Bukti Sampai
+        {done && <span style={{ marginLeft: 8, color: '#22C55E', fontSize: 11 }}>✓ Terupload</span>}
+      </p>
+      {preview ? (
+        <img src={preview} alt="preview" style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--k-border)', marginBottom: 6 }} />
+      ) : done ? (
+        <AuthedImg src={`/mart/orders/${orderId}/delivery-photo`} alt="Bukti pengiriman"
+          style={{ width: '100%', maxHeight: 160, borderRadius: 10, border: '1px solid var(--k-border)', display: 'block', marginBottom: 6 }} />
+      ) : null}
+      {!done && (
+        <>
+          <label htmlFor={inputId} style={{ display: 'block', width: '100%', padding: '10px', borderRadius: 10, border: '1.5px dashed rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.04)', color: 'var(--k-sub)', fontSize: 12, fontWeight: 600, textAlign: 'center', cursor: 'pointer', boxSizing: 'border-box' }}>
+            {busy ? 'Mengunggah...' : '📷 Pilih Foto'}
+          </label>
+          <input id={inputId} type="file" accept="image/*" capture="environment" onChange={handleFile} disabled={busy} style={{ display: 'none' }} />
+        </>
+      )}
+      {done && !preview && (
+        <>
+          <label htmlFor={inputId} style={{ display: 'block', marginTop: 6, fontSize: 11, color: 'var(--k-muted)', textAlign: 'center', cursor: 'pointer' }}>
+            {busy ? 'Mengunggah...' : '🔄 Ganti foto'}
+          </label>
+          <input id={inputId} type="file" accept="image/*" capture="environment" onChange={handleFile} disabled={busy} style={{ display: 'none' }} />
+        </>
+      )}
+    </div>
+  )
+}
 
 // ── Pin marker ────────────────────────────────────────────────────────────────
 function PinMarker({ color, emoji, size = 34 }) {
@@ -418,9 +484,19 @@ export default function MitraMartOrdersPage() {
                             </div>
                           </div>
 
+                          {/* Foto bukti pengiriman — saat on_delivery */}
+                          {order.status === 'on_delivery' && (
+                            <DeliveryPhotoSlot
+                              orderId={order.id}
+                              uploaded={!!order.delivery_photo}
+                              onUploaded={load}
+                              uploadUrl={`/mart/mitra/orders/${order.id}/delivery-photo`}
+                            />
+                          )}
+
                           {nx && (
                             <button onClick={() => updateStatus(order.id, nx.value)} disabled={updating === order.id}
-                              style={{ width: '100%', padding: 15, borderRadius: 14, border: 'none', cursor: updating === order.id ? 'default' : 'pointer', background: updating === order.id ? 'var(--k-border)' : nx.color, color: '#fff', fontWeight: 900, fontSize: 15, animation: updating !== order.id ? 'pulse 2s infinite' : 'none' }}>
+                              style={{ width: '100%', padding: 15, borderRadius: 14, border: 'none', cursor: updating === order.id ? 'default' : 'pointer', background: updating === order.id ? 'var(--k-border)' : nx.color, color: '#fff', fontWeight: 900, fontSize: 15, animation: updating !== order.id ? 'pulse 2s infinite' : 'none', marginTop: order.status === 'on_delivery' ? 12 : 0 }}>
                               {updating === order.id ? 'Memperbarui...' : nx.label}
                             </button>
                           )}
@@ -554,6 +630,13 @@ export default function MitraMartOrdersPage() {
                           </div>
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--k-sub)' }}>📍 {order.delivery_address}</div>
+                        {order.delivery_photo && (
+                          <div style={{ marginTop: 10 }}>
+                            <p style={{ fontSize: 11, color: 'var(--k-muted)', fontWeight: 600, marginBottom: 6 }}>📸 Bukti Sampai</p>
+                            <AuthedImg src={`/mart/orders/${order.id}/delivery-photo`} alt="Bukti pengiriman"
+                              style={{ width: '100%', maxHeight: 140, borderRadius: 10, border: '1px solid var(--k-border)', display: 'block' }} />
+                          </div>
+                        )}
                       </div>
                     )
                   })}

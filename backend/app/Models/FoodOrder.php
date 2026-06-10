@@ -23,6 +23,7 @@ class FoodOrder extends Model
         'on_delivery_at', 'delivered_at', 'completed_at',
         'cancelled_at', 'cancellation_reason', 'cancelled_by',
         'rejected_at', 'rejection_reason',
+        'delivery_photo',
         'cod_confirmed_at',
     ];
 

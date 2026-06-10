@@ -10,6 +10,19 @@ import echo from '../../services/echo'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
+
+function AuthedImg({ src, alt, style = {} }) {
+  const [url, setUrl] = useState(null)
+  useEffect(() => {
+    let active = true
+    api.get(src, { responseType: 'blob' })
+      .then(r => { if (active) setUrl(URL.createObjectURL(r.data)) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [src])
+  if (!url) return <div style={{ ...style, background: 'var(--k-card2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 28 }}>📷</span></div>
+  return <img src={url} alt={alt} style={{ ...style, objectFit: 'cover' }} />
+}
 function fmtDist(m) {
   if (!m && m !== 0) return null
   return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`
@@ -449,6 +462,17 @@ export default function FoodTrackingPage() {
               </div>
             </div>
           </div>
+
+          {/* Foto bukti pengiriman — tampil saat delivered/completed */}
+          {['delivered', 'completed'].includes(order.status) && order.delivery_photo && (
+            <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, overflow: 'hidden' }}>
+              <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--k-border)' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>📸 Bukti Pengiriman</p>
+              </div>
+              <AuthedImg src={`/food/orders/${id}/delivery-photo`} alt="Bukti pengiriman"
+                style={{ width: '100%', maxHeight: 220, display: 'block' }} />
+            </div>
+          )}
 
           {order.status === 'delivered' && (
             <div>
