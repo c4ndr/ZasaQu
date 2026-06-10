@@ -50,7 +50,7 @@ android {
         // Extension Agora yang tidak dibutuhkan untuk voice call sederhana
         exclude 'lib/*/libagora_lip_sync_extension.so'      // deteksi lip sync video
         exclude 'lib/*/libagora_spatial_audio_extension.so' // audio 3D posisi ruang
-        exclude 'lib/*/libagora-ffmpeg.so'                  // media demuxer (untuk video player)
+        // libagora-ffmpeg.so TIDAK dieksklusi — dibutuhkan untuk audio codec (AAC)
     }
 }
 
