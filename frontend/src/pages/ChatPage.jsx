@@ -178,12 +178,14 @@ function playNotif() {
 // Derive orderType + backTo dari pathname
 function deriveContext(pathname, orderId) {
   const p = pathname
-  if (p.startsWith('/mitra/food/')) return { orderType: 'zasafood', isMitra: true,  backTo: '/mitra/food/orders' }
-  if (p.startsWith('/mitra/mart/')) return { orderType: 'zasamart', isMitra: true,  backTo: '/mitra/mart/orders' }
-  if (p.startsWith('/mitra/'))     return { orderType: 'zasago',   isMitra: true,  backTo: '/mitra/orders' }
-  if (p.startsWith('/food/'))      return { orderType: 'zasafood', isMitra: false, backTo: `/food/orders/${orderId}` }
-  if (p.startsWith('/mart/'))      return { orderType: 'zasamart', isMitra: false, backTo: `/mart/orders/${orderId}` }
-  return                                   { orderType: 'zasago',   isMitra: false, backTo: `/orders/${orderId}/tracking` }
+  if (p.startsWith('/mitra/food/'))          return { orderType: 'zasafood', isMitra: true,  backTo: '/mitra/food/orders' }
+  if (p.startsWith('/mitra/mart/'))          return { orderType: 'zasamart', isMitra: true,  backTo: '/mitra/mart/orders' }
+  if (p.startsWith('/mitra/'))              return { orderType: 'zasago',   isMitra: true,  backTo: '/mitra/orders' }
+  if (p.startsWith('/food/'))               return { orderType: 'zasafood', isMitra: false, backTo: `/food/orders/${orderId}` }
+  if (p.startsWith('/mart/'))               return { orderType: 'zasamart', isMitra: false, backTo: `/mart/orders/${orderId}` }
+  if (p.startsWith('/home/provider/orders/')) return { orderType: 'zasahome', isMitra: true,  backTo: '/home/provider' }
+  if (p.startsWith('/home/orders/'))         return { orderType: 'zasahome', isMitra: false, backTo: `/home/orders/${orderId}` }
+  return                                            { orderType: 'zasago',   isMitra: false, backTo: `/orders/${orderId}/tracking` }
 }
 
 export default function ChatPage() {

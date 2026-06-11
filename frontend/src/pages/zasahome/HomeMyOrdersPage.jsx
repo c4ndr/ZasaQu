@@ -1,17 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
-
-const STATUS_INFO = {
-  pending:    { label: 'Menunggu',      color: '#F6AD55' },
-  confirmed:  { label: 'Dikonfirmasi', color: '#6366F1' },
-  picked_up:  { label: 'Dijemput',     color: '#6366F1' },
-  processing: { label: 'Diproses',     color: '#F97316' },
-  ready:      { label: 'Siap',         color: '#00C896' },
-  delivering: { label: 'Diantar',      color: '#6366F1' },
-  completed:  { label: 'Selesai',      color: '#00C896' },
-  cancelled:  { label: 'Dibatalkan',   color: '#F56565' },
-}
+import { STATUS_META } from '../../utils/homeServiceConfig'
 
 export default function HomeMyOrdersPage() {
   const navigate = useNavigate()
@@ -32,11 +22,12 @@ export default function HomeMyOrdersPage() {
           ← ZasaHome
         </button>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--k-text)' }}>Pesanan Saya</h1>
+        <p style={{ color: 'var(--k-muted)', fontSize: 13 }}>{orders.length} pesanan</p>
       </div>
 
       <div style={{ padding: '0 16px' }}>
         {loading ? (
-          [1,2,3].map(i => <div key={i} style={{ height: 80, borderRadius: 14, background: 'var(--k-card)', marginBottom: 10, animation: 'pulse 1.5s infinite' }} />)
+          [1,2,3].map(i => <div key={i} style={{ height: 100, borderRadius: 16, background: 'var(--k-card)', marginBottom: 12, animation: 'pulse 1.5s infinite' }} />)
         ) : orders.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-muted)' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
@@ -46,22 +37,47 @@ export default function HomeMyOrdersPage() {
             </button>
           </div>
         ) : orders.map(order => {
-          const si = STATUS_INFO[order.status] ?? { label: order.status, color: '#A0A0BC' }
+          const si = STATUS_META[order.status] ?? { label: order.status, color: '#A0A0BC', bg: 'rgba(160,160,188,0.12)', icon: '?' }
+          const isActive = !['completed', 'cancelled'].includes(order.status)
           return (
             <button key={order.id} onClick={() => navigate(`/home/orders/${order.id}`)}
-              style={{ width: '100%', textAlign: 'left', background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: 14, marginBottom: 10, cursor: 'pointer' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>{order.order_number}</p>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${si.color}15`, color: si.color }}>
-                  {si.label}
+              style={{
+                width: '100%', textAlign: 'left', background: 'var(--k-card)',
+                border: isActive ? `1.5px solid ${si.color}40` : '1px solid var(--k-border)',
+                borderRadius: 16, padding: 16, marginBottom: 12, cursor: 'pointer',
+              }}>
+              {/* Status banner */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: si.bg, color: si.color }}>
+                  {si.icon} {si.label}
                 </span>
-              </div>
-              <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--k-text)', marginBottom: 4 }}>{order.provider?.name}</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>
-                  {new Date(order.created_at).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>
+                  {new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
-                <p style={{ fontSize: 14, fontWeight: 700, color: '#6366F1' }}>Rp {order.total_price.toLocaleString('id')}</p>
+              </div>
+
+              {/* Provider name + order number */}
+              <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--k-text)', marginBottom: 2 }}>{order.provider?.name}</p>
+              <p style={{ fontSize: 11, color: 'var(--k-muted)', marginBottom: 8 }}>{order.order_number}</p>
+
+              {/* Scheduled time jika ada */}
+              {order.scheduled_pickup_at && (
+                <p style={{ fontSize: 12, color: '#6366F1', fontWeight: 600, marginBottom: 4 }}>
+                  🕐 {new Date(order.scheduled_pickup_at).toLocaleString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+
+              {/* Items summary */}
+              {order.items?.length > 0 && (
+                <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 8 }}>
+                  {order.items.map(i => `${i.service_name} (${i.quantity} ${i.unit})`).join(', ')}
+                </p>
+              )}
+
+              {/* Total */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>{order.items?.length ?? 0} layanan</p>
+                <p style={{ fontSize: 15, fontWeight: 800, color: '#6366F1' }}>Rp {order.total_price.toLocaleString('id')}</p>
               </div>
             </button>
           )

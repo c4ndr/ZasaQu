@@ -233,6 +233,8 @@ function AppRoutes() {
       <Route path="/mitra/food/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/mart/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/mitra/mart/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/home/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/home/provider/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/jastip" element={<PrivateRoute><JastipPage /></PrivateRoute>} />
       <Route path="/mitra/jastip" element={<PrivateRoute><MitraJastipPage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
@@ -429,8 +431,9 @@ function NotifBridge() {
 // Resolve URL chat dari role user + orderType + orderId
 function resolveChatPath(role, orderType, orderId) {
   const isMitra = role?.startsWith('mitra')
-  if (orderType === 'zasafood') return isMitra ? `/mitra/food/orders/${orderId}/chat` : `/food/orders/${orderId}/chat`
-  if (orderType === 'zasamart') return isMitra ? `/mitra/mart/orders/${orderId}/chat` : `/mart/orders/${orderId}/chat`
+  if (orderType === 'zasafood')  return isMitra ? `/mitra/food/orders/${orderId}/chat` : `/food/orders/${orderId}/chat`
+  if (orderType === 'zasamart')  return isMitra ? `/mitra/mart/orders/${orderId}/chat` : `/mart/orders/${orderId}/chat`
+  if (orderType === 'zasahome')  return role === 'home_provider' ? `/home/provider/orders/${orderId}/chat` : `/home/orders/${orderId}/chat`
   return isMitra ? `/mitra/orders/${orderId}/chat` : `/orders/${orderId}/chat`
 }
 

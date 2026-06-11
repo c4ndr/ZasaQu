@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\FoodOrder;
+use App\Models\HomeOrder;
 use App\Models\MartOrder;
 use App\Models\Order;
 use App\Services\NotificationService;
@@ -38,10 +39,20 @@ class ChatController extends Controller
     private function resolveOrder(int $orderId, string $type): \Illuminate\Database\Eloquent\Model
     {
         return match($type) {
-            'zasafood' => FoodOrder::with(['customer', 'mitra'])->findOrFail($orderId),
-            'zasamart' => MartOrder::with(['customer', 'mitra'])->findOrFail($orderId),
-            default    => Order::with(['customer', 'mitra'])->findOrFail($orderId),
+            'zasafood'  => FoodOrder::with(['customer', 'mitra'])->findOrFail($orderId),
+            'zasamart'  => MartOrder::with(['customer', 'mitra'])->findOrFail($orderId),
+            'zasahome'  => HomeOrder::with(['customer', 'provider.user'])->findOrFail($orderId),
+            default     => Order::with(['customer', 'mitra'])->findOrFail($orderId),
         };
+    }
+
+    /** Ambil user ID pihak provider/mitra dari order (berbeda antara HomeOrder dan lainnya) */
+    private function getProviderUserId(\Illuminate\Database\Eloquent\Model $order): ?int
+    {
+        if ($order instanceof HomeOrder) {
+            return $order->provider?->user_id;
+        }
+        return $order->mitra_id ?? null;
     }
 
     public function getOrCreateRoom(int $orderId, Request $request): JsonResponse
@@ -50,7 +61,7 @@ class ChatController extends Controller
         $order = $this->resolveOrder($orderId, $type);
         $user  = $request->user();
 
-        if ($order->customer_id !== $user->id && $order->mitra_id !== $user->id) {
+        if ($order->customer_id !== $user->id && $this->getProviderUserId($order) !== $user->id) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
@@ -70,7 +81,7 @@ class ChatController extends Controller
         $user  = $request->user();
         $order = $this->resolveOrder($room->order_id, $room->order_type ?? 'zasago');
 
-        if ($order->customer_id !== $user->id && $order->mitra_id !== $user->id) {
+        if ($order->customer_id !== $user->id && $this->getProviderUserId($order) !== $user->id) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 

@@ -9,6 +9,7 @@ class HomeOrder extends Model
     protected $fillable = [
         'order_number', 'customer_id', 'provider_id', 'status',
         'pickup_address', 'pickup_lat', 'pickup_lng',
+        'pickup_type', 'pickup_fee',
         'delivery_address', 'delivery_lat', 'delivery_lng',
         'notes', 'total_price',
         'commission_rate', 'platform_commission', 'provider_income',

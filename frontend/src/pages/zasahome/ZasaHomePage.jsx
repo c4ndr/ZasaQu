@@ -73,7 +73,7 @@ export default function ZasaHomePage() {
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[1,2,3].map(i => (
-              <div key={i} style={{ height: 88, borderRadius: 16, background: 'var(--k-card)', animation: 'pulse 1.5s infinite' }} />
+              <div key={i} style={{ height: 96, borderRadius: 16, background: 'var(--k-card)', animation: 'pulse 1.5s infinite' }} />
             ))}
           </div>
         ) : providers.length === 0 ? (
@@ -93,8 +93,17 @@ export default function ZasaHomePage() {
   )
 }
 
+function startingPrice(provider) {
+  const services = provider.services ?? []
+  if (!services.length) return null
+  const min = Math.min(...services.map(s => s.price))
+  const unit = services.find(s => s.price === min)?.unit ?? ''
+  return `mulai Rp ${(min / 1000).toLocaleString('id')}rb/${unit}`
+}
+
 function ProviderCard({ provider: p, onClick }) {
   const catEmoji = { laundry: '👕', pijat: '💆', cleaning: '🧹', tukang: '🔧', lainnya: '⚡' }
+  const priceHint = startingPrice(p)
   return (
     <button onClick={onClick} style={{
       width: '100%', textAlign: 'left', background: 'var(--k-card)',
@@ -109,10 +118,10 @@ function ProviderCard({ provider: p, onClick }) {
         }
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--k-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+            fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, flexShrink: 0,
             background: p.is_open ? 'rgba(0,200,150,0.12)' : 'rgba(160,160,188,0.12)',
             color: p.is_open ? '#00C896' : 'var(--k-muted)',
           }}>{p.is_open ? 'Buka' : 'Tutup'}</span>
@@ -122,7 +131,12 @@ function ProviderCard({ provider: p, onClick }) {
           {p.average_rating > 0 && (
             <span style={{ fontSize: 12, color: '#F6AD55', fontWeight: 600 }}>⭐ {p.average_rating.toFixed(1)}</span>
           )}
-          <span style={{ fontSize: 12, color: 'var(--k-muted)' }}>{p.services?.length ?? 0} layanan</span>
+          {priceHint && (
+            <span style={{ fontSize: 12, color: '#6366F1', fontWeight: 600 }}>{priceHint}</span>
+          )}
+          {!priceHint && (
+            <span style={{ fontSize: 12, color: 'var(--k-muted)' }}>{p.services?.length ?? 0} layanan</span>
+          )}
         </div>
       </div>
       <span style={{ color: 'var(--k-muted)', fontSize: 16 }}>›</span>

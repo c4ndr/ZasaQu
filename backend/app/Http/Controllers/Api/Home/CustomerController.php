@@ -49,11 +49,12 @@ class CustomerController extends Controller
             'pickup_address'      => ['required', 'string', 'max:255'],
             'pickup_lat'          => ['nullable', 'numeric'],
             'pickup_lng'          => ['nullable', 'numeric'],
+            'pickup_type'         => ['nullable', 'in:antar_jemput,mandiri'],
+            'scheduled_at'        => ['nullable', 'date', 'after:now'],
             'delivery_address'    => ['nullable', 'string', 'max:255'],
             'delivery_lat'        => ['nullable', 'numeric'],
             'delivery_lng'        => ['nullable', 'numeric'],
             'notes'               => ['nullable', 'string', 'max:500'],
-            'scheduled_pickup_at' => ['nullable', 'date', 'after:now'],
             'items'               => ['required', 'array', 'min:1'],
             'items.*.service_id'  => ['required', 'exists:home_services,id'],
             'items.*.quantity'    => ['required', 'numeric', 'min:0.1'],
@@ -63,6 +64,19 @@ class CustomerController extends Controller
 
         if (!$provider->isActive()) {
             return response()->json(['message' => 'Provider tidak tersedia.'], 422);
+        }
+
+        $onSiteCategories = ['pijat', 'cleaning', 'tukang', 'lainnya'];
+        $isOnSite         = in_array($provider->category, $onSiteCategories);
+
+        // On-site: provider selalu datang ke pelanggan, tidak ada pilihan pickup
+        $pickupType = $isOnSite ? 'on_site' : ($data['pickup_type'] ?? 'mandiri');
+        $pickupFee  = (!$isOnSite && $pickupType === 'antar_jemput' && $provider->offers_pickup)
+            ? (int) ($provider->pickup_fee ?? 0)
+            : 0;
+
+        if (!$isOnSite && $pickupType === 'antar_jemput' && !$provider->offers_pickup) {
+            return response()->json(['message' => 'Provider ini tidak menyediakan layanan antar jemput.'], 422);
         }
 
         $totalPrice = 0;
@@ -99,11 +113,13 @@ class CustomerController extends Controller
             'delivery_lat'        => $data['delivery_lat'] ?? null,
             'delivery_lng'        => $data['delivery_lng'] ?? null,
             'notes'               => $data['notes'] ?? null,
-            'total_price'         => $totalPrice,
-            'scheduled_pickup_at' => $data['scheduled_pickup_at'] ?? null,
+            'pickup_type'         => $pickupType,
+            'pickup_fee'          => $pickupFee,
+            'total_price'         => $totalPrice + $pickupFee,
+            'scheduled_pickup_at' => $data['scheduled_at'] ?? null,
             'commission_rate'     => $commRate = (float) AdminSetting::valueOf('home_commission_percent', 10),
-            'platform_commission' => $commission = (int) round($totalPrice * $commRate / 100),
-            'provider_income'     => $totalPrice - $commission,
+            'platform_commission' => $commission = (int) round(($totalPrice + $pickupFee) * $commRate / 100),
+            'provider_income'     => ($totalPrice + $pickupFee) - $commission,
         ]);
 
         foreach ($orderItems as $item) {

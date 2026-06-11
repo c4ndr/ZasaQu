@@ -33,14 +33,22 @@ class ProviderController extends Controller
         if (!$provider) return response()->json(['message' => 'Profil provider tidak ditemukan.'], 404);
 
         $data = $request->validate([
-            'name'        => ['sometimes', 'string', 'max:100'],
-            'description' => ['sometimes', 'nullable', 'string'],
-            'address'     => ['sometimes', 'string', 'max:255'],
-            'lat'         => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
-            'lng'         => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
-            'phone'       => ['sometimes', 'nullable', 'string', 'max:20'],
-            'open_time'   => ['sometimes', 'nullable', 'date_format:H:i'],
-            'close_time'  => ['sometimes', 'nullable', 'date_format:H:i'],
+            'name'          => ['sometimes', 'string', 'max:100'],
+            'description'   => ['sometimes', 'nullable', 'string'],
+            'address'       => ['sometimes', 'string', 'max:255'],
+            'lat'           => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
+            'lng'           => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
+            'phone'         => ['sometimes', 'nullable', 'string', 'max:20'],
+            'open_time'     => ['sometimes', 'nullable', 'date_format:H:i'],
+            'close_time'    => ['sometimes', 'nullable', 'date_format:H:i'],
+            'offers_pickup'    => ['sometimes', 'boolean'],
+            'pickup_fee'       => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'specializations'   => ['sometimes', 'nullable', 'array'],
+            'specializations.*' => ['string', 'max:60'],
+            'skill_level'       => ['sometimes', 'nullable', 'string', 'in:pemula,terlatih,berpengalaman,profesional,master'],
+            'experience_years'  => ['sometimes', 'nullable', 'integer', 'min:0', 'max:60'],
+            'certificates'      => ['sometimes', 'nullable', 'array', 'max:10'],
+            'certificates.*'    => ['string', 'max:120'],
         ]);
 
         $provider->update($data);
@@ -174,7 +182,7 @@ class ProviderController extends Controller
         if (!$provider) return response()->json(['message' => 'Provider tidak ditemukan.'], 404);
 
         $status = $request->status;
-        $query  = $provider->orders()->with('customer', 'items')->orderByDesc('created_at');
+        $query  = $provider->orders()->with('customer', 'items', 'provider')->orderByDesc('created_at');
 
         if ($status) $query->where('status', $status);
 
@@ -189,7 +197,15 @@ class ProviderController extends Controller
             return response()->json(['message' => 'Tidak ditemukan.'], 404);
         }
 
-        $allowed = [
+        $onSiteCategories = ['pijat', 'cleaning', 'tukang', 'lainnya'];
+        $isOnSite         = in_array($provider->category, $onSiteCategories);
+
+        $allowed = $isOnSite ? [
+            'pending'     => ['confirmed', 'cancelled'],
+            'confirmed'   => ['traveling', 'cancelled'],
+            'traveling'   => ['in_progress'],
+            'in_progress' => ['completed'],
+        ] : [
             'pending'    => ['confirmed', 'cancelled'],
             'confirmed'  => ['picked_up', 'cancelled'],
             'picked_up'  => ['processing'],

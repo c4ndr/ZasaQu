@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api, { storageUrl } from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
+import { getCategoryConfig } from '../../utils/homeServiceConfig'
 import MerchantLocationPicker from '../../components/MerchantLocationPicker'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { isNative } from '../../utils/nativePlatform'
@@ -29,6 +31,7 @@ function statusColor(s) {
 
 export default function HomeProviderSettingsPage() {
   const navigate = useNavigate()
+  const { logout } = useAuth()
   const [provider,  setProvider]  = useState(null)
   const [loading,   setLoading]   = useState(true)
   const [saving,    setSaving]    = useState(false)
@@ -43,14 +46,20 @@ export default function HomeProviderSettingsPage() {
         setProvider(r.data.data)
         const p = r.data.data
         setForm({
-          name:        p.name || '',
-          description: p.description || '',
-          address:     p.address || '',
-          lat:         p.lat ? String(p.lat) : '',
-          lng:         p.lng ? String(p.lng) : '',
-          phone:       p.phone || '',
-          open_time:   p.open_time?.slice(0, 5) || '',
-          close_time:  p.close_time?.slice(0, 5) || '',
+          name:          p.name || '',
+          description:   p.description || '',
+          address:       p.address || '',
+          lat:           p.lat ? String(p.lat) : '',
+          lng:           p.lng ? String(p.lng) : '',
+          phone:         p.phone || '',
+          open_time:     p.open_time?.slice(0, 5) || '',
+          close_time:    p.close_time?.slice(0, 5) || '',
+          offers_pickup:    p.offers_pickup ?? false,
+          pickup_fee:       p.pickup_fee ?? '',
+          specializations:  p.specializations ?? [],
+          skill_level:      p.skill_level ?? '',
+          experience_years: p.experience_years ?? '',
+          certificates:     p.certificates ?? [],
         })
       })
       .catch(() => showToast('error', 'Gagal memuat profil.'))
@@ -257,12 +266,177 @@ export default function HomeProviderSettingsPage() {
               placeholder="Ceritakan layanan Anda..." {...field('description')} />
           </div>
 
+          {/* Layanan Antar Jemput */}
+          <div style={{ padding: '14px 16px', borderRadius: 14, background: 'var(--k-input)', border: '1px solid var(--k-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: form.offers_pickup ? 12 : 0 }}>
+              <div>
+                <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)' }}>🚚 Layanan Antar Jemput</p>
+                <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 2 }}>Tawarkan antar jemput ke pelanggan</p>
+              </div>
+              <button type="button" onClick={() => setForm(f => ({ ...f, offers_pickup: !f.offers_pickup }))}
+                style={{
+                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', flexShrink: 0,
+                  background: form.offers_pickup ? '#6366F1' : 'var(--k-border)', position: 'relative', transition: 'background 0.2s',
+                }}>
+                <span style={{
+                  position: 'absolute', top: 3, width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                  transition: 'left 0.2s', left: form.offers_pickup ? 25 : 3,
+                }} />
+              </button>
+            </div>
+            {form.offers_pickup && (
+              <div>
+                <label style={{ ...lbl, marginBottom: 6 }}>Biaya Antar Jemput (Rp)</label>
+                <input
+                  style={inp} type="number" min="0" step="1000"
+                  value={form.pickup_fee}
+                  onChange={e => setForm(f => ({ ...f, pickup_fee: e.target.value }))}
+                  placeholder="0 = Gratis"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Keahlian / Spesialisasi */}
+          {(() => {
+            const cfg = getCategoryConfig(provider?.category)
+            if (!cfg.skills?.length) return null
+            const selected = form.specializations ?? []
+            const toggle = skill => setForm(f => {
+              const cur = f.specializations ?? []
+              return { ...f, specializations: cur.includes(skill) ? cur.filter(s => s !== skill) : [...cur, skill] }
+            })
+            return (
+              <div style={{ padding: '14px 16px', borderRadius: 14, background: 'var(--k-input)', border: '1px solid var(--k-border)' }}>
+                <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 4 }}>
+                  {cfg.icon} Keahlian / Spesialisasi
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 12 }}>
+                  Pilih yang sesuai dengan layanan Anda
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {cfg.skills.map(skill => {
+                    const active = selected.includes(skill)
+                    return (
+                      <button key={skill} type="button" onClick={() => toggle(skill)}
+                        style={{
+                          padding: '7px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                          fontWeight: active ? 700 : 400, fontSize: 13,
+                          background: active ? '#6366F1' : 'var(--k-card)',
+                          color: active ? '#fff' : 'var(--k-sub)',
+                          border: active ? '1.5px solid #6366F1' : '1.5px solid var(--k-border)',
+                          transition: 'all 0.15s',
+                        }}>
+                        {active ? '✓ ' : ''}{skill}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Level Keahlian + Pengalaman + Sertifikat (on_site saja) */}
+          {getCategoryConfig(provider?.category).flow === 'on_site' && (
+            <>
+              {/* Level keahlian */}
+              <div style={{ padding: '14px 16px', borderRadius: 14, background: 'var(--k-input)', border: '1px solid var(--k-border)' }}>
+                <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 4 }}>🏅 Level Keahlian</p>
+                <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 12 }}>Tingkat kemampuan Anda saat ini</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { key: 'pemula',         label: 'Pemula',          desc: 'Baru belajar, < 1 tahun',          color: '#94A3B8', badge: '⭐' },
+                    { key: 'terlatih',       label: 'Terlatih',        desc: '1–3 tahun pengalaman',             color: '#22C55E', badge: '⭐⭐' },
+                    { key: 'berpengalaman',  label: 'Berpengalaman',   desc: '3–5 tahun, punya teknik sendiri',  color: '#3B82F6', badge: '⭐⭐⭐' },
+                    { key: 'profesional',    label: 'Profesional',     desc: '5–10 tahun, bersertifikat',        color: '#8B5CF6', badge: '⭐⭐⭐⭐' },
+                    { key: 'master',         label: 'Master',          desc: '10+ tahun, terlatih & diakui',     color: '#F59E0B', badge: '⭐⭐⭐⭐⭐' },
+                  ].map(lv => {
+                    const active = form.skill_level === lv.key
+                    return (
+                      <button key={lv.key} type="button" onClick={() => setForm(f => ({ ...f, skill_level: lv.key }))}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                          borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                          border: active ? `2px solid ${lv.color}` : '1.5px solid var(--k-border)',
+                          background: active ? `${lv.color}15` : 'var(--k-card)',
+                        }}>
+                        <span style={{ fontSize: 18, minWidth: 60, textAlign: 'center' }}>{lv.badge}</span>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontWeight: 700, fontSize: 14, color: active ? lv.color : 'var(--k-text)' }}>{lv.label}</p>
+                          <p style={{ fontSize: 11, color: 'var(--k-muted)', marginTop: 1 }}>{lv.desc}</p>
+                        </div>
+                        {active && <span style={{ fontSize: 16, color: lv.color }}>✓</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Tahun pengalaman */}
+              <div style={{ padding: '14px 16px', borderRadius: 14, background: 'var(--k-input)', border: '1px solid var(--k-border)' }}>
+                <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 4 }}>📅 Tahun Pengalaman</p>
+                <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 10 }}>Sudah berapa lama Anda di bidang ini?</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="number" min="0" max="60" placeholder="0"
+                    value={form.experience_years}
+                    onChange={e => setForm(f => ({ ...f, experience_years: e.target.value }))}
+                    style={{ ...inp, width: 90, textAlign: 'center', fontSize: 20, fontWeight: 700 }}
+                  />
+                  <p style={{ fontSize: 14, color: 'var(--k-sub)' }}>tahun</p>
+                </div>
+              </div>
+
+              {/* Sertifikat */}
+              <div style={{ padding: '14px 16px', borderRadius: 14, background: 'var(--k-input)', border: '1px solid var(--k-border)' }}>
+                <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 4 }}>🎖️ Sertifikat & Lisensi</p>
+                <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 12 }}>
+                  Tambahkan sertifikat yang Anda miliki (BNSP, kursus, pelatihan, dll.)
+                </p>
+                {(form.certificates ?? []).map((cert, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <input
+                      type="text" placeholder={`Contoh: Sertifikat Pijat Tradisional BNSP`}
+                      value={cert}
+                      onChange={e => setForm(f => {
+                        const certs = [...(f.certificates ?? [])]
+                        certs[i] = e.target.value
+                        return { ...f, certificates: certs }
+                      })}
+                      style={{ ...inp, flex: 1, marginBottom: 0 }}
+                    />
+                    <button type="button"
+                      onClick={() => setForm(f => ({ ...f, certificates: (f.certificates ?? []).filter((_, j) => j !== i) }))}
+                      style={{ padding: '0 12px', borderRadius: 10, border: '1px solid rgba(245,101,101,0.4)', background: 'rgba(245,101,101,0.08)', color: '#F56565', cursor: 'pointer', fontSize: 16 }}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                {(form.certificates ?? []).length < 10 && (
+                  <button type="button"
+                    onClick={() => setForm(f => ({ ...f, certificates: [...(f.certificates ?? []), ''] }))}
+                    style={{ width: '100%', padding: '9px', borderRadius: 10, border: '1.5px dashed rgba(99,102,241,0.4)', background: 'transparent', color: '#6366F1', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                    + Tambah Sertifikat
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
           <button type="submit" disabled={saving} style={{
             padding: '12px', borderRadius: 12, border: 'none', cursor: saving ? 'default' : 'pointer',
             background: saving ? 'var(--k-border)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)',
             color: '#fff', fontWeight: 700, fontSize: 14,
           }}>
             {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+          </button>
+
+          <button type="button" onClick={() => { if (confirm('Keluar dari akun?')) { logout(); navigate('/login') } }} style={{
+            padding: '12px', borderRadius: 12, border: '1.5px solid rgba(245,101,101,0.4)',
+            background: 'rgba(245,101,101,0.06)', color: '#F56565',
+            fontWeight: 700, fontSize: 14, cursor: 'pointer',
+          }}>
+            Keluar (Logout)
           </button>
         </form>
       </div>

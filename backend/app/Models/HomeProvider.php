@@ -11,14 +11,21 @@ class HomeProvider extends Model
         'address', 'lat', 'lng', 'phone',
         'logo_path', 'banner_path',
         'open_time', 'close_time', 'is_open',
+        'offers_pickup', 'pickup_fee',
+        'specializations',
+        'skill_level', 'experience_years', 'certificates',
         'average_rating', 'total_ratings', 'status',
     ];
 
     protected $casts = [
-        'is_open'        => 'boolean',
-        'lat'            => 'float',
-        'lng'            => 'float',
-        'average_rating' => 'float',
+        'is_open'          => 'boolean',
+        'offers_pickup'    => 'boolean',
+        'specializations'  => 'array',
+        'certificates'     => 'array',
+        'experience_years' => 'integer',
+        'lat'              => 'float',
+        'lng'              => 'float',
+        'average_rating'   => 'float',
     ];
 
     public function user()      { return $this->belongsTo(User::class); }

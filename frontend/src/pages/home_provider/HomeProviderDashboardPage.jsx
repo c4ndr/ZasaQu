@@ -1,56 +1,50 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
+import { STATUS_META as BASE_STATUS_META, FLOW_STEPS, getNextActions, getCategoryConfig } from '../../utils/homeServiceConfig'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtRp   = v => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const fmtTime = d => new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
-// ── Status config ─────────────────────────────────────────────────────────────
-const STATUS_META = {
-  pending:    { label: 'Order Baru',     color: '#F6AD55', bg: '#FFFBEB', border: '#F6AD5555', icon: '🔔', step: 0 },
-  confirmed:  { label: 'Dikonfirmasi',   color: '#6366F1', bg: '#EEF2FF', border: '#6366F155', icon: '✅', step: 1 },
-  picked_up:  { label: 'Sudah Dijemput', color: '#8B5CF6', bg: '#FAF5FF', border: '#8B5CF655', icon: '🚚', step: 2 },
-  processing: { label: 'Sedang Diproses',color: '#F97316', bg: '#FFF7ED', border: '#F9731655', icon: '⚙️', step: 3 },
-  ready:      { label: 'Siap Diantar',   color: '#00C896', bg: '#ECFDF3', border: '#00C89655', icon: '📦', step: 4 },
-  delivering: { label: 'Sedang Diantar', color: '#3B82F6', bg: '#EFF6FF', border: '#3B82F655', icon: '🛵', step: 5 },
-  completed:  { label: 'Selesai',        color: '#027A48', bg: '#ECFDF3', border: '#00C89655', icon: '✓',  step: 6 },
-  cancelled:  { label: 'Dibatalkan',     color: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB',   icon: '✕',  step: -1 },
+// Tambah border/bg untuk dashboard (melengkapi STATUS_META dari shared config)
+const STATUS_EXTRA = {
+  pending:     { bg: '#FFFBEB', border: '#F6AD5555', label: 'Order Baru' },
+  confirmed:   { bg: '#EEF2FF', border: '#6366F155' },
+  picked_up:   { bg: '#FAF5FF', border: '#8B5CF655' },
+  processing:  { bg: '#FFF7ED', border: '#F9731655' },
+  ready:       { bg: '#ECFDF3', border: '#00C89655' },
+  delivering:  { bg: '#EFF6FF', border: '#3B82F655' },
+  traveling:   { bg: '#FAF5FF', border: '#8B5CF655' },
+  in_progress: { bg: '#FFF7ED', border: '#F9731655' },
+  completed:   { bg: '#ECFDF3', border: '#00C89655' },
+  cancelled:   { bg: '#F9FAFB', border: '#E5E7EB', color: '#6B7280' },
 }
 
-const NEXT_ACTION = {
-  pending:    [{ status: 'confirmed',  label: '✓ Terima Order',          color: '#6366F1' },
-               { status: 'cancelled', label: '✗ Tolak',                  color: '#F56565', danger: true }],
-  confirmed:  [{ status: 'picked_up', label: '🚚 Sudah Jemput Laundry',  color: '#8B5CF6' }],
-  picked_up:  [{ status: 'processing',label: '⚙️ Mulai Cuci',            color: '#F97316' }],
-  processing: [{ status: 'ready',     label: '📦 Selesai, Siap Antar',   color: '#00C896' }],
-  ready:      [{ status: 'delivering',label: '🛵 Berangkat Antar',        color: '#3B82F6' },
-               { status: 'completed', label: '✓ Selesai di Lokasi',      color: '#027A48' }],
-  delivering: [{ status: 'completed', label: '✓ Sudah Sampai ke Customer',color: '#027A48' }],
+function getStatusMeta(status) {
+  const base  = BASE_STATUS_META[status] ?? { label: status, color: '#A0A0BC', icon: '?' }
+  const extra = STATUS_EXTRA[status] ?? {}
+  return { ...base, ...extra }
 }
-
-// Step labels for progress bar
-const STEPS = ['Terima', 'Jemput', 'Proses', 'Siap', 'Antar', 'Selesai']
 
 // ── Progress stepper ──────────────────────────────────────────────────────────
-function FlowSteps({ status }) {
-  const meta = STATUS_META[status]
-  if (!meta || meta.step < 0) return null
-  const idx = meta.step  // 0=pending,1=confirmed,2=picked_up,3=processing,4=ready,5=delivering,6=completed
-  // Map step index (0-6) to stepper index (0-5)
-  const stepperIdx = Math.max(0, idx - 1) // confirmed=0, picked_up=1, processing=2, ready=3, delivering=4, completed=5
-  const filled = status === 'pending' ? -1 : stepperIdx
+function FlowSteps({ status, category }) {
+  const cfg   = getCategoryConfig(category)
+  const steps = FLOW_STEPS[cfg.flow]
+  const meta  = getStatusMeta(status)
+  const idx   = steps.findIndex(s => s.key === status)
+  if (idx < 0 || ['cancelled'].includes(status)) return null
 
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', gap: 3, marginBottom: 4 }}>
-        {STEPS.map((_, i) => (
-          <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= filled ? meta.color : 'var(--k-border)' }} />
+        {steps.map((_, i) => (
+          <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= idx ? meta.color : 'var(--k-border)' }} />
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        {STEPS.map((l, i) => (
-          <span key={i} style={{ fontSize: 9, color: i <= filled ? meta.color : 'var(--k-muted)', fontWeight: i === filled ? 700 : 400 }}>{l}</span>
+        {steps.map((s, i) => (
+          <span key={i} style={{ fontSize: 9, color: i <= idx ? meta.color : 'var(--k-muted)', fontWeight: i === idx ? 700 : 400 }}>{s.label}</span>
         ))}
       </div>
     </div>
@@ -78,11 +72,15 @@ function CancelSheet({ onConfirm, onClose }) {
 
 // ── Single order card ─────────────────────────────────────────────────────────
 function OrderCard({ order, onUpdateStatus }) {
+  const navigate = useNavigate()
   const [busy,       setBusy]       = useState(false)
   const [showCancel, setShowCancel] = useState(false)
-  const sm      = STATUS_META[order.status] ?? STATUS_META.cancelled
-  const actions = NEXT_ACTION[order.status] ?? []
+  const category = order.provider?.category ?? 'laundry'
+  const cfg      = getCategoryConfig(category)
+  const sm       = getStatusMeta(order.status)
+  const actions  = getNextActions(order)
   const isPending = order.status === 'pending'
+  const isOnSite  = cfg.flow === 'on_site'
 
   async function handleAction(nextStatus) {
     if (nextStatus === 'cancelled') { setShowCancel(true); return }
@@ -111,16 +109,57 @@ function OrderCard({ order, onUpdateStatus }) {
 
         <div style={{ padding: 14 }}>
           {/* Progress bar */}
-          <FlowSteps status={order.status} />
+          <FlowSteps status={order.status} category={category} />
 
           {/* Customer info */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'var(--k-input)', border: '1px solid var(--k-border)', marginBottom: 12 }}>
             <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>👤</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)' }}>{order.customer?.name}</p>
-              <p style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {order.pickup_address}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)' }}>{order.customer?.name}</p>
+                {isOnSite ? (
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, flexShrink: 0, background: 'rgba(99,102,241,0.12)', color: '#6366F1' }}>
+                    {cfg.icon} On-Site
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, flexShrink: 0,
+                    background: order.pickup_type === 'antar_jemput' ? 'rgba(59,130,246,0.12)' : 'rgba(160,160,188,0.12)',
+                    color: order.pickup_type === 'antar_jemput' ? '#3B82F6' : 'var(--k-muted)' }}>
+                    {order.pickup_type === 'antar_jemput' ? '🚚 Antar Jemput' : '🏃 Mandiri'}
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                📍 {order.pickup_address}
+              </p>
+              {order.scheduled_pickup_at && (
+                <p style={{ fontSize: 11, color: '#6366F1', fontWeight: 600, marginTop: 2 }}>
+                  🕐 {new Date(order.scheduled_pickup_at).toLocaleString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
             </div>
-            <p style={{ fontSize: 12, color: 'var(--k-muted)', flexShrink: 0 }}>{fmtTime(order.created_at)}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+              <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{fmtTime(order.created_at)}</p>
+              {order.status !== 'cancelled' && (
+                <button
+                  onClick={() => navigate(`/home/provider/orders/${order.id}/chat`, { state: { otherName: order.customer?.name } })}
+                  style={{ padding: '3px 10px', borderRadius: 8, border: '1px solid rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.08)', color: '#6366F1', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                  💬 Chat
+                </button>
+              )}
+              {isOnSite && (order.pickup_lat && order.pickup_lng || order.pickup_address) && (
+                <button
+                  onClick={() => {
+                    const dest = order.pickup_lat && order.pickup_lng
+                      ? `${order.pickup_lat},${order.pickup_lng}`
+                      : encodeURIComponent(order.pickup_address)
+                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`, '_blank')
+                  }}
+                  style={{ padding: '3px 10px', borderRadius: 8, border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.08)', color: '#16a34a', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                  🗺️ Maps
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Items */}
@@ -224,16 +263,16 @@ export default function HomeProviderDashboardPage() {
 
   function showToast(type, msg) { setToast({ type, msg }); setTimeout(() => setToast(null), 3000) }
 
-  const ACTIVE_STATUSES  = ['confirmed', 'picked_up', 'processing', 'ready', 'delivering']
+  const ACTIVE_STATUSES  = ['confirmed', 'picked_up', 'processing', 'ready', 'delivering', 'traveling', 'in_progress']
   const HISTORY_STATUSES = ['completed', 'cancelled']
 
   const pending = allOrders.filter(o => o.status === 'pending')
   const active  = allOrders.filter(o => ACTIVE_STATUSES.includes(o.status))
   const history = allOrders.filter(o => HISTORY_STATUSES.includes(o.status))
 
-  const todayIncome = history
-    .filter(o => o.status === 'completed' && new Date(o.completed_at).toDateString() === new Date().toDateString())
-    .reduce((s, o) => s + (o.provider_income ?? 0), 0)
+  const todayIncome    = history.filter(o => o.status === 'completed' && new Date(o.completed_at).toDateString() === new Date().toDateString()).reduce((s, o) => s + (o.provider_income ?? 0), 0)
+  const todayCompleted = history.filter(o => o.status === 'completed' && new Date(o.completed_at).toDateString() === new Date().toDateString()).length
+  const cfg            = getCategoryConfig(provider?.category)
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 80 }}>
@@ -246,68 +285,78 @@ export default function HomeProviderDashboardPage() {
         </div>
       )}
 
-      {/* ── Header ── */}
-      <div style={{ background: 'var(--k-card)', borderBottom: '1px solid var(--k-border)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ padding: '14px 16px 10px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div>
-              <p style={{ fontWeight: 800, fontSize: 17, color: 'var(--k-text)' }}>🏠 ZasaHome Provider</p>
-              <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 1 }}>{provider?.name ?? '...'}</p>
-              {todayIncome > 0 && <p style={{ fontSize: 12, color: '#027A48', fontWeight: 600, marginTop: 1 }}>Hari ini: +{fmtRp(todayIncome)}</p>}
+      {/* ── Hero card ── */}
+      <div style={{ background: 'linear-gradient(135deg,#1e1b4b 0%,#312e81 60%,#4c1d95 100%)', padding: '52px 20px 20px', position: 'relative', overflow: 'hidden' }}>
+        {/* decorative circles */}
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+        <div style={{ position: 'absolute', bottom: -20, left: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, position: 'relative' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ width: 48, height: 48, borderRadius: 16, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
+              {cfg.icon}
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-              {provider?.status === 'active' && (
-                <button onClick={handleToggleOpen} style={{
-                  padding: '7px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12,
-                  background: provider?.is_open ? 'rgba(245,101,101,0.12)' : 'rgba(0,200,150,0.12)',
-                  color: provider?.is_open ? '#F56565' : '#00C896',
-                }}>
-                  {provider?.is_open ? '● Tutup' : '● Buka'}
-                </button>
-              )}
-              <button onClick={() => navigate('/home/provider/services')} style={{ padding: '7px 10px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-sub)', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-                🧺 Layanan
-              </button>
-              <button onClick={() => navigate('/home/provider/settings')} style={{ padding: '7px 10px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-sub)', fontSize: 16, cursor: 'pointer' }}>
-                ⚙️
-              </button>
+            <div>
+              <p style={{ fontWeight: 800, fontSize: 16, color: '#fff', lineHeight: 1.2 }}>{provider?.name ?? '...'}</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2, textTransform: 'capitalize' }}>{provider?.category ?? ''}</p>
             </div>
           </div>
 
-          {provider?.status === 'pending' && (
-            <div style={{ padding: '8px 12px', borderRadius: 10, background: 'rgba(246,173,85,0.1)', border: '1px solid rgba(246,173,85,0.3)', fontSize: 12, color: '#F6AD55', marginBottom: 4 }}>
-              ⏳ Akun sedang menunggu persetujuan admin.
-            </div>
+          {provider?.status === 'active' && (
+            <button onClick={handleToggleOpen} style={{
+              padding: '8px 16px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 12,
+              background: provider?.is_open ? 'rgba(0,200,150,0.2)' : 'rgba(255,255,255,0.12)',
+              color: provider?.is_open ? '#00C896' : 'rgba(255,255,255,0.7)',
+              backdropFilter: 'blur(4px)',
+            }}>
+              {provider?.is_open ? '● Buka' : '○ Tutup'}
+            </button>
           )}
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', borderTop: '1px solid var(--k-border)' }}>
+        {/* Stats row */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, position: 'relative' }}>
+          <StatCard label="Pendapatan" value={fmtRp(todayIncome)} sub="hari ini" color="#00C896" />
+          <StatCard label="Selesai" value={todayCompleted} sub="hari ini" color="#6366F1" />
+          <StatCard label="Aktif" value={active.length + pending.length} sub="order" color="#F97316" />
+        </div>
+
+        {provider?.status === 'pending' && (
+          <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 10, background: 'rgba(246,173,85,0.15)', border: '1px solid rgba(246,173,85,0.3)', fontSize: 12, color: '#F6AD55', position: 'relative' }}>
+            ⏳ Akun menunggu persetujuan admin
+          </div>
+        )}
+      </div>
+
+      {/* ── Sticky Tabs ── */}
+      <div style={{ background: 'var(--k-card)', borderBottom: '1px solid var(--k-border)', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ display: 'flex' }}>
           {[
             ['pending', '🔔', 'Order Baru', pending.length],
-            ['active',  '⚙️', 'Aktif',      active.length ],
-            ['history', '📜', 'Riwayat',    0             ],
+            ['active',  '⚡', 'Aktif',      active.length ],
+            ['history', '📋', 'Riwayat',    0             ],
           ].map(([k, emoji, label, count]) => (
             <button key={k} onClick={() => setTab(k)} style={{
-              flex: 1, padding: '10px 4px 8px', border: 'none', cursor: 'pointer', background: 'transparent',
+              flex: 1, padding: '11px 4px 9px', border: 'none', cursor: 'pointer', background: 'transparent',
               color: tab === k ? '#6366F1' : 'var(--k-sub)',
               borderBottom: tab === k ? '2.5px solid #6366F1' : '2.5px solid transparent',
               fontWeight: tab === k ? 700 : 400, fontSize: 11,
             }}>
-              <div style={{ fontSize: 18, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
+              <div style={{ fontSize: 17, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
                 {emoji}
                 {count > 0 && (
-                  <span style={{ position: 'absolute', top: -5, right: -8, background: k === 'pending' ? '#F56565' : '#6366F1', color: '#fff', fontSize: 9, fontWeight: 800, padding: '1px 4px', borderRadius: 20, lineHeight: 1.4, animation: k === 'pending' && count > 0 ? 'blink 2s infinite' : 'none' }}>
+                  <span style={{ position: 'absolute', top: -5, right: -8, background: k === 'pending' ? '#F56565' : '#6366F1', color: '#fff', fontSize: 9, fontWeight: 800, padding: '1px 4px', borderRadius: 20, lineHeight: 1.4, animation: k === 'pending' ? 'blink 2s infinite' : 'none' }}>
                     {count}
                   </span>
                 )}
               </div>
-              <div style={{ marginTop: 2 }}>{label}</div>
+              <div style={{ marginTop: 3 }}>{label}</div>
             </button>
           ))}
         </div>
       </div>
 
+      {/* ── Content ── */}
       <div style={{ padding: '14px 16px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-sub)' }}>
@@ -316,75 +365,93 @@ export default function HomeProviderDashboardPage() {
           </div>
         ) : (
           <>
-            {/* ── Tab: Order Baru ── */}
             {tab === 'pending' && (
-              pending.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-sub)' }}>
-                  <div style={{ fontSize: 48, marginBottom: 12 }}>🔔</div>
-                  <p style={{ fontWeight: 600, color: 'var(--k-text)', marginBottom: 6 }}>Belum ada order baru</p>
-                  <p style={{ fontSize: 13 }}>Order masuk akan muncul di sini.</p>
-                </div>
-              ) : (
-                pending.map(order => <OrderCard key={order.id} order={order} onUpdateStatus={updateStatus} />)
-              )
+              pending.length === 0 ? <EmptyState icon="🔔" title="Belum ada order baru" sub="Order masuk akan muncul di sini" /> :
+              pending.map(order => <OrderCard key={order.id} order={order} onUpdateStatus={updateStatus} />)
             )}
-
-            {/* ── Tab: Aktif ── */}
             {tab === 'active' && (
-              active.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-sub)' }}>
-                  <div style={{ fontSize: 48, marginBottom: 12 }}>⚙️</div>
-                  <p style={{ fontWeight: 600, color: 'var(--k-text)', marginBottom: 6 }}>Tidak ada order aktif</p>
-                  <p style={{ fontSize: 13 }}>Order yang sedang diproses akan muncul di sini.</p>
-                </div>
-              ) : (
-                active.map(order => <OrderCard key={order.id} order={order} onUpdateStatus={updateStatus} />)
-              )
+              active.length === 0 ? <EmptyState icon="⚡" title="Tidak ada order aktif" sub="Order yang sedang diproses muncul di sini" /> :
+              active.map(order => <OrderCard key={order.id} order={order} onUpdateStatus={updateStatus} />)
             )}
-
-            {/* ── Tab: Riwayat ── */}
             {tab === 'history' && (
-              history.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-sub)' }}>
-                  <div style={{ fontSize: 48, marginBottom: 12 }}>📜</div>
-                  <p>Belum ada riwayat order.</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {history.map(order => {
-                    const sm = STATUS_META[order.status] ?? STATUS_META.cancelled
-                    return (
-                      <div key={order.id} style={{ padding: 14, borderRadius: 14, background: 'var(--k-card)', border: '1.5px solid var(--k-border)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                          <div>
-                            <p style={{ fontWeight: 700, fontSize: 14 }}>{order.customer?.name}</p>
-                            <p style={{ fontSize: 11, color: 'var(--k-muted)', marginTop: 1, fontFamily: 'monospace' }}>#{order.order_number}</p>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <span style={{ display: 'block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, color: sm.color, background: sm.bg }}>
-                              {sm.icon} {sm.label}
-                            </span>
-                            {order.status === 'completed' && order.provider_income > 0 && (
-                              <p style={{ fontSize: 13, color: '#027A48', fontWeight: 800, marginTop: 4 }}>+{fmtRp(order.provider_income)}</p>
-                            )}
-                          </div>
+              history.length === 0 ? <EmptyState icon="📋" title="Belum ada riwayat" sub="" /> :
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {history.map(order => {
+                  const sm = getStatusMeta(order.status)
+                  return (
+                    <div key={order.id} style={{ padding: 14, borderRadius: 16, background: 'var(--k-card)', border: '1px solid var(--k-border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <div>
+                          <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)' }}>{order.customer?.name}</p>
+                          <p style={{ fontSize: 11, color: 'var(--k-muted)', marginTop: 1, fontFamily: 'monospace' }}>#{order.order_number}</p>
                         </div>
-                        <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>
-                          {order.items?.map(i => `${i.service_name} ${i.quantity}${i.unit}`).join(', ')}
-                        </p>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-                          <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{fmtTime(order.created_at)}</p>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: '#6366F1' }}>{fmtRp(order.total_price)}</p>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, color: sm.color, background: sm.bg }}>
+                            {sm.icon} {sm.label}
+                          </span>
+                          {order.status === 'completed' && order.provider_income > 0 && (
+                            <p style={{ fontSize: 13, color: '#027A48', fontWeight: 800, marginTop: 4 }}>+{fmtRp(order.provider_income)}</p>
+                          )}
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-              )
+                      <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 8 }}>
+                        {order.items?.map(i => `${i.service_name} ${i.quantity}${i.unit}`).join(', ')}
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{fmtTime(order.created_at)}</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: '#6366F1' }}>{fmtRp(order.total_price)}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </>
         )}
       </div>
+
+      {/* ── Bottom Navigation ── */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+        background: 'var(--k-card)', borderTop: '1px solid var(--k-border)',
+        display: 'flex', paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}>
+        {[
+          { icon: '📋', label: 'Dashboard', action: null          },
+          { icon: '🧺', label: 'Layanan',   action: '/home/provider/services'  },
+          { icon: '👤', label: 'Akun',      action: '/home/provider/settings'  },
+        ].map(item => (
+          <button key={item.label} onClick={() => item.action && navigate(item.action)}
+            style={{
+              flex: 1, padding: '10px 4px 8px', border: 'none', cursor: 'pointer', background: 'transparent',
+              color: !item.action ? '#6366F1' : 'var(--k-sub)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            }}>
+            <span style={{ fontSize: 20 }}>{item.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: !item.action ? 700 : 400 }}>{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function StatCard({ label, value, sub, color }) {
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: '12px 10px', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+      <p style={{ fontSize: 18, fontWeight: 800, color: '#fff', lineHeight: 1, marginBottom: 3 }}>{value}</p>
+      <p style={{ fontSize: 10, color: color, fontWeight: 700 }}>{label}</p>
+      <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{sub}</p>
+    </div>
+  )
+}
+
+function EmptyState({ icon, title, sub }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--k-sub)' }}>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>{icon}</div>
+      <p style={{ fontWeight: 600, color: 'var(--k-text)', marginBottom: 6 }}>{title}</p>
+      {sub && <p style={{ fontSize: 13 }}>{sub}</p>}
     </div>
   )
 }
