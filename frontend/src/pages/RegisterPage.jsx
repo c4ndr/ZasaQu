@@ -490,6 +490,37 @@ export default function RegisterPage() {
           Sudah punya akun?{' '}
           <Link to="/login" style={{ color: '#8B5CF6', fontWeight: 700, textDecoration: 'none' }}>Masuk</Link>
         </p>
+
+        {/* Footer links */}
+        <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--k-border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px 16px', marginBottom: 10 }}>
+            {[
+              { label: 'Tentang Kami', to: '/about' },
+              { label: 'Layanan', to: '/layanan' },
+              { label: 'Cara Kerja', to: '/cara-kerja' },
+              { label: 'Jadi Mitra', to: '/daftar-mitra' },
+            ].map(l => (
+              <Link key={l.to} to={l.to} style={{ fontSize: 12, color: 'var(--k-muted)', textDecoration: 'none', fontWeight: 600 }}>
+                {l.label}
+              </Link>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px 16px', marginBottom: 14 }}>
+            {[
+              { label: 'Syarat & Ketentuan', to: '/tos' },
+              { label: 'Kebijakan Privasi', to: '/privacy' },
+              { label: 'Refund & Sengketa', to: '/refund' },
+              { label: 'Kontak', to: '/contact' },
+            ].map(l => (
+              <Link key={l.to} to={l.to} style={{ fontSize: 12, color: 'var(--k-muted)', textDecoration: 'none', fontWeight: 600 }}>
+                {l.label}
+              </Link>
+            ))}
+          </div>
+          <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--k-muted)', opacity: 0.6, margin: 0 }}>
+            © 2026 ZasaQu · ZashaGo Ecosystem
+          </p>
+        </div>
       </div>
     </div>
   )
