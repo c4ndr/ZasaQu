@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { Link } from 'react-router-dom'
-import Map, { Marker } from 'react-map-gl/maplibre'
-import { SATELLITE_STYLE } from '../../utils/mapStyle'
-import { fitPoints, distanceMeter } from '../../utils/geo'
+import { GoogleMap, OverlayView } from '@react-google-maps/api'
+import { fitGoogleMap, distanceMeter } from '../../utils/geo'
 import RoadPolyline from '../../components/RoadPolyline'
+import MapSatToggle from '../../components/MapSatToggle'
 import BottomNav from '../../components/BottomNav'
 import api from '../../services/api'
 import { useMitraGps } from '../../context/MitraGpsContext'
@@ -107,6 +107,7 @@ function getDrop(order) {
 // ── Peta embedded aktif ───────────────────────────────────────────────────────
 function MartActiveMap({ order, mitraLat, mitraLng, height = 210, onExpand }) {
   const mapRef = useRef(null)
+  const [mapType, setMapType] = useState('roadmap')
   const pick = getPickup(order)
   const drop = getDrop(order)
   const goingToSeller = order.status === 'picking_up'
@@ -121,19 +122,18 @@ function MartActiveMap({ order, mitraLat, mitraLng, height = 210, onExpand }) {
   )
   return (
     <div style={{ position: 'relative', height, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--k-border)', cursor: 'pointer' }} onClick={onExpand}>
-      <Map ref={mapRef} initialViewState={{ longitude: pick.lng, latitude: pick.lat, zoom: 13 }} mapStyle={SATELLITE_STYLE}
-        style={{ width: '100%', height: '100%' }} interactive={false} attributionControl={false}
-        onLoad={() => {
-          const pts = [[pick.lat, pick.lng], [drop.lat, drop.lng]]
-          if (mitraLat) pts.push([mitraLat, mitraLng])
-          fitPoints(mapRef.current?.getMap(), pts, 52)
-        }}>
-        <RoadPolyline pickup={routeFrom} dropoff={routeTo} color={goingToSeller ? '#8B5CF6' : '#6366F1'} weight={4} opacity={0.9} id={`mart-active-${order.id}`} />
-        {!goingToSeller && <RoadPolyline pickup={[pick.lat, pick.lng]} dropoff={[drop.lat, drop.lng]} color="#6366F1" weight={3} opacity={0.45} dashArray={[3, 3]} id={`mart-rest-${order.id}`} />}
-        <Marker longitude={pick.lng} latitude={pick.lat} anchor="bottom"><PinMarker color="#8B5CF6" emoji="🏪" size={goingToSeller ? 36 : 28} /></Marker>
-        <Marker longitude={drop.lng} latitude={drop.lat} anchor="bottom"><PinMarker color="#6366F1" emoji="🏠" size={!goingToSeller ? 36 : 28} /></Marker>
-        {mitraLat && mitraLng && <Marker longitude={mitraLng} latitude={mitraLat} anchor="center"><MitraDot /></Marker>}
-      </Map>
+      <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} center={{ lat: pick.lat, lng: pick.lng }} zoom={13}
+        options={{ disableDefaultUI: true, gestureHandling: 'none', clickableIcons: false, mapTypeId: mapType }}
+        onLoad={(map) => { mapRef.current = map; const pts = [[pick.lat, pick.lng], [drop.lat, drop.lng]]; if (mitraLat) pts.push([mitraLat, mitraLng]); fitGoogleMap(map, pts, 52) }}>
+        <RoadPolyline pickup={routeFrom} dropoff={routeTo} color={goingToSeller ? '#8B5CF6' : '#6366F1'} weight={4} opacity={0.9} />
+        {!goingToSeller && <RoadPolyline pickup={[pick.lat, pick.lng]} dropoff={[drop.lat, drop.lng]} color="#6366F1" weight={3} opacity={0.45} />}
+        <OverlayView position={{ lat: pick.lat, lng: pick.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET} getPixelPositionOffset={(w,h)=>({x:-w/2,y:-h})}><PinMarker color="#8B5CF6" emoji="🏪" size={goingToSeller ? 36 : 28} /></OverlayView>
+        <OverlayView position={{ lat: drop.lat, lng: drop.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET} getPixelPositionOffset={(w,h)=>({x:-w/2,y:-h})}><PinMarker color="#6366F1" emoji="🏠" size={!goingToSeller ? 36 : 28} /></OverlayView>
+        {mitraLat && mitraLng && <OverlayView position={{ lat: mitraLat, lng: mitraLng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}><MitraDot /></OverlayView>}
+      </GoogleMap>
+      <div onClick={e => e.stopPropagation()}>
+        <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />
+      </div>
       <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,0.55)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#fff', fontWeight: 600, backdropFilter: 'blur(4px)', pointerEvents: 'none' }}>
         Tap untuk perbesar ↗
       </div>
@@ -144,6 +144,7 @@ function MartActiveMap({ order, mitraLat, mitraLng, height = 210, onExpand }) {
 // ── Modal peta fullscreen ─────────────────────────────────────────────────────
 function MartMapModal({ order, mitraLat, mitraLng, onClose }) {
   const mapRef = useRef(null)
+  const [mapType, setMapType] = useState('roadmap')
   const pick = getPickup(order)
   const drop = getDrop(order)
   const goingToSeller = order.status === 'picking_up'
@@ -158,20 +159,17 @@ function MartMapModal({ order, mitraLat, mitraLng, onClose }) {
         <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>{order.order_number}</p>
         <p style={{ fontSize: 13, fontWeight: 800, color: '#8B5CF6' }}>{fmtRp(order.shipping_fee ?? 0)} pendapatan</p>
       </div>
-      <div style={{ flex: 1 }}>
-        <Map ref={mapRef} initialViewState={{ longitude: pick.lng, latitude: pick.lat, zoom: 13 }} mapStyle={SATELLITE_STYLE}
-          style={{ width: '100%', height: '100%' }} attributionControl={false}
-          onLoad={() => {
-            const pts = [[pick.lat, pick.lng], [drop.lat, drop.lng]]
-            if (mitraLat) pts.push([mitraLat, mitraLng])
-            fitPoints(mapRef.current?.getMap(), pts, 60)
-          }}>
-          <RoadPolyline pickup={routeFrom} dropoff={routeTo} color={goingToSeller ? '#8B5CF6' : '#6366F1'} weight={5} opacity={0.92} id={`modal-mart-${order.id}`} />
-          {!goingToSeller && <RoadPolyline pickup={[pick.lat, pick.lng]} dropoff={[drop.lat, drop.lng]} color="#6366F1" weight={4} opacity={0.5} dashArray={[4, 4]} id={`modal-mart-rest-${order.id}`} />}
-          <Marker longitude={pick.lng} latitude={pick.lat} anchor="bottom"><PinMarker color="#8B5CF6" emoji="🏪" size={40} /></Marker>
-          <Marker longitude={drop.lng} latitude={drop.lat} anchor="bottom"><PinMarker color="#6366F1" emoji="🏠" size={40} /></Marker>
-          {mitraLat && mitraLng && <Marker longitude={mitraLng} latitude={mitraLat} anchor="center"><MitraDot /></Marker>}
-        </Map>
+      <div style={{ flex: 1, position: 'relative' }}>
+        <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} center={{ lat: pick.lat, lng: pick.lng }} zoom={13}
+          options={{ disableDefaultUI: true, gestureHandling: 'greedy', clickableIcons: false, mapTypeId: mapType }}
+          onLoad={(map) => { mapRef.current = map; const pts = [[pick.lat, pick.lng], [drop.lat, drop.lng]]; if (mitraLat) pts.push([mitraLat, mitraLng]); fitGoogleMap(map, pts, 60) }}>
+          <RoadPolyline pickup={routeFrom} dropoff={routeTo} color={goingToSeller ? '#8B5CF6' : '#6366F1'} weight={5} opacity={0.92} />
+          {!goingToSeller && <RoadPolyline pickup={[pick.lat, pick.lng]} dropoff={[drop.lat, drop.lng]} color="#6366F1" weight={4} opacity={0.5} />}
+          <OverlayView position={{ lat: pick.lat, lng: pick.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET} getPixelPositionOffset={(w,h)=>({x:-w/2,y:-h})}><PinMarker color="#8B5CF6" emoji="🏪" size={40} /></OverlayView>
+          <OverlayView position={{ lat: drop.lat, lng: drop.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET} getPixelPositionOffset={(w,h)=>({x:-w/2,y:-h})}><PinMarker color="#6366F1" emoji="🏠" size={40} /></OverlayView>
+          {mitraLat && mitraLng && <OverlayView position={{ lat: mitraLat, lng: mitraLng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}><MitraDot /></OverlayView>}
+        </GoogleMap>
+        <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />
       </div>
       <div style={{ background: 'var(--k-surface)', borderTop: '1px solid var(--k-border)', padding: '14px 16px', paddingBottom: 'calc(14px + env(safe-area-inset-bottom,0px))', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
@@ -201,23 +199,21 @@ function MartMapModal({ order, mitraLat, mitraLng, onClose }) {
 // ── Mini peta order tersedia ──────────────────────────────────────────────────
 function MartAvailableMap({ order, mitraLat, mitraLng }) {
   const mapRef = useRef(null)
+  const [mapType, setMapType] = useState('roadmap')
   const pick = getPickup(order)
   const drop = getDrop(order)
   if (!pick.lat || !pick.lng || !drop.lat || !drop.lng || isNaN(pick.lat) || isNaN(drop.lat)) return null
   return (
-    <div style={{ height: 150, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--k-border)', marginBottom: 12 }}>
-      <Map ref={mapRef} initialViewState={{ longitude: pick.lng, latitude: pick.lat, zoom: 13 }} mapStyle={SATELLITE_STYLE}
-        style={{ width: '100%', height: '100%' }} interactive={false} attributionControl={false}
-        onLoad={() => {
-          const pts = [[pick.lat, pick.lng], [drop.lat, drop.lng]]
-          if (mitraLat) pts.push([mitraLat, mitraLng])
-          fitPoints(mapRef.current?.getMap(), pts, 44)
-        }}>
-        <RoadPolyline pickup={[pick.lat, pick.lng]} dropoff={[drop.lat, drop.lng]} color="#8B5CF6" weight={3} opacity={0.8} id={`avail-mart-${order.id}`} />
-        <Marker longitude={pick.lng} latitude={pick.lat} anchor="bottom"><PinMarker color="#8B5CF6" emoji="🏪" size={28} /></Marker>
-        <Marker longitude={drop.lng} latitude={drop.lat} anchor="bottom"><PinMarker color="#6366F1" emoji="🏠" size={28} /></Marker>
-        {mitraLat && mitraLng && <Marker longitude={mitraLng} latitude={mitraLat} anchor="center"><MitraDot /></Marker>}
-      </Map>
+    <div style={{ height: 150, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--k-border)', marginBottom: 12, position: 'relative' }}>
+      <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} center={{ lat: pick.lat, lng: pick.lng }} zoom={13}
+        options={{ disableDefaultUI: true, gestureHandling: 'none', clickableIcons: false, mapTypeId: mapType }}
+        onLoad={(map) => { mapRef.current = map; const pts = [[pick.lat, pick.lng], [drop.lat, drop.lng]]; if (mitraLat) pts.push([mitraLat, mitraLng]); fitGoogleMap(map, pts, 44) }}>
+        <RoadPolyline pickup={[pick.lat, pick.lng]} dropoff={[drop.lat, drop.lng]} color="#8B5CF6" weight={3} opacity={0.8} />
+        <OverlayView position={{ lat: pick.lat, lng: pick.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET} getPixelPositionOffset={(w,h)=>({x:-w/2,y:-h})}><PinMarker color="#8B5CF6" emoji="🏪" size={28} /></OverlayView>
+        <OverlayView position={{ lat: drop.lat, lng: drop.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET} getPixelPositionOffset={(w,h)=>({x:-w/2,y:-h})}><PinMarker color="#6366F1" emoji="🏠" size={28} /></OverlayView>
+        {mitraLat && mitraLng && <OverlayView position={{ lat: mitraLat, lng: mitraLng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}><MitraDot /></OverlayView>}
+      </GoogleMap>
+      <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />
     </div>
   )
 }

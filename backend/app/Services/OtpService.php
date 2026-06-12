@@ -5,12 +5,13 @@ namespace App\Services;
 use App\Models\OtpCode;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class OtpService
 {
     const EXPIRY_MINUTES = 5;
 
-    public function send(string $phone, string $type): OtpCode
+    public function send(string $phone, string $type, ?string $email = null): OtpCode
     {
         // Batalkan OTP lama yang belum dipakai
         OtpCode::where('phone', $phone)
@@ -29,12 +30,15 @@ class OtpService
 
         $sent = $this->sendWhatsapp($phone, $code, $type);
 
+        // Fallback: kirim via email jika WA gagal
+        if (!$sent && $email) {
+            $sent = $this->sendEmail($email, $code, $type);
+        }
+
         if (!$sent) {
-            // Fallback: log agar developer bisa lihat kode
             Log::info("OTP [{$type}] untuk {$phone}: {$code}");
         }
 
-        // Simpan plain code agar controller bisa tampilkan di mode demo
         $otp->plain_code = $sent ? null : $code;
 
         return $otp;
@@ -81,6 +85,33 @@ class OtpService
             return false;
         } catch (\Throwable $e) {
             Log::error('Fonnte exception: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    // Fallback: kirim OTP via Email (Gmail SMTP)
+    private function sendEmail(string $email, string $code, string $type): bool
+    {
+        $typeLabel = match ($type) {
+            'register'       => 'Registrasi',
+            'login'          => 'Login',
+            'reset_password' => 'Reset Password',
+            default          => 'Verifikasi',
+        };
+
+        try {
+            Mail::raw(
+                "Kode OTP ZasaQu untuk {$typeLabel}: {$code}\n\n"
+                . "Berlaku selama " . self::EXPIRY_MINUTES . " menit.\n"
+                . "Jangan bagikan kode ini ke siapapun.",
+                function ($m) use ($email, $typeLabel, $code) {
+                    $m->to($email)
+                      ->subject("[ZasaQu] Kode OTP {$typeLabel}: {$code}");
+                }
+            );
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Email OTP gagal: ' . $e->getMessage());
             return false;
         }
     }

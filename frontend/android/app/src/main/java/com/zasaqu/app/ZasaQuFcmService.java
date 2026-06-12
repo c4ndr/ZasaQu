@@ -118,6 +118,16 @@ public class ZasaQuFcmService extends FirebaseMessagingService {
         try {
             NotificationManagerCompat.from(this).notify(NOTIF_ID_CALL, nb.build());
         } catch (SecurityException ignored) {}
+
+        // Langsung start IncomingCallActivity lewat startActivity() sebagai jalur kedua.
+        // Diperlukan saat app sedang foreground — Android menekan fullScreenIntent untuk app aktif
+        // dan hanya menampilkan heads-up banner sekilas.
+        // Ketika app foreground: startActivity() berhasil (ada visible window).
+        // Ketika app background/killed di Android 12+: kemungkinan diblokir, tapi fullScreenIntent
+        // di atas sudah menanganinya. Silent fail dengan catch.
+        try {
+            startActivity(callIntent);
+        } catch (Exception ignored) {}
     }
 
     private void showSimpleNotification(String title, String body) {

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { Link } from 'react-router-dom'
-import Map, { Marker } from 'react-map-gl/maplibre'
-import { SATELLITE_STYLE } from '../../utils/mapStyle'
-import { fitPoints, distanceMeter } from '../../utils/geo'
+import { GoogleMap, OverlayView } from '@react-google-maps/api'
+import { fitGoogleMap, distanceMeter } from '../../utils/geo'
 import RoadPolyline from '../../components/RoadPolyline'
+import MapSatToggle from '../../components/MapSatToggle'
 import BottomNav from '../../components/BottomNav'
 import api from '../../services/api'
 import echo from '../../services/echo'
@@ -106,6 +106,7 @@ function MitraDot() {
 // ── Peta embedded untuk order aktif ──────────────────────────────────────────
 function FoodActiveMap({ order, mitraLat, mitraLng, height = 210, onExpand }) {
   const mapRef    = useRef(null)
+  const [mapType, setMapType] = useState('roadmap')
   const merchant  = order.merchant
   const pickLat   = parseFloat(merchant?.lat)
   const pickLng   = parseFloat(merchant?.lng)
@@ -135,58 +136,39 @@ function FoodActiveMap({ order, mitraLat, mitraLng, height = 210, onExpand }) {
   return (
     <div style={{ position: 'relative', height, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--k-border)' }}
       onClick={onExpand}>
-      <Map
-        ref={mapRef}
-        initialViewState={{ longitude: pickLng, latitude: pickLat, zoom: 13 }}
-        mapStyle={SATELLITE_STYLE}
-        style={{ width: '100%', height: '100%' }}
-        interactive={false}
-        attributionControl={false}
-        onLoad={() => {
+      <GoogleMap
+        mapContainerStyle={{ width: '100%', height: '100%' }}
+        center={{ lat: pickLat, lng: pickLng }}
+        zoom={13}
+        options={{ disableDefaultUI: true, gestureHandling: 'none', clickableIcons: false, mapTypeId: mapType }}
+        onLoad={(map) => {
+          mapRef.current = map
           const pts = [[pickLat, pickLng], [dropLat, dropLng]]
           if (mitraLat) pts.push([mitraLat, mitraLng])
-          fitPoints(mapRef.current?.getMap(), pts, 52)
+          fitGoogleMap(map, pts, 52)
         }}
       >
-        {/* Rute jalan */}
-        <RoadPolyline
-          pickup={routeFrom}
-          dropoff={routeTo}
-          color={goingToMerchant ? '#F97316' : '#3B82F6'}
-          weight={4}
-          opacity={0.9}
-          id={`food-active-${order.id}`}
-        />
-        {/* Rute sisa (merchant→customer) jika sudah pickup */}
-        {!goingToMerchant && (
-          <RoadPolyline
-            pickup={[pickLat, pickLng]}
-            dropoff={[dropLat, dropLng]}
-            color="#3B82F6"
-            weight={3}
-            opacity={0.5}
-            dashArray={[3, 3]}
-            id={`food-delivery-${order.id}`}
-          />
-        )}
+        <RoadPolyline pickup={routeFrom} dropoff={routeTo} color={goingToMerchant ? '#F97316' : '#3B82F6'} weight={4} opacity={0.9} />
+        {!goingToMerchant && <RoadPolyline pickup={[pickLat, pickLng]} dropoff={[dropLat, dropLng]} color="#3B82F6" weight={3} opacity={0.5} />}
 
-        {/* Pin merchant */}
-        <Marker longitude={pickLng} latitude={pickLat} anchor="bottom">
+        <OverlayView position={{ lat: pickLat, lng: pickLng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+          getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}>
           <PinMarker color="#F97316" emoji="🍜" size={goingToMerchant ? 36 : 28} />
-        </Marker>
-
-        {/* Pin customer */}
-        <Marker longitude={dropLng} latitude={dropLat} anchor="bottom">
+        </OverlayView>
+        <OverlayView position={{ lat: dropLat, lng: dropLng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+          getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}>
           <PinMarker color="#3B82F6" emoji="🏠" size={!goingToMerchant ? 36 : 28} />
-        </Marker>
-
-        {/* Posisi mitra */}
+        </OverlayView>
         {mitraLat && mitraLng && (
-          <Marker longitude={mitraLng} latitude={mitraLat} anchor="center">
+          <OverlayView position={{ lat: mitraLat, lng: mitraLng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
             <MitraDot />
-          </Marker>
+          </OverlayView>
         )}
-      </Map>
+      </GoogleMap>
+
+      <div onClick={e => e.stopPropagation()}>
+        <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />
+      </div>
 
       {/* Overlay tap-to-expand */}
       <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,0.55)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#fff', fontWeight: 600, backdropFilter: 'blur(4px)', pointerEvents: 'none' }}>
@@ -199,6 +181,7 @@ function FoodActiveMap({ order, mitraLat, mitraLng, height = 210, onExpand }) {
 // ── Modal peta fullscreen ──────────────────────────────────────────────────────
 function FoodMapModal({ order, mitraLat, mitraLng, onClose }) {
   const mapRef   = useRef(null)
+  const [mapType, setMapType] = useState('roadmap')
   const merchant = order.merchant
   const pickLat  = parseFloat(merchant?.lat)
   const pickLng  = parseFloat(merchant?.lng)
@@ -226,32 +209,36 @@ function FoodMapModal({ order, mitraLat, mitraLng, onClose }) {
       </div>
 
       {/* Peta */}
-      <div style={{ flex: 1 }}>
-        <Map
-          ref={mapRef}
-          initialViewState={{ longitude: pickLng, latitude: pickLat, zoom: 13 }}
-          mapStyle={SATELLITE_STYLE}
-          style={{ width: '100%', height: '100%' }}
-          attributionControl={false}
-          onLoad={() => {
+      <div style={{ flex: 1, position: 'relative' }}>
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '100%' }}
+          center={{ lat: pickLat, lng: pickLng }}
+          zoom={13}
+          options={{ disableDefaultUI: true, gestureHandling: 'greedy', clickableIcons: false, mapTypeId: mapType }}
+          onLoad={(map) => {
+            mapRef.current = map
             const pts = [[pickLat, pickLng], [dropLat, dropLng]]
             if (mitraLat) pts.push([mitraLat, mitraLng])
-            fitPoints(mapRef.current?.getMap(), pts, 60)
+            fitGoogleMap(map, pts, 60)
           }}
         >
-          <RoadPolyline pickup={routeFrom} dropoff={routeTo} color={goingToMerchant ? '#F97316' : '#3B82F6'} weight={5} opacity={0.92} id={`modal-food-${order.id}`} />
-          {!goingToMerchant && <RoadPolyline pickup={[pickLat, pickLng]} dropoff={[dropLat, dropLng]} color="#3B82F6" weight={4} opacity={0.55} dashArray={[4, 4]} id={`modal-food-rest-${order.id}`} />}
-
-          <Marker longitude={pickLng} latitude={pickLat} anchor="bottom">
+          <RoadPolyline pickup={routeFrom} dropoff={routeTo} color={goingToMerchant ? '#F97316' : '#3B82F6'} weight={5} opacity={0.92} />
+          {!goingToMerchant && <RoadPolyline pickup={[pickLat, pickLng]} dropoff={[dropLat, dropLng]} color="#3B82F6" weight={4} opacity={0.55} />}
+          <OverlayView position={{ lat: pickLat, lng: pickLng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}>
             <PinMarker color="#F97316" emoji="🍜" size={40} />
-          </Marker>
-          <Marker longitude={dropLng} latitude={dropLat} anchor="bottom">
+          </OverlayView>
+          <OverlayView position={{ lat: dropLat, lng: dropLng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}>
             <PinMarker color="#3B82F6" emoji="🏠" size={40} />
-          </Marker>
+          </OverlayView>
           {mitraLat && mitraLng && (
-            <Marker longitude={mitraLng} latitude={mitraLat} anchor="center"><MitraDot /></Marker>
+            <OverlayView position={{ lat: mitraLat, lng: mitraLng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+              <MitraDot />
+            </OverlayView>
           )}
-        </Map>
+        </GoogleMap>
+        <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />
       </div>
 
       {/* Info rute bawah */}

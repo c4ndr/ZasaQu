@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import Map, { Marker } from 'react-map-gl/maplibre'
-import { OSM_STYLE } from '../../utils/mapStyle'
-import { fitPoints, distanceMeter } from '../../utils/geo'
+import { GoogleMap, OverlayView } from '@react-google-maps/api'
+import { fitGoogleMap, distanceMeter } from '../../utils/geo'
 import RoadPolyline from '../../components/RoadPolyline'
+import MapSatToggle from '../../components/MapSatToggle'
 import useRoadRoute from '../../hooks/useRoadRoute'
 import api from '../../services/api'
 import echo from '../../services/echo'
@@ -141,6 +141,7 @@ export default function FoodTrackingPage() {
   const [order,        setOrder]        = useState(null)
   const [mitraGps,     setMitraGps]     = useState(null)
   const [loading,      setLoading]      = useState(true)
+  const [mapType,      setMapType]      = useState('roadmap')
   const [loadError,    setLoadError]    = useState(false)
   const [notifStatus,  setNotifStatus]  = useState(null)
   const [rating,       setRating]       = useState({ merchant_score: 0, mitra_score: 0 })
@@ -182,7 +183,7 @@ export default function FoodTrackingPage() {
   // Camera follow mitra
   useEffect(() => {
     if (!mitraGps || !mapRef.current) return
-    mapRef.current.getMap().flyTo({ center: [mitraGps.lng, mitraGps.lat], speed: 0.8 })
+    mapRef.current.panTo({ lat: mitraGps.lat, lng: mitraGps.lng })
   }, [mitraGps])
 
   const routeFrom = useMemo(() => mitraGps ? [mitraGps.lat, mitraGps.lng] : null, [mitraGps])
@@ -257,8 +258,10 @@ export default function FoodTrackingPage() {
   const isDone    = ['completed','cancelled','rejected'].includes(order.status)
 
   const mapCenter = order.delivery_lat && order.delivery_lng
-    ? { longitude: parseFloat(order.delivery_lng), latitude: parseFloat(order.delivery_lat) }
-    : { longitude: 106.8456, latitude: -6.2088 }
+    ? { lat: parseFloat(order.delivery_lat), lng: parseFloat(order.delivery_lng) }
+    : { lat: -6.2088, lng: 106.8456 }
+
+  const MAP_OPTS = { disableDefaultUI: true, gestureHandling: 'none', clickableIcons: false }
 
   return (
     <div style={{ minHeight: '100dvh', background: '#0C0C16', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
@@ -295,46 +298,47 @@ export default function FoodTrackingPage() {
         )}
       </div>
 
-      {/* ── Peta MapLibre ── */}
-      <div style={{ height: showMap ? '45vh' : '0px', minHeight: showMap ? 200 : 0, transition: 'height 0.3s', flexShrink: 0 }}>
+      {/* ── Peta Google Maps ── */}
+      <div style={{ height: showMap ? '45vh' : '0px', minHeight: showMap ? 200 : 0, transition: 'height 0.3s', flexShrink: 0, position: 'relative' }}>
         {showMap && (
-          <Map
-            ref={mapRef}
-            initialViewState={{ ...mapCenter, zoom: 14 }}
-            mapStyle={OSM_STYLE}
-            style={{ width: '100%', height: '100%' }}
-            attributionControl={false}
-            onLoad={() => {
+          <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '100%' }}
+            center={mapCenter}
+            zoom={14}
+            options={{ ...MAP_OPTS, mapTypeId: mapType }}
+            onLoad={map => {
+              mapRef.current = map
               const pts = []
               if (mitraGps) pts.push([mitraGps.lat, mitraGps.lng])
               if (order.merchant?.lat) pts.push([parseFloat(order.merchant.lat), parseFloat(order.merchant.lng)])
               if (order.delivery_lat)  pts.push([parseFloat(order.delivery_lat),  parseFloat(order.delivery_lng)])
-              if (pts.length >= 2) fitPoints(mapRef.current.getMap(), pts, 70)
+              fitGoogleMap(map, pts, 70)
             }}
           >
             {routeFrom && routeTo && (
-              <RoadPolyline pickup={routeFrom} dropoff={routeTo} color="#F97316" id="food-route" />
+              <RoadPolyline pickup={routeFrom} dropoff={routeTo} color="#F97316" />
             )}
 
             {showMitra && (
-              <Marker longitude={mitraGps.lng} latitude={mitraGps.lat} anchor="center">
-                <MitraMarkerEl />
-              </Marker>
+              <OverlayView position={{ lat: mitraGps.lat, lng: mitraGps.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                <div style={{ transform: 'translate(-50%,-50%)' }}><MitraMarkerEl /></div>
+              </OverlayView>
             )}
 
             {order.merchant?.lat && order.merchant?.lng && (
-              <Marker longitude={parseFloat(order.merchant.lng)} latitude={parseFloat(order.merchant.lat)} anchor="center">
-                <MerchantMarkerEl />
-              </Marker>
+              <OverlayView position={{ lat: parseFloat(order.merchant.lat), lng: parseFloat(order.merchant.lng) }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                <div style={{ transform: 'translate(-50%,-50%)' }}><MerchantMarkerEl /></div>
+              </OverlayView>
             )}
 
             {order.delivery_lat && order.delivery_lng && (
-              <Marker longitude={parseFloat(order.delivery_lng)} latitude={parseFloat(order.delivery_lat)} anchor="center">
-                <DestMarkerEl />
-              </Marker>
+              <OverlayView position={{ lat: parseFloat(order.delivery_lat), lng: parseFloat(order.delivery_lng) }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                <div style={{ transform: 'translate(-50%,-50%)' }}><DestMarkerEl /></div>
+              </OverlayView>
             )}
-          </Map>
+          </GoogleMap>
         )}
+        {showMap && <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />}
       </div>
 
       {/* ── Panel bawah ── */}

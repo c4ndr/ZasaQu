@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { isNative } from '../utils/nativePlatform'
+
+const AUTH_PATHS = ['/login', '/register', '/forgot-password']
 
 // Reset setiap refresh halaman (module variable)
 let shownThisLoad = false
@@ -7,14 +10,16 @@ let shownThisLoad = false
 export default function ApkPopup() {
   const [visible, setVisible] = useState(false)
   const [animOut, setAnimOut] = useState(false)
+  const { pathname } = useLocation()
 
   useEffect(() => {
+    if (AUTH_PATHS.includes(pathname)) { setVisible(false); return }
     if (isNative) return
     if (!shownThisLoad) {
       const t = setTimeout(() => setVisible(true), 2000)
       return () => clearTimeout(t)
     }
-  }, [])
+  }, [pathname])
 
   const dismiss = () => {
     shownThisLoad = true
@@ -121,7 +126,7 @@ export default function ApkPopup() {
                 <path d="M4 18h16v2H4v-2z" fill="#0C0C16"/>
               </svg>
               <span style={{ fontSize: 15, fontWeight: 800, color: '#0C0C16' }}>
-                Download APK · 54 MB
+                Download APK · 51 MB
               </span>
             </div>
           </a>

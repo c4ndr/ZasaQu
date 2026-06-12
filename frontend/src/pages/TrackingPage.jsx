@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import Map, { Marker } from 'react-map-gl/maplibre'
-import { OSM_STYLE } from '../utils/mapStyle'
-import { fitPoints } from '../utils/geo'
+import { GoogleMap, OverlayView } from '@react-google-maps/api'
+import { fitGoogleMap } from '../utils/geo'
 import RoadPolyline from '../components/RoadPolyline'
+import MapSatToggle from '../components/MapSatToggle'
 import useRoadRoute from '../hooks/useRoadRoute'
 import useOrderTracking from '../hooks/useOrderTracking'
 import api from '../services/api'
@@ -277,17 +277,15 @@ export default function TrackingPage() {
   const [loading,    setLoading]    = useState(true)
   const [follow,     setFollow]     = useState(true)
   const [panelOpen,  setPanelOpen]  = useState(true)
+  const [mapType,    setMapType]    = useState('roadmap')
   const { mitraLocation, gpsActive, notifications, statusUpdate } = useOrderTracking(id)
   const [shownUpdate, setShownUpdate] = useState(null)
   const dismissNotif = useCallback(() => setShownUpdate(null), [])
 
   // Camera follow mitra
   useEffect(() => {
-    if (!mitraLocation || !mapRef.current) return
-    if (follow) mapRef.current.getMap().flyTo({
-      center: [mitraLocation.lng, mitraLocation.lat],
-      speed: 0.8,
-    })
+    if (!mitraLocation || !mapRef.current || !follow) return
+    mapRef.current.panTo({ lat: mitraLocation.lat, lng: mitraLocation.lng })
   }, [mitraLocation, follow])
 
   useEffect(() => {
@@ -415,36 +413,40 @@ export default function TrackingPage() {
         </div>
       )}
 
-      {/* ── Peta MapLibre ── */}
+      {/* ── Peta Google Maps ── */}
       <div style={{ flex: 1, minHeight: panelOpen ? 'calc(100vh - 340px)' : 'calc(100vh - 72px)', transition: 'min-height 0.3s', position: 'relative' }}>
-        <Map
-          ref={mapRef}
-          initialViewState={{ longitude: initLng, latitude: initLat, zoom: 14 }}
-          mapStyle={OSM_STYLE}
-          style={{ width: '100%', height: '100%', minHeight: 300 }}
-          attributionControl={false}
-          onLoad={() => {
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '100%', minHeight: 300 }}
+          center={{ lat: initLat, lng: initLng }}
+          zoom={14}
+          options={{ disableDefaultUI: true, gestureHandling: 'greedy', clickableIcons: false, mapTypeId: mapType }}
+          onLoad={(map) => {
+            mapRef.current = map
             const pts = [pickup, dropoff]
             if (mitraLocation) pts.push([mitraLocation.lat, mitraLocation.lng])
-            fitPoints(mapRef.current.getMap(), pts, 60)
+            fitGoogleMap(map, pts, 60)
           }}
         >
           <RoadPolyline pickup={pickup} dropoff={dropoff} color="#00C896" />
 
           {mitraLocation && (
-            <Marker longitude={mitraLocation.lng} latitude={mitraLocation.lat} anchor="center">
+            <OverlayView position={{ lat: mitraLocation.lat, lng: mitraLocation.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
               <MitraMarkerEl />
-            </Marker>
+            </OverlayView>
           )}
 
-          <Marker longitude={pickup[1]} latitude={pickup[0]} anchor="bottom">
+          <OverlayView position={{ lat: pickup[0], lng: pickup[1] }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}>
             <PinMarkerEl color="#00C896" emoji="📍" />
-          </Marker>
+          </OverlayView>
 
-          <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom">
+          <OverlayView position={{ lat: dropoff[0], lng: dropoff[1] }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}>
             <PinMarkerEl color="#F56565" emoji="🏁" />
-          </Marker>
-        </Map>
+          </OverlayView>
+        </GoogleMap>
+
+        <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />
 
         {showGpsHint && (
           <div style={{

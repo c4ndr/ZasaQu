@@ -5,9 +5,9 @@ import api from '../services/api'
 export default function ForgotPasswordPage() {
   const navigate = useNavigate()
 
-  // step: 'phone' | 'otp' | 'password'
-  const [step, setStep]         = useState('phone')
-  const [phone, setPhone]       = useState('')
+  // step: 'email' | 'otp' | 'password'
+  const [step, setStep]         = useState('email')
+  const [email, setEmail]       = useState('')
   const [otp, setOtp]           = useState('')
   const [demoOtp, setDemoOtp]   = useState('')
   const [password, setPassword] = useState('')
@@ -17,10 +17,10 @@ export default function ForgotPasswordPage() {
   const [error, setError]       = useState('')
 
   async function handleSendOtp(e) {
-    e.preventDefault()
+    e?.preventDefault()
     setError(''); setLoading(true)
     try {
-      const res = await api.post('/auth/otp/send', { phone, type: 'reset_password' })
+      const res = await api.post('/auth/otp/send', { email, type: 'reset_password' })
       if (res.data.demo_otp) {
         setDemoOtp(res.data.demo_otp)
         setOtp(res.data.demo_otp)
@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
     setError(''); setLoading(true)
     try {
       await api.post('/auth/otp/reset-password', {
-        phone,
+        email,
         otp,
         password,
         password_confirmation: confirm,
@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
     } finally { setLoading(false) }
   }
 
-  const steps = ['phone', 'otp', 'password']
+  const steps = ['email', 'otp', 'password']
   const stepIdx = steps.indexOf(step)
 
   return (
@@ -88,8 +88,8 @@ export default function ForgotPasswordPage() {
           Lupa Password
         </h1>
         <p style={{ color: 'var(--k-muted)', fontSize: 14 }}>
-          {step === 'phone'    && 'Masukkan nomor HP yang terdaftar.'}
-          {step === 'otp'     && 'Masukkan kode OTP yang dikirim ke HP Anda.'}
+          {step === 'email'    && 'Masukkan email yang terdaftar di akun Anda.'}
+          {step === 'otp'      && 'Masukkan kode OTP yang dikirim ke email Anda.'}
           {step === 'password' && 'Buat password baru untuk akun Anda.'}
         </p>
       </div>
@@ -108,28 +108,27 @@ export default function ForgotPasswordPage() {
       {/* Form */}
       <div style={{ flex: 1, padding: '20px 24px 0' }}>
 
-        {/* ── Step 1: Nomor HP ── */}
-        {step === 'phone' && (
+        {/* ── Step 1: Email ── */}
+        {step === 'email' && (
           <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label className="label">Nomor HP</label>
+              <label className="label">Email</label>
               <input
                 className="input-field"
-                type="tel"
-                value={phone}
-                onChange={e => { setPhone(e.target.value); setError('') }}
-                placeholder="08xxxxxxxxxx"
-                inputMode="numeric"
+                type="email"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setError('') }}
+                placeholder="email@contoh.com"
                 required
               />
               <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 6 }}>
-                Kode OTP akan dikirim ke nomor ini.
+                Kode OTP akan dikirim ke email ini.
               </p>
             </div>
 
             {error && <p style={{ color: 'var(--k-danger)', fontSize: 13 }}>⚠️ {error}</p>}
 
-            <button type="submit" className="btn-primary" disabled={loading || !phone}>
+            <button type="submit" className="btn-primary" disabled={loading || !email}>
               {loading ? 'Mengirim...' : 'Kirim Kode OTP'}
             </button>
           </form>
@@ -174,7 +173,7 @@ export default function ForgotPasswordPage() {
                 required
               />
               <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 6 }}>
-                Dikirim ke <strong style={{ color: 'var(--k-text)' }}>{phone}</strong>. Berlaku 5 menit.
+                Dikirim ke <strong style={{ color: 'var(--k-text)' }}>{email}</strong>. Berlaku 5 menit.
               </p>
             </div>
 
@@ -185,12 +184,12 @@ export default function ForgotPasswordPage() {
             </button>
 
             <button type="button"
-              onClick={() => { setStep('phone'); setOtp(''); setDemoOtp(''); setError('') }}
+              onClick={() => { setStep('email'); setOtp(''); setDemoOtp(''); setError('') }}
               style={{ color: 'var(--k-muted)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-              Ganti nomor HP
+              Ganti email
             </button>
             <button type="button"
-              onClick={(e) => { setOtp(''); setDemoOtp(''); handleSendOtp({ preventDefault: () => {} }) }}
+              onClick={() => { setOtp(''); setDemoOtp(''); handleSendOtp() }}
               style={{ color: 'var(--k-accent)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
               Kirim ulang OTP
             </button>

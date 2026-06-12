@@ -48,7 +48,17 @@ export function circleGeoJson(lat, lng, radiusMeters, steps = 64) {
   return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] } }
 }
 
-// Fit bounds dari array titik [lat, lng] ke MapLibre map instance
+// Fit bounds dari array titik [lat, lng] ke Google Maps map instance
+export function fitGoogleMap(mapInstance, points, padding = 60) {
+  if (!mapInstance || !window.google?.maps || points.length < 1) return
+  try {
+    const bounds = new window.google.maps.LatLngBounds()
+    points.forEach(([lat, lng]) => { if (!isNaN(lat) && !isNaN(lng)) bounds.extend({ lat, lng }) })
+    if (!bounds.isEmpty()) mapInstance.fitBounds(bounds, padding)
+  } catch {}
+}
+
+// Kept for any remaining MapLibre usage
 export function fitPoints(mapInstance, points, padding = 50) {
   if (!mapInstance || points.length < 2) return
   const lngs = points.map(p => p[1])

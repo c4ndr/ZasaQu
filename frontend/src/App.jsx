@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import useFcmToken from './hooks/useFcmToken'
 import echo from './services/echo'
 import api from './services/api'
-import { storeIncomingCall, markAutoAnswer } from './services/callBuffer'
+import { storeIncomingCall, markAutoAnswer, peekIncomingCall, onIncomingCallUpdate } from './services/callBuffer'
 import { startRingtone, stopRingtone } from './utils/ringtone'
 import { useJsApiLoader } from '@react-google-maps/api'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -100,6 +100,11 @@ import NotFoundPage from './pages/NotFoundPage'
 import AboutPage from './pages/AboutPage'
 import TosPage from './pages/TosPage'
 import PrivacyPage from './pages/PrivacyPage'
+import ContactPage from './pages/ContactPage'
+import LayananPage from './pages/LayananPage'
+import CaraKerjaPage from './pages/CaraKerjaPage'
+import DaftarMitraPage from './pages/DaftarMitraPage'
+import RefundPage from './pages/RefundPage'
 import AddressesPage from './pages/AddressesPage'
 
 function PrivateRoute({ children }) {
@@ -177,7 +182,7 @@ function MaintenanceScreen() {
 
 function AppRoutes() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const { maintenance_mode } = useAppInfo()
 
   // Load Google Maps script sekali di level app — tersedia untuk semua halaman pelanggan
@@ -187,7 +192,7 @@ function AppRoutes() {
   })
 
   useEffect(() => {
-    const handler = () => navigate('/login', { replace: true })
+    const handler = () => { logout(); navigate('/login', { replace: true }) }
     window.addEventListener('zasaqu:unauthorized', handler)
     return () => window.removeEventListener('zasaqu:unauthorized', handler)
   }, [navigate])
@@ -308,9 +313,14 @@ function AppRoutes() {
       <Route path="/merchant/settings" element={<MerchantRoute><MerchantSettingsPage /></MerchantRoute>} />
 
       {/* Halaman publik */}
-      <Route path="/about"   element={<AboutPage />} />
-      <Route path="/tos"     element={<TosPage />} />
-      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/about"        element={<AboutPage />} />
+      <Route path="/tos"          element={<TosPage />} />
+      <Route path="/privacy"      element={<PrivacyPage />} />
+      <Route path="/contact"      element={<ContactPage />} />
+      <Route path="/layanan"      element={<LayananPage />} />
+      <Route path="/cara-kerja"   element={<CaraKerjaPage />} />
+      <Route path="/daftar-mitra" element={<DaftarMitraPage />} />
+      <Route path="/refund"       element={<RefundPage />} />
 
       {/* 404 — catch-all */}
       <Route path="*" element={<NotFoundPage />} />
@@ -365,6 +375,10 @@ function NotifBridge() {
   const navigate  = useNavigate()
   const [foregroundNotif, setForegroundNotif] = useState(null)
 
+  // Ref agar onTap closure selalu bisa baca user terbaru tanpa re-register listener
+  const userRef = useRef(user)
+  useEffect(() => { userRef.current = user }, [user])
+
   // Web push: daftarkan FCM token (hanya browser, bukan native)
   useFcmToken(user)
 
@@ -374,6 +388,13 @@ function NotifBridge() {
     const token = localStorage.getItem('token') || ''
     const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '') + '/api'
     AgoraVoice.setCallConfig({ baseUrl, token }).catch(() => {})
+
+    // Flush pending FCM token yang disimpan saat user belum login
+    const pendingFcm = localStorage.getItem('_pending_fcm_token')
+    if (pendingFcm) {
+      localStorage.removeItem('_pending_fcm_token')
+      api.post('/auth/fcm-token', { fcm_token: pendingFcm }).catch(() => {})
+    }
   }, [user?.id])
 
   // Cek pending call dari IncomingCallActivity (saat app kembali aktif setelah user angkat)
@@ -397,6 +418,21 @@ function NotifBridge() {
     return () => { sub.then(h => h.remove()).catch(() => {}) }
   }, [user?.id, navigate])
 
+  // Deferred navigation: app mati → onTap simpan ke localStorage → user load → navigasi
+  useEffect(() => {
+    if (!user) return
+    const raw = localStorage.getItem('_pending_notif_tap')
+    if (!raw) return
+    localStorage.removeItem('_pending_notif_tap')
+    try {
+      const data = JSON.parse(raw)
+      // Panggilan masuk ditangani VoiceCallBridge via _pending_call_tap — skip di sini
+      if (data.type !== 'incoming_call') {
+        navigate(resolveNotifUrl(data, user.role))
+      }
+    } catch {}
+  }, [user?.id, navigate])
+
   useEffect(() => {
     if (!isNative) return
 
@@ -409,13 +445,23 @@ function NotifBridge() {
       },
       onTap: (notif) => {
         const data = notif?.data ?? {}
-        // Fallback: jika user tap notif biasa (bukan full-screen), isi callBuffer manual
+        const currentUser = userRef.current
+
         if (data.type === 'incoming_call' && data.order_id && data.order_type) {
+          // Simpan ke callBuffer + localStorage (VoiceCallBridge tampilkan overlay)
           storeIncomingCall({ orderId: data.order_id, orderType: data.order_type, callerName: data.caller_name || null })
-          markAutoAnswer()
+          localStorage.setItem('_pending_call_tap', JSON.stringify({
+            order_id: data.order_id, order_type: data.order_type, caller_name: data.caller_name || null,
+          }))
+          return // VoiceCallBridge yang handle — tidak navigate manual
         }
-        const url = resolveNotifUrl(data, user?.role)
-        navigate(url)
+
+        // Notif biasa: navigasi langsung jika user sudah ada, atau simpan untuk nanti
+        if (currentUser) {
+          navigate(resolveNotifUrl(data, currentUser.role))
+        } else {
+          localStorage.setItem('_pending_notif_tap', JSON.stringify(data))
+        }
       },
     }).catch(() => {})
   }, [navigate])
@@ -496,12 +542,46 @@ function VoiceCallBridge() {
   useEffect(() => { locationRef.current = location }, [location])
 
   // Hapus overlay otomatis saat user sudah berada di halaman chat panggilan ini
-  // (misal: checkPending di NotifBridge navigasi ke ChatPage saat overlay masih tampil)
   useEffect(() => {
     if (!incoming) return
     const chatPath = resolveChatPath(user?.role, incoming.orderType, incoming.orderId)
     if (location.pathname === chatPath) setIncoming(null)
   }, [location.pathname, incoming, user?.role])
+
+  // ── Tangkap call dari FCM tap saat app mati/background ──────────────────────
+  // Skenario 1: app mati → onTap simpan ke _pending_call_tap → user load → cek di sini
+  // Skenario 2: app background → onTap → storeIncomingCall → listener di bawah tangkap
+  useEffect(() => {
+    if (!user) return
+    const raw = localStorage.getItem('_pending_call_tap')
+    if (!raw) return
+    localStorage.removeItem('_pending_call_tap')
+    try {
+      const d = JSON.parse(raw)
+      if (!d.order_id || !d.order_type) return
+      const call = { orderId: d.order_id, orderType: d.order_type, callerName: d.caller_name || null }
+      storeIncomingCall(call)
+      const chatPath = resolveChatPath(user.role, call.orderType, call.orderId)
+      if (locationRef.current.pathname !== chatPath) {
+        setIncoming(call)
+      }
+    } catch {}
+  }, [user?.id])
+
+  // Skenario 2: app background, WebSocket mati → onTap → storeIncomingCall → listener ini
+  useEffect(() => {
+    if (!user) return
+    const unsub = onIncomingCallUpdate((call) => {
+      // Hanya tampilkan overlay jika BUKAN dari WebSocket ring (sudah ditangani listener ws di bawah)
+      // Kita tandai dengan ada/tidaknya senderId: FCM tap tidak punya senderId
+      if (call.senderId) return
+      const chatPath = resolveChatPath(user.role, call.orderType, call.orderId)
+      if (locationRef.current.pathname !== chatPath) {
+        setIncoming({ orderId: call.orderId, orderType: call.orderType, callerName: call.callerName || null })
+      }
+    })
+    return unsub
+  }, [user?.id])
 
   useEffect(() => {
     if (!user) return

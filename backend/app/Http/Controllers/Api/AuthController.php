@@ -22,6 +22,7 @@ class AuthController extends Controller
             'email'         => ['required', 'email', 'unique:users,email'],
             'password'      => ['required', 'confirmed', Password::min(8)],
             'role'          => ['sometimes', 'in:pelanggan,mitra_motor,mitra_mobil,merchant,home_provider,seller'],
+            'address'       => ['required_if:role,pelanggan', 'nullable', 'string', 'max:255'],
             'vehicle_plate' => ['nullable', 'required_if:role,mitra_motor', 'required_if:role,mitra_mobil', 'string', 'max:20'],
             'vehicle_brand' => ['nullable', 'sometimes', 'string', 'max:50'],
             'vehicle_year'  => ['nullable', 'sometimes', 'integer', 'min:2000', 'max:' . date('Y')],

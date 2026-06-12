@@ -23,7 +23,10 @@ export async function initPushNotifications({ onToken, onForeground, onTap } = {
 
   PushNotifications.addListener('registration', (token) => {
     onToken?.(token.value)
-    // Kirim FCM token ke backend
+    // Simpan token — kirim ke backend hanya jika sudah login
+    // Tanpa pengecekan ini, 401 memicu zasaqu:unauthorized → redirect paksa dari halaman login
+    localStorage.setItem('_pending_fcm_token', token.value)
+    if (!localStorage.getItem('token')) return
     import('../services/api').then(({ default: api }) => {
       api.post('/auth/fcm-token', { fcm_token: token.value }).catch(() => {})
     })

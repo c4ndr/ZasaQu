@@ -22,9 +22,26 @@ class OtpController extends Controller
     public function sendOtp(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'phone' => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
+            'phone' => ['nullable', 'string', 'regex:/^08[0-9]{8,11}$/'],
+            'email' => ['nullable', 'email'],
             'type'  => ['required', 'in:register,login,reset_password'],
         ]);
+
+        // reset_password boleh pakai email saja (tanpa phone)
+        if ($data['type'] === 'reset_password' && empty($data['phone'])) {
+            if (empty($data['email'])) {
+                return response()->json(['message' => 'Email harus diisi untuk reset password.'], 422);
+            }
+            $user = User::where('email', $data['email'])->first();
+            if (!$user) {
+                return response()->json(['message' => 'Email tidak ditemukan.'], 422);
+            }
+            $data['phone'] = $user->phone;
+        }
+
+        if (empty($data['phone'])) {
+            return response()->json(['message' => 'Nomor HP harus diisi.'], 422);
+        }
 
         // Rate limiting: max 3 OTP per nomor per jam
         $rateLimitKey = 'otp_rate:' . $data['phone'];
@@ -43,25 +60,27 @@ class OtpController extends Controller
             }
         }
 
+        // Cari email user untuk OTP
+        $email = $data['email'] ?? null;
         if (in_array($data['type'], ['login', 'reset_password'])) {
-            $exists = User::where('phone', $data['phone'])->exists();
-            if (!$exists) {
+            $user = User::where('phone', $data['phone'])->first();
+            if (!$user) {
                 return response()->json(['message' => 'Nomor HP tidak ditemukan.'], 422);
             }
+            $email = $user->email;
         }
 
-        $otp = $this->otpService->send($data['phone'], $data['type']);
+        $otp = $this->otpService->send($data['phone'], $data['type'], $email);
 
-        // Fonnte gagal kirim (device disconnect, quota habis, dll)
         if ($otp->plain_code !== null) {
             return response()->json([
-                'message'  => 'WhatsApp tidak tersedia saat ini. Gunakan kode berikut untuk melanjutkan.',
-                'otp_code' => $otp->plain_code,
-                'warning'  => 'Kode ini tampil karena WhatsApp gateway sedang offline.',
+                'message'  => 'Kode OTP ditampilkan karena WhatsApp dan Email tidak tersedia.',
+                'demo_otp' => $otp->plain_code,
             ]);
         }
 
-        return response()->json(['message' => 'Kode OTP telah dikirim ke WhatsApp kamu. Berlaku 5 menit.']);
+        $via = $email ? "Email ({$email})" : 'WhatsApp';
+        return response()->json(['message' => "Kode OTP telah dikirim via {$via}. Berlaku 5 menit."]);
     }
 
     public function register(Request $request): JsonResponse
@@ -72,6 +91,7 @@ class OtpController extends Controller
             'otp'           => ['required', 'string', 'size:6'],
             'password'      => ['required', 'confirmed', Password::min(8)],
             'role'              => ['sometimes', 'in:pelanggan,mitra_motor,mitra_mobil,merchant,home_provider'],
+            'address'           => ['required_if:role,pelanggan', 'nullable', 'string', 'max:255'],
             'vehicle_plate'     => ['required_if:role,mitra_motor', 'required_if:role,mitra_mobil', 'string', 'max:20'],
             'vehicle_brand'     => ['sometimes', 'string', 'max:50'],
             'vehicle_year'      => ['sometimes', 'integer', 'min:2000', 'max:' . date('Y')],
@@ -105,19 +125,27 @@ class OtpController extends Controller
     public function resetPassword(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'phone'    => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
+            'phone'    => ['nullable', 'string', 'regex:/^08[0-9]{8,11}$/'],
+            'email'    => ['nullable', 'email'],
             'otp'      => ['required', 'string', 'size:6'],
             'password' => ['required', 'confirmed', Password::min(6)],
         ]);
 
-        $valid = $this->otpService->verify($data['phone'], $data['otp'], 'reset_password');
-        if (!$valid) {
-            return response()->json(['message' => 'Kode OTP tidak valid atau sudah kedaluwarsa.'], 422);
+        // Cari user: bisa via email atau phone
+        $user = null;
+        if (!empty($data['email'])) {
+            $user = User::where('email', $data['email'])->first();
+        } elseif (!empty($data['phone'])) {
+            $user = User::where('phone', $data['phone'])->first();
         }
 
-        $user = User::where('phone', $data['phone'])->first();
         if (!$user) {
             return response()->json(['message' => 'Pengguna tidak ditemukan.'], 404);
+        }
+
+        $valid = $this->otpService->verify($user->phone, $data['otp'], 'reset_password');
+        if (!$valid) {
+            return response()->json(['message' => 'Kode OTP tidak valid atau sudah kedaluwarsa.'], 422);
         }
 
         $user->update(['password' => Hash::make($data['password'])]);

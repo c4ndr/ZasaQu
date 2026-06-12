@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import Map, { Marker, Source, Layer } from 'react-map-gl/maplibre'
-import { SATELLITE_STYLE } from '../utils/mapStyle'
-import { fitPoints, distanceMeter, circleGeoJson } from '../utils/geo'
+import { GoogleMap, OverlayView, Polyline, Circle } from '@react-google-maps/api'
+import { fitGoogleMap, distanceMeter } from '../utils/geo'
 import RoadPolyline from '../components/RoadPolyline'
+import MapSatToggle from '../components/MapSatToggle'
 import BottomNav from '../components/BottomNav'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
@@ -82,26 +82,32 @@ function MapsLink({ lat, lng, address, color = 'var(--k-text)', fontSize = 13, s
 }
 
 // ── Mini peta rute (MapLibre GL) ──────────────────────────────────────────────
+const MINI_MAP_OPTS = { disableDefaultUI: true, gestureHandling: 'none', clickableIcons: false }
+
 function MiniMap({ order, height = 160 }) {
   const mapRef  = useRef(null)
+  const [mapType, setMapType] = useState('roadmap')
   const pickup  = [parseFloat(order.pickup_lat),  parseFloat(order.pickup_lng)]
   const dropoff = [parseFloat(order.dropoff_lat), parseFloat(order.dropoff_lng)]
 
   return (
-    <div style={{ height, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--k-border)' }}>
-      <Map
-        ref={mapRef}
-        initialViewState={{ longitude: pickup[1], latitude: pickup[0], zoom: 13 }}
-        mapStyle={SATELLITE_STYLE}
-        style={{ width: '100%', height: '100%' }}
-        interactive={false}
-        attributionControl={false}
-        onLoad={() => fitPoints(mapRef.current?.getMap(), [pickup, dropoff], 48)}
+    <div style={{ height, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--k-border)', position: 'relative' }}>
+      <GoogleMap
+        mapContainerStyle={{ width: '100%', height: '100%' }}
+        center={{ lat: pickup[0], lng: pickup[1] }}
+        zoom={13}
+        options={{ ...MINI_MAP_OPTS, mapTypeId: mapType }}
+        onLoad={(map) => { mapRef.current = map; fitGoogleMap(map, [pickup, dropoff], 48) }}
       >
-        <RoadPolyline pickup={pickup} dropoff={dropoff} weight={3} opacity={0.7} id={`route-${order.id}`} />
-        <Marker longitude={pickup[1]}  latitude={pickup[0]}  anchor="bottom"><PinMarker color="#00C896" /></Marker>
-        <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom"><PinMarker color="#F56565" /></Marker>
-      </Map>
+        <RoadPolyline pickup={pickup} dropoff={dropoff} weight={3} opacity={0.7} />
+        <OverlayView position={{ lat: pickup[0], lng: pickup[1] }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+          <PinMarker color="#00C896" />
+        </OverlayView>
+        <OverlayView position={{ lat: dropoff[0], lng: dropoff[1] }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+          <PinMarker color="#F56565" />
+        </OverlayView>
+      </GoogleMap>
+      <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />
     </div>
   )
 }
@@ -109,6 +115,7 @@ function MiniMap({ order, height = 160 }) {
 // ── Modal peta fullscreen (MapLibre GL) ───────────────────────────────────────
 function MapModal({ order, onClose }) {
   const mapRef  = useRef(null)
+  const [mapType, setMapType] = useState('roadmap')
   const pickup  = [parseFloat(order.pickup_lat),  parseFloat(order.pickup_lng)]
   const dropoff = [parseFloat(order.dropoff_lat), parseFloat(order.dropoff_lng)]
 
@@ -129,19 +136,23 @@ function MapModal({ order, onClose }) {
       </div>
 
       {/* Peta */}
-      <div style={{ flex: 1 }}>
-        <Map
-          ref={mapRef}
-          initialViewState={{ longitude: pickup[1], latitude: pickup[0], zoom: 13 }}
-          mapStyle={SATELLITE_STYLE}
-          style={{ width: '100%', height: '100%' }}
-          attributionControl={false}
-          onLoad={() => fitPoints(mapRef.current?.getMap(), [pickup, dropoff], 60)}
+      <div style={{ flex: 1, position: 'relative' }}>
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '100%' }}
+          center={{ lat: pickup[0], lng: pickup[1] }}
+          zoom={13}
+          options={{ disableDefaultUI: true, gestureHandling: 'greedy', clickableIcons: false, mapTypeId: mapType }}
+          onLoad={(map) => { mapRef.current = map; fitGoogleMap(map, [pickup, dropoff], 60) }}
         >
-          <RoadPolyline pickup={pickup} dropoff={dropoff} weight={4} opacity={0.8} id={`modal-${order.id}`} />
-          <Marker longitude={pickup[1]}  latitude={pickup[0]}  anchor="bottom"><PinMarker color="#00C896" /></Marker>
-          <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom"><PinMarker color="#F56565" /></Marker>
-        </Map>
+          <RoadPolyline pickup={pickup} dropoff={dropoff} weight={4} opacity={0.8} />
+          <OverlayView position={{ lat: pickup[0], lng: pickup[1] }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <PinMarker color="#00C896" />
+          </OverlayView>
+          <OverlayView position={{ lat: dropoff[0], lng: dropoff[1] }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <PinMarker color="#F56565" />
+          </OverlayView>
+        </GoogleMap>
+        <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />
       </div>
 
       {/* Info rute bawah */}
@@ -760,6 +771,7 @@ function getNavTarget(order) {
 function NavMap({ order, gpsLocation, height = 300 }) {
   const mapRef    = useRef(null)
   const mapLoaded = useRef(false)
+  const [mapType, setMapType] = useState('roadmap')
   const target    = getNavTarget(order)
   const pickup    = [parseFloat(order.pickup_lat),  parseFloat(order.pickup_lng)]
   const dropoff   = [parseFloat(order.dropoff_lat), parseFloat(order.dropoff_lng)]
@@ -814,66 +826,68 @@ function NavMap({ order, gpsLocation, height = 300 }) {
     <div>
       {/* ── Peta navigasi ── */}
       <div style={{ height, borderRadius: 16, overflow: 'hidden', position: 'relative', border: '1px solid var(--k-border)' }}>
-        <Map
-          ref={mapRef}
-          initialViewState={{ longitude: toPos[1], latitude: toPos[0], zoom: 14 }}
-          mapStyle={SATELLITE_STYLE}
-          style={{ width: '100%', height: '100%' }}
-          attributionControl={false}
-          onLoad={() => {
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '100%' }}
+          center={{ lat: toPos[0], lng: toPos[1] }}
+          zoom={14}
+          options={{ disableDefaultUI: true, gestureHandling: 'greedy', clickableIcons: false, mapTypeId: mapType }}
+          onLoad={(map) => {
+            mapRef.current = map
             mapLoaded.current = true
-            refitMap()
+            fitGoogleMap(map, [fromPos, toPos], 80)
           }}
         >
           {/* Lingkaran akurasi GPS */}
-          {accuracyCircle && (
-            <Source id={`acc-${order.id}`} type="geojson" data={accuracyCircle}>
-              <Layer id={`acc-fill-${order.id}`} type="fill"
-                paint={{ 'fill-color': '#3B82F6', 'fill-opacity': 0.12 }} />
-              <Layer id={`acc-line-${order.id}`} type="line"
-                paint={{ 'line-color': '#3B82F6', 'line-width': 1.5, 'line-opacity': 0.5 }} />
-            </Source>
+          {gpsLocation && (
+            <Circle
+              center={{ lat: gpsLocation.lat, lng: gpsLocation.lng }}
+              radius={8}
+              options={{ strokeColor: '#3B82F6', strokeOpacity: 0.5, strokeWeight: 1.5, fillColor: '#3B82F6', fillOpacity: 0.12 }}
+            />
           )}
 
           {/* Route road */}
-          <Source id={`nav-route-${order.id}`} type="geojson" data={routeGeoJson}>
-            <Layer id={`nav-line-${order.id}`} type="line"
-              paint={{ 'line-color': '#3B82F6', 'line-width': 5, 'line-opacity': 0.9 }}
-              layout={{ 'line-join': 'round', 'line-cap': 'round' }} />
-          </Source>
+          {routePoints && (
+            <Polyline
+              path={routePoints.map(([lat, lng]) => ({ lat, lng }))}
+              options={{ strokeColor: '#3B82F6', strokeWeight: 5, strokeOpacity: 0.9, geodesic: true }}
+            />
+          )}
 
           {/* Posisi mitra — dot biru berdenyut */}
           {gpsLocation && (
-            <Marker longitude={gpsLocation.lng} latitude={gpsLocation.lat} anchor="center">
-              <div style={{ position: 'relative', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <OverlayView position={{ lat: gpsLocation.lat, lng: gpsLocation.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+              <div style={{ position: 'relative', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translate(-50%,-50%)' }}>
                 <div style={{ position: 'absolute', width: 48, height: 48, borderRadius: '50%', background: 'rgba(59,130,246,0.2)', animation: 'gps-ring 2s ease-out infinite' }} />
                 <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#3B82F6', border: '3px solid #fff', boxShadow: '0 2px 10px rgba(59,130,246,.6)', zIndex: 1 }} />
               </div>
-            </Marker>
+            </OverlayView>
           )}
 
-          {/* Pickup marker — selalu tampil, besar jika sedang menuju pickup */}
-          <Marker longitude={pickup[1]} latitude={pickup[0]} anchor="bottom">
-            <div style={{ position: 'relative', width: toDropoff ? 20 : 32, height: toDropoff ? 26 : 40, pointerEvents: 'none', opacity: toDropoff ? 0.5 : 1, transition: 'all 0.4s' }}>
+          {/* Pickup marker */}
+          <OverlayView position={{ lat: pickup[0], lng: pickup[1] }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}>
+            <div style={{ width: toDropoff ? 20 : 32, height: toDropoff ? 26 : 40, pointerEvents: 'none', opacity: toDropoff ? 0.5 : 1, transition: 'all 0.4s' }}>
               <svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                <path d="M16 0C8.268 0 2 6.268 2 14c0 9.6 14 26 14 26S30 23.6 30 14C30 6.268 23.732 0 16 0z"
-                  fill="#00C896" stroke="white" strokeWidth="2" />
+                <path d="M16 0C8.268 0 2 6.268 2 14c0 9.6 14 26 14 26S30 23.6 30 14C30 6.268 23.732 0 16 0z" fill="#00C896" stroke="white" strokeWidth="2" />
                 <circle cx="16" cy="14" r="6" fill="white" />
               </svg>
             </div>
-          </Marker>
+          </OverlayView>
 
-          {/* Dropoff marker — selalu tampil, besar jika sedang menuju dropoff */}
-          <Marker longitude={dropoff[1]} latitude={dropoff[0]} anchor="bottom">
-            <div style={{ position: 'relative', width: toDropoff ? 32 : 20, height: toDropoff ? 40 : 26, pointerEvents: 'none', opacity: toDropoff ? 1 : 0.5, transition: 'all 0.4s' }}>
+          {/* Dropoff marker */}
+          <OverlayView position={{ lat: dropoff[0], lng: dropoff[1] }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}>
+            <div style={{ width: toDropoff ? 32 : 20, height: toDropoff ? 40 : 26, pointerEvents: 'none', opacity: toDropoff ? 1 : 0.5, transition: 'all 0.4s' }}>
               <svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                <path d="M16 0C8.268 0 2 6.268 2 14c0 9.6 14 26 14 26S30 23.6 30 14C30 6.268 23.732 0 16 0z"
-                  fill="#F56565" stroke="white" strokeWidth="2" />
+                <path d="M16 0C8.268 0 2 6.268 2 14c0 9.6 14 26 14 26S30 23.6 30 14C30 6.268 23.732 0 16 0z" fill="#F56565" stroke="white" strokeWidth="2" />
                 <circle cx="16" cy="14" r="6" fill="white" />
               </svg>
             </div>
-          </Marker>
-        </Map>
+          </OverlayView>
+        </GoogleMap>
+
+        <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} style={{ bottom: 'auto', top: 8 }} />
 
         {/* Badge GPS off */}
         {!gpsLocation && (

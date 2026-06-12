@@ -24,7 +24,7 @@ class ProviderController extends Controller
         $provider = $this->provider($request);
         if (!$provider) return response()->json(['message' => 'Profil provider tidak ditemukan.'], 404);
 
-        return response()->json(['data' => $provider->load('allServices')]);
+        return response()->json(['data' => $provider->load('allServices', 'user')]);
     }
 
     public function updateProfile(Request $request): JsonResponse

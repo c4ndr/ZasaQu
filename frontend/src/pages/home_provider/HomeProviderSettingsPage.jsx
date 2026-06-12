@@ -39,12 +39,18 @@ export default function HomeProviderSettingsPage() {
   const [form,      setForm]      = useState({})
   const [previews,  setPreviews]  = useState({})
   const [uploading, setUploading] = useState({})
+  const [acct,      setAcct]      = useState({ name: '', email: '' })
+  const [acctSaving, setAcctSaving] = useState(false)
+  const [pwd,       setPwd]       = useState({ current_password: '', new_password: '', new_password_confirmation: '' })
+  const [pwdSaving, setPwdSaving] = useState(false)
 
   useEffect(() => {
     api.get('/home/provider/profile')
       .then(r => {
         setProvider(r.data.data)
         const p = r.data.data
+        // Isi form akun dari data user yang disertakan di response
+        if (p.user) setAcct({ name: p.user.name || '', email: p.user.email || '' })
         setForm({
           name:          p.name || '',
           description:   p.description || '',
@@ -128,7 +134,35 @@ export default function HomeProviderSettingsPage() {
   }
 
   function showToast(type, msg) {
-    setToast({ type, msg }); setTimeout(() => setToast(null), 3000)
+    setToast({ type, msg }); setTimeout(() => setToast(null), 3500)
+  }
+
+  async function handleSaveAcct(e) {
+    e.preventDefault()
+    if (!acct.name.trim()) { showToast('error', 'Nama tidak boleh kosong.'); return }
+    if (!acct.email.trim()) { showToast('error', 'Email tidak boleh kosong.'); return }
+    setAcctSaving(true)
+    try {
+      await api.patch('/auth/profile', { name: acct.name, email: acct.email })
+      showToast('success', 'Akun berhasil diperbarui.')
+    } catch (err) {
+      const errs = err.response?.data?.errors
+      showToast('error', errs ? Object.values(errs).flat()[0] : (err.response?.data?.message || 'Gagal menyimpan.'))
+    } finally { setAcctSaving(false) }
+  }
+
+  async function handleChangePwd(e) {
+    e.preventDefault()
+    if (pwd.new_password !== pwd.new_password_confirmation) { showToast('error', 'Konfirmasi password tidak cocok.'); return }
+    if (pwd.new_password.length < 6) { showToast('error', 'Password minimal 6 karakter.'); return }
+    setPwdSaving(true)
+    try {
+      await api.post('/auth/change-password', pwd)
+      showToast('success', 'Password berhasil diubah.')
+      setPwd({ current_password: '', new_password: '', new_password_confirmation: '' })
+    } catch (err) {
+      showToast('error', err.response?.data?.message || 'Gagal mengubah password.')
+    } finally { setPwdSaving(false) }
   }
 
   const inp = {
@@ -437,6 +471,68 @@ export default function HomeProviderSettingsPage() {
             fontWeight: 700, fontSize: 14, cursor: 'pointer',
           }}>
             Keluar (Logout)
+          </button>
+        </form>
+
+        {/* ── Akun (nama & email) ── */}
+        <form onSubmit={handleSaveAcct} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 24 }}>
+          <div style={{ padding: '14px 16px', borderRadius: 14, background: 'var(--k-card)', border: '1px solid var(--k-border)' }}>
+            <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 14 }}>👤 Akun Login</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={lbl}>Nama Lengkap</label>
+                <input style={inp} type="text" value={acct.name}
+                  onChange={e => setAcct(a => ({ ...a, name: e.target.value }))}
+                  placeholder="Nama tampilan Anda" />
+              </div>
+              <div>
+                <label style={lbl}>Email</label>
+                <input style={inp} type="email" value={acct.email}
+                  onChange={e => setAcct(a => ({ ...a, email: e.target.value }))}
+                  placeholder="email@contoh.com" />
+              </div>
+            </div>
+          </div>
+          <button type="submit" disabled={acctSaving} style={{
+            padding: '12px', borderRadius: 12, border: 'none', cursor: acctSaving ? 'default' : 'pointer',
+            background: acctSaving ? 'var(--k-border)' : 'linear-gradient(135deg,#0EA5E9,#6366F1)',
+            color: '#fff', fontWeight: 700, fontSize: 14,
+          }}>
+            {acctSaving ? 'Menyimpan...' : 'Simpan Akun'}
+          </button>
+        </form>
+
+        {/* ── Ganti Password ── */}
+        <form onSubmit={handleChangePwd} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 16, paddingBottom: 40 }}>
+          <div style={{ padding: '14px 16px', borderRadius: 14, background: 'var(--k-card)', border: '1px solid var(--k-border)' }}>
+            <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)', marginBottom: 14 }}>🔒 Ganti Password</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={lbl}>Password Saat Ini</label>
+                <input style={inp} type="password" value={pwd.current_password}
+                  onChange={e => setPwd(p => ({ ...p, current_password: e.target.value }))}
+                  placeholder="••••••••" autoComplete="current-password" />
+              </div>
+              <div>
+                <label style={lbl}>Password Baru</label>
+                <input style={inp} type="password" value={pwd.new_password}
+                  onChange={e => setPwd(p => ({ ...p, new_password: e.target.value }))}
+                  placeholder="Minimal 6 karakter" autoComplete="new-password" />
+              </div>
+              <div>
+                <label style={lbl}>Konfirmasi Password Baru</label>
+                <input style={inp} type="password" value={pwd.new_password_confirmation}
+                  onChange={e => setPwd(p => ({ ...p, new_password_confirmation: e.target.value }))}
+                  placeholder="Ulangi password baru" autoComplete="new-password" />
+              </div>
+            </div>
+          </div>
+          <button type="submit" disabled={pwdSaving} style={{
+            padding: '12px', borderRadius: 12, border: 'none', cursor: pwdSaving ? 'default' : 'pointer',
+            background: pwdSaving ? 'var(--k-border)' : 'linear-gradient(135deg,#F59E0B,#EF4444)',
+            color: '#fff', fontWeight: 700, fontSize: 14,
+          }}>
+            {pwdSaving ? 'Mengubah...' : 'Ubah Password'}
           </button>
         </form>
       </div>

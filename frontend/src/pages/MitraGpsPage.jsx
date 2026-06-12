@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import Map, { Marker, Source, Layer } from 'react-map-gl/maplibre'
-import { SATELLITE_STYLE } from '../utils/mapStyle'
-import { circleGeoJson } from '../utils/geo'
+import { GoogleMap, OverlayView, Circle } from '@react-google-maps/api'
 import { useMitraGps } from '../context/MitraGpsContext'
 import LocationSearch from '../components/LocationSearch'
+import MapSatToggle from '../components/MapSatToggle'
 import api from '../services/api'
 import { isNative, requestGeolocationPermission } from '../utils/nativePlatform'
 
@@ -104,6 +103,7 @@ export default function MitraGpsPage() {
   }
 
   const mapRef = useRef(null)
+  const [mapType, setMapType] = useState('roadmap')
 
   // ── Auto-fill origin dari GPS jika tersedia saat form dibuka ─────────────────
   useEffect(() => {
@@ -206,10 +206,8 @@ export default function MitraGpsPage() {
 
   // Follow lokasi di peta ketika GPS aktif
   useEffect(() => {
-    if (!location || !follow) return
-    const map = mapRef.current?.getMap()
-    if (!map) return
-    map.easeTo({ center: [location.lng, location.lat], duration: 600 })
+    if (!location || !follow || !mapRef.current) return
+    mapRef.current.panTo({ lat: location.lat, lng: location.lng })
   }, [location, follow])
 
   // Tick waktu terakhir update
@@ -300,33 +298,37 @@ export default function MitraGpsPage() {
         </span>
       </div>
 
-      {/* ── Peta MapLibre GL ── */}
-      <div style={{ flex: 1, minHeight: panelOpen ? 'calc(100vh - 280px)' : 'calc(100vh - 72px)', transition: 'min-height 0.3s' }}>
-        <Map
-          ref={mapRef}
-          initialViewState={{ longitude: location?.lng ?? 106.8456, latitude: location?.lat ?? -6.2088, zoom: 16 }}
-          mapStyle={SATELLITE_STYLE}
-          style={{ width: '100%', height: '100%', minHeight: 300 }}
+      {/* ── Peta Google Maps ── */}
+      <div style={{ flex: 1, minHeight: panelOpen ? 'calc(100vh - 280px)' : 'calc(100vh - 72px)', transition: 'min-height 0.3s', position: 'relative' }}>
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '100%', minHeight: 300 }}
+          center={{ lat: location?.lat ?? -6.2088, lng: location?.lng ?? 106.8456 }}
+          zoom={16}
+          options={{ disableDefaultUI: true, gestureHandling: 'greedy', clickableIcons: false, mapTypeId: mapType }}
+          onLoad={(map) => { mapRef.current = map }}
         >
           {/* Lingkaran akurasi GPS */}
           {location && accuracy && (
-            <Source id="accuracy-circle" type="geojson" data={circleGeoJson(location.lat, location.lng, accuracy)}>
-              <Layer id="accuracy-fill" type="fill" paint={{ 'fill-color': '#00C896', 'fill-opacity': 0.06 }} />
-              <Layer id="accuracy-border" type="line" paint={{ 'line-color': '#00C896', 'line-width': 1, 'line-opacity': 0.4 }} />
-            </Source>
+            <Circle
+              center={{ lat: location.lat, lng: location.lng }}
+              radius={accuracy}
+              options={{ strokeColor: '#00C896', strokeOpacity: 0.4, strokeWeight: 1, fillColor: '#00C896', fillOpacity: 0.06 }}
+            />
           )}
 
           {/* Marker posisi mitra — dot pulse */}
           {location && (
-            <Marker longitude={location.lng} latitude={location.lat} anchor="center">
-              <div style={{ position: 'relative', width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <OverlayView position={{ lat: location.lat, lng: location.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+              <div style={{ position: 'relative', width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translate(-50%,-50%)' }}>
                 <div style={{ position: 'absolute', width: 52, height: 52, borderRadius: '50%', background: 'rgba(0,200,150,0.15)', animation: 'gps-ring 2s ease-out infinite' }} />
                 <div style={{ position: 'absolute', width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,200,150,0.25)', animation: 'gps-ring 2s ease-out infinite 0.4s' }} />
                 <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#00C896', border: '3px solid #fff', boxShadow: '0 2px 12px rgba(0,200,150,.6)', position: 'relative', zIndex: 1 }} />
               </div>
-            </Marker>
+            </OverlayView>
           )}
-        </Map>
+        </GoogleMap>
+
+        <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />
 
         {/* Overlay jika GPS belum aktif */}
         {!location && (

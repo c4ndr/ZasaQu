@@ -23,6 +23,7 @@ class AuthService
             'email'             => $data['email'],
             'password'          => Hash::make($data['password']),
             'role'              => $role,
+            'address'           => $data['address'] ?? null,
             'status'            => $isMitra ? 'pending_review' : 'active',
             'email_verified_at' => now(),
         ]);
@@ -58,6 +59,7 @@ class AuthService
             'phone'             => $data['phone'],
             'password'          => Hash::make($data['password']),
             'role'              => $role,
+            'address'           => $data['address'] ?? null,
             'status'            => $isMitra ? 'pending_review' : 'active',
             'phone_verified_at' => now(),
         ]);

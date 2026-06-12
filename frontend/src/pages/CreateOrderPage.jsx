@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import Map, { Marker } from 'react-map-gl/maplibre'
-import { OSM_STYLE } from '../utils/mapStyle'
+import { GoogleMap, OverlayView } from '@react-google-maps/api'
 import { getPosition } from '../utils/geo'
 import { reverseGeocodeGoogle } from '../utils/googleMaps'
 import LocationSearch from '../components/LocationSearch'
+import MapSatToggle from '../components/MapSatToggle'
 import api from '../services/api'
 import useAddresses from '../hooks/useAddresses'
 
@@ -26,11 +26,12 @@ const GPS_ERROR_MSG = {
   3: 'Waktu deteksi habis. Coba lagi atau ketuk peta secara manual.',
 }
 
-// ── Komponen Map Picker (MapLibre) ────────────────────────────────────────────
+// ── Komponen Map Picker (Google Maps) ─────────────────────────────────────────
 function LocationPicker({ label, color, lat, lng, address, onchange }) {
   const [geocoding, setGeocoding] = useState(false)
   const [locating,  setLocating]  = useState(false)
   const [gpsError,  setGpsError]  = useState('')
+  const [mapType,   setMapType]   = useState('roadmap')
   const mapRef  = useRef(null)
   const position = (lat && lng) ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null
 
@@ -47,7 +48,8 @@ function LocationPicker({ label, color, lat, lng, address, onchange }) {
   // Pan ke posisi baru setelah pick
   useEffect(() => {
     if (!position || !mapRef.current) return
-    mapRef.current.getMap().flyTo({ center: [position.lng, position.lat], zoom: 15, speed: 1.2 })
+    mapRef.current.panTo({ lat: position.lat, lng: position.lng })
+    mapRef.current.setZoom(15)
   }, [lat, lng]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const detectLocation = async () => {
@@ -67,8 +69,10 @@ function LocationPicker({ label, color, lat, lng, address, onchange }) {
   }
 
   const initCenter = position
-    ? { longitude: position.lng, latitude: position.lat }
-    : { longitude: 106.816, latitude: -6.2 }
+    ? { lat: position.lat, lng: position.lng }
+    : { lat: -6.2, lng: 106.816 }
+
+  const MAP_OPTS = { disableDefaultUI: true, gestureHandling: 'greedy', clickableIcons: false, styles: [{ featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }] }
 
   return (
     <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 20, overflow: 'hidden' }}>
@@ -101,22 +105,28 @@ function LocationPicker({ label, color, lat, lng, address, onchange }) {
         </div>
       )}
 
-      {/* Peta MapLibre */}
+      {/* Peta Google Maps */}
       <div style={{ height: 220, position: 'relative', cursor: 'crosshair' }}>
-        <Map
-          ref={mapRef}
-          initialViewState={{ ...initCenter, zoom: position ? 15 : 12 }}
-          mapStyle={OSM_STYLE}
-          style={{ width: '100%', height: '100%' }}
-          attributionControl={false}
-          onClick={e => pick(e.lngLat.lat, e.lngLat.lng)}
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '100%' }}
+          center={initCenter}
+          zoom={position ? 15 : 12}
+          options={{ ...MAP_OPTS, mapTypeId: mapType }}
+          onLoad={map => { mapRef.current = map }}
+          onClick={e => pick(e.latLng.lat(), e.latLng.lng())}
         >
           {position && (
-            <Marker longitude={position.lng} latitude={position.lat} anchor="bottom">
+            <OverlayView
+              position={position}
+              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}
+            >
               <PinMarker color={color} />
-            </Marker>
+            </OverlayView>
           )}
-        </Map>
+        </GoogleMap>
+
+        <MapSatToggle mapType={mapType} onToggle={() => setMapType(t => t === 'roadmap' ? 'hybrid' : 'roadmap')} />
 
         {!position && (
           <div style={{
