@@ -86,7 +86,7 @@ export default function TosPage() {
 
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ padding: '16px', background: 'var(--k-card)', borderRadius: 14, border: '1px solid var(--k-border)', textAlign: 'center' }}>
-            <p style={{ fontSize: 12, color: 'var(--k-muted)', margin: '0 0 10px' }}>Pertanyaan? Hubungi kami di <strong style={{ color: '#00C896' }}>support@zasaqu.uk</strong></p>
+            <p style={{ fontSize: 12, color: 'var(--k-muted)', margin: '0 0 10px' }}>Pertanyaan? Hubungi kami di <a href="mailto:support@zasaqu.uk" style={{ color: '#00C896', fontWeight: 700, textDecoration: 'none' }}>support@zasaqu.uk</a></p>
             <button onClick={() => navigate('/refund')}
               style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
               💸 Lihat Kebijakan Refund Lengkap

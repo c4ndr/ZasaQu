@@ -184,7 +184,7 @@ export default function RefundPage() {
         <div style={{ background: 'var(--k-card)', borderRadius: 14, border: '1px solid var(--k-border)', padding: '18px', textAlign: 'center' }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--k-text)', margin: '0 0 8px' }}>Ada Masalah?</p>
           <p style={{ fontSize: 12, color: 'var(--k-muted)', margin: '0 0 14px', lineHeight: 1.6 }}>
-            Hubungi tim ZasaQu di <strong style={{ color: '#00C896' }}>support@zasaqu.uk</strong> atau WhatsApp kami. Sertakan nomor order untuk penanganan yang lebih cepat.
+            Hubungi tim ZasaQu di <a href="mailto:support@zasaqu.uk" style={{ color: '#00C896', fontWeight: 700, textDecoration: 'none' }}>support@zasaqu.uk</a> atau WhatsApp kami. Sertakan nomor order untuk penanganan yang lebih cepat.
           </p>
           <button onClick={() => navigate('/contact')}
             style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#00C896,#00A87D)', color: '#0C0C16', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>

@@ -83,7 +83,7 @@ export default function PrivacyPage() {
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ padding: '16px', background: 'var(--k-card)', borderRadius: 14, border: '1px solid var(--k-border)', textAlign: 'center' }}>
             <p style={{ fontSize: 12, color: 'var(--k-muted)', margin: 0 }}>
-              Pertanyaan privasi? Hubungi <strong style={{ color: '#6366F1' }}>support@zasaqu.uk</strong>
+              Pertanyaan privasi? Hubungi <a href="mailto:support@zasaqu.uk" style={{ color: '#6366F1', fontWeight: 700, textDecoration: 'none' }}>support@zasaqu.uk</a>
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

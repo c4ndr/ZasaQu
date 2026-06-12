@@ -179,7 +179,7 @@ export default function DaftarMitraPage() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--k-muted)', margin: 0 }}>
-          Pertanyaan? Hubungi <span style={{ color: '#00C896', fontWeight: 700 }}>support@zasaqu.uk</span>
+          Pertanyaan? Hubungi <a href="mailto:support@zasaqu.uk" style={{ color: '#00C896', fontWeight: 700, textDecoration: 'none' }}>support@zasaqu.uk</a>
         </p>
       </div>
     </div>

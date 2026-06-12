@@ -13,7 +13,7 @@ const INFO_ROWS = [
   { label: 'Versi',         value: VERSION },
   { label: 'Platform',      value: 'Android & Web' },
   { label: 'Dikembangkan',  value: 'ZashaGo Ecosystem' },
-  { label: 'Email',         value: 'support@zasaqu.uk' },
+  { label: 'Email',         value: 'support@zasaqu.uk', href: 'mailto:support@zasaqu.uk' },
   { label: 'Website',       value: 'zasaqu.uk' },
 ]
 
@@ -75,7 +75,10 @@ export default function AboutPage() {
           {INFO_ROWS.map((r, i) => (
             <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: i < INFO_ROWS.length - 1 ? 10 : 0, marginBottom: i < INFO_ROWS.length - 1 ? 10 : 0, borderBottom: i < INFO_ROWS.length - 1 ? '1px solid var(--k-border)' : 'none' }}>
               <span style={{ fontSize: 13, color: 'var(--k-muted)' }}>{r.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)' }}>{r.value}</span>
+              {r.href
+                ? <a href={r.href} style={{ fontSize: 13, fontWeight: 700, color: '#00C896', textDecoration: 'none' }}>{r.value}</a>
+                : <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)' }}>{r.value}</span>
+              }
             </div>
           ))}
         </div>
