@@ -97,6 +97,7 @@ import AdminMartProductsPage from './pages/admin/AdminMartProductsPage'
 import AdminMartOrdersPage from './pages/admin/AdminMartOrdersPage'
 import AdminModulesPage from './pages/admin/AdminModulesPage'
 import NotFoundPage from './pages/NotFoundPage'
+import LandingPage from './pages/LandingPage'
 import AboutPage from './pages/AboutPage'
 import TosPage from './pages/TosPage'
 import PrivacyPage from './pages/PrivacyPage'
@@ -217,7 +218,7 @@ function AppRoutes() {
       {/* Notifikasi order untuk mitra — aktif di semua halaman */}
       <MitraOrderAlert />
       <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
       <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
       <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
