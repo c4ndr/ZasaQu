@@ -34,6 +34,7 @@ const NAV_GROUPS = [
       { to: '/admin/mart/review',   emoji: '⏳', label: 'Review Seller' },
       { to: '/admin/mart/products',  emoji: '📋', label: 'Produk Mart'   },
       { to: '/admin/mitra/verify',   emoji: '✅', label: 'Verif Mitra'   },
+      { to: '/admin/mitra/review',  emoji: '⏳', label: 'Review Mitra'  },
     ],
   },
   {
