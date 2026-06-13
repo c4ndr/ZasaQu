@@ -55,6 +55,7 @@ import NotificationsPage from './pages/NotificationsPage'
 import MitraOrderAlert from './components/MitraOrderAlert'
 import AdminFoodMerchantsPage from './pages/admin/AdminFoodMerchantsPage'
 import AdminHomeProvidersPage from './pages/admin/AdminHomeProvidersPage'
+import AdminHomeProviderReviewPage from './pages/admin/AdminHomeProviderReviewPage'
 import AdminHomeOrdersPage from './pages/admin/AdminHomeOrdersPage'
 import AdminServProvidersPage from './pages/admin/AdminServProvidersPage'
 import AdminServOrdersPage from './pages/admin/AdminServOrdersPage'
@@ -303,6 +304,7 @@ function AppRoutes() {
       <Route path="/admin/food/merchants" element={<AdminRoute><AdminFoodMerchantsPage /></AdminRoute>} />
       <Route path="/admin/food/orders" element={<AdminRoute><AdminFoodOrdersPage /></AdminRoute>} />
       <Route path="/admin/home/providers" element={<AdminRoute><AdminHomeProvidersPage /></AdminRoute>} />
+      <Route path="/admin/home/review" element={<AdminRoute><AdminHomeProviderReviewPage /></AdminRoute>} />
       <Route path="/admin/home/orders" element={<AdminRoute><AdminHomeOrdersPage /></AdminRoute>} />
       <Route path="/admin/serv/providers" element={<AdminRoute><AdminServProvidersPage /></AdminRoute>} />
       <Route path="/admin/serv/review" element={<AdminRoute><AdminServProviderReviewPage /></AdminRoute>} />

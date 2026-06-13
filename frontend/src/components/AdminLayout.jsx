@@ -27,6 +27,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/admin/food/merchants', emoji: '🍽️', label: 'Merchant Food' },
       { to: '/admin/home/providers', emoji: '🧺', label: 'Provider Home' },
+      { to: '/admin/home/review',   emoji: '⏳', label: 'Review Home'   },
       { to: '/admin/serv/providers', emoji: '🔧', label: 'Provider Serv' },
       { to: '/admin/serv/review',   emoji: '⏳', label: 'Review Pending' },
       { to: '/admin/mart/sellers',   emoji: '🛍️', label: 'Seller Mart'   },
