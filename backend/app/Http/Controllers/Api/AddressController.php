@@ -26,8 +26,8 @@ class AddressController extends Controller
             'recipient_name'  => 'required|string|max:100',
             'recipient_phone' => 'required|string|max:20',
             'address'         => 'required|string',
-            'lat'             => 'nullable|numeric',
-            'lng'             => 'nullable|numeric',
+            'lat'             => 'nullable|numeric|between:-90,90',
+            'lng'             => 'nullable|numeric|between:-180,180',
             'notes'           => 'nullable|string',
             'is_default'      => 'sometimes|boolean',
         ]);
@@ -59,8 +59,8 @@ class AddressController extends Controller
             'recipient_name'  => 'sometimes|required|string|max:100',
             'recipient_phone' => 'sometimes|required|string|max:20',
             'address'         => 'sometimes|required|string',
-            'lat'             => 'nullable|numeric',
-            'lng'             => 'nullable|numeric',
+            'lat'             => 'nullable|numeric|between:-90,90',
+            'lng'             => 'nullable|numeric|between:-180,180',
             'notes'           => 'nullable|string',
             'is_default'      => 'sometimes|boolean',
         ]);

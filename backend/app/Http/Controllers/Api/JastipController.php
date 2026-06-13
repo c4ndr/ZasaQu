@@ -22,10 +22,10 @@ class JastipController extends Controller
         }
         $data = $request->validate([
             'master_order_id'=>['nullable','exists:orders,id'],
-            'origin_lat'=>['required','numeric'],
-            'origin_lng'=>['required','numeric'],
-            'destination_lat'=>['nullable','numeric'],
-            'destination_lng'=>['nullable','numeric'],
+            'origin_lat'=>['required','numeric','between:-90,90'],
+            'origin_lng'=>['required','numeric','between:-180,180'],
+            'destination_lat'=>['nullable','numeric','between:-90,90'],
+            'destination_lng'=>['nullable','numeric','between:-180,180'],
             'route_polyline'=>['nullable','array'],
             'corridor_width'=>['nullable','integer','min:100','max:' . (int) (AdminSetting::where('key','corridor_max_meters')->value('value') ?? 2000)],
         ]);
@@ -71,8 +71,8 @@ class JastipController extends Controller
     public function availableSessions(Request $request): JsonResponse {
         $data = $request->validate([
             'vehicle_type'=>['required','in:motor,mobil'],
-            'lat'=>['nullable','numeric'],
-            'lng'=>['nullable','numeric'],
+            'lat'=>['nullable','numeric','between:-90,90'],
+            'lng'=>['nullable','numeric','between:-180,180'],
         ]);
         $sessions = $this->jastipService->getActiveSessions(
             $data['vehicle_type'],
@@ -85,11 +85,11 @@ class JastipController extends Controller
         $session = JastipSession::where('status','active')->findOrFail($sessionId);
         $data = $request->validate([
             'pickup_address'=>['required','string'],
-            'pickup_lat'=>['required','numeric'],
-            'pickup_lng'=>['required','numeric'],
+            'pickup_lat'=>['required','numeric','between:-90,90'],
+            'pickup_lng'=>['required','numeric','between:-180,180'],
             'dropoff_address'=>['required','string'],
-            'dropoff_lat'=>['required','numeric'],
-            'dropoff_lng'=>['required','numeric'],
+            'dropoff_lat'=>['required','numeric','between:-90,90'],
+            'dropoff_lng'=>['required','numeric','between:-180,180'],
             'item_category_id'=>['nullable','exists:item_categories,id'],
             'item_description'=>['required','string','max:255'],
             'item_value'=>['nullable','numeric','min:0'],

@@ -49,11 +49,11 @@ class OrderController extends Controller
     public function store(Request $request): JsonResponse {
         $data = $request->validate([
             'pickup_address'=>['required','string'],
-            'pickup_lat'=>['required','numeric'],
-            'pickup_lng'=>['required','numeric'],
+            'pickup_lat'=>['required','numeric','between:-90,90'],
+            'pickup_lng'=>['required','numeric','between:-180,180'],
             'dropoff_address'=>['required','string'],
-            'dropoff_lat'=>['required','numeric'],
-            'dropoff_lng'=>['required','numeric'],
+            'dropoff_lat'=>['required','numeric','between:-90,90'],
+            'dropoff_lng'=>['required','numeric','between:-180,180'],
             'item_category_id'=>['nullable','exists:item_categories,id'],
             'item_description'=>['required','string','max:255'],
             'item_value'=>['nullable','numeric','min:0'],

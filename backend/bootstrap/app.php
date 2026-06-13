@@ -27,5 +27,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('api', CheckMaintenanceMode::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Tangkap QueryException/PDOException — jangan bocorkan detail DB ke client
+        $exceptions->render(function (\Illuminate\Database\QueryException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                \Illuminate\Support\Facades\Log::error('DB QueryException', [
+                    'message' => $e->getMessage(),
+                    'url'     => $request->fullUrl(),
+                ]);
+                return response()->json(['message' => 'Terjadi kesalahan sistem. Silakan coba lagi.'], 500);
+            }
+        });
     })->create();

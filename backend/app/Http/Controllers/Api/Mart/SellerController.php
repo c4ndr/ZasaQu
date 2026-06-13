@@ -35,8 +35,8 @@ class SellerController extends Controller
             'name'        => ['sometimes', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:1000'],
             'address'     => ['sometimes', 'string', 'max:500'],
-            'lat'         => ['nullable', 'numeric'],
-            'lng'         => ['nullable', 'numeric'],
+            'lat'         => ['nullable', 'numeric', 'between:-90,90'],
+            'lng'         => ['nullable', 'numeric', 'between:-180,180'],
             'phone'       => ['nullable', 'string', 'max:20'],
         ]);
 

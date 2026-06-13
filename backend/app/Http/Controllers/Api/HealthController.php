@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Storage;
 
 class HealthController extends Controller
 {
@@ -22,7 +22,8 @@ class HealthController extends Controller
             $userCount = DB::table('users')->count();
             $checks['database'] = ['status' => 'ok', 'users' => $userCount];
         } catch (\Throwable $e) {
-            $checks['database'] = ['status' => 'error', 'message' => $e->getMessage()];
+            Log::error('Health DB check failed', ['error' => $e->getMessage()]);
+            $checks['database'] = ['status' => 'error'];
             $healthy = false;
         }
 
@@ -32,12 +33,11 @@ class HealthController extends Controller
             Redis::setex($key, 5, 'pong');
             $val = Redis::get($key);
             Redis::del($key);
-            $checks['redis'] = $val === 'pong'
-                ? ['status' => 'ok', 'client' => config('database.redis.client', 'predis')]
-                : ['status' => 'error', 'message' => 'read-back mismatch'];
+            $checks['redis'] = ['status' => $val === 'pong' ? 'ok' : 'error'];
             if ($val !== 'pong') $healthy = false;
         } catch (\Throwable $e) {
-            $checks['redis'] = ['status' => 'error', 'message' => $e->getMessage()];
+            Log::error('Health Redis check failed', ['error' => $e->getMessage()]);
+            $checks['redis'] = ['status' => 'error'];
             $healthy = false;
         }
 
@@ -45,9 +45,10 @@ class HealthController extends Controller
         try {
             Cache::put('health:cache', 'ok', 5);
             $v = Cache::get('health:cache');
-            $checks['cache'] = ['status' => $v === 'ok' ? 'ok' : 'error', 'driver' => config('cache.default')];
+            $checks['cache'] = ['status' => $v === 'ok' ? 'ok' : 'error'];
         } catch (\Throwable $e) {
-            $checks['cache'] = ['status' => 'error', 'message' => $e->getMessage()];
+            Log::error('Health cache check failed', ['error' => $e->getMessage()]);
+            $checks['cache'] = ['status' => 'error'];
         }
 
         // ── Queue ─────────────────────────────────────────────────────────────
@@ -55,33 +56,26 @@ class HealthController extends Controller
             $pending = DB::table('jobs')->count();
             $failed  = DB::table('failed_jobs')->count();
             $checks['queue'] = [
-                'status'      => 'ok',
-                'connection'  => config('queue.default'),
-                'pending'     => $pending,
-                'failed'      => $failed,
+                'status'  => 'ok',
+                'pending' => $pending,
+                'failed'  => $failed,
             ];
             if ($failed > 0) $checks['queue']['warning'] = "{$failed} failed jobs";
         } catch (\Throwable $e) {
-            $checks['queue'] = ['status' => 'error', 'message' => $e->getMessage()];
+            Log::error('Health queue check failed', ['error' => $e->getMessage()]);
+            $checks['queue'] = ['status' => 'error'];
         }
 
         // ── Storage ───────────────────────────────────────────────────────────
         $storageLinkExists = is_link(public_path('storage'));
-        $checks['storage'] = [
-            'status'      => $storageLinkExists ? 'ok' : 'warning',
-            'public_link' => $storageLinkExists,
-            'disk'        => config('filesystems.default'),
-        ];
+        $checks['storage'] = ['status' => $storageLinkExists ? 'ok' : 'warning'];
         if (!$storageLinkExists) {
             $checks['storage']['message'] = 'Run: php artisan storage:link';
         }
 
         // ── Broadcast ─────────────────────────────────────────────────────────
         $broadcastConn = config('broadcasting.default');
-        $checks['broadcast'] = [
-            'status'     => 'ok',
-            'connection' => $broadcastConn,
-        ];
+        $checks['broadcast'] = ['status' => 'ok'];
         if ($broadcastConn === 'log') {
             $checks['broadcast']['warning'] = 'Using log driver — real-time push disabled';
         }
@@ -90,8 +84,8 @@ class HealthController extends Controller
         $fcmConfigured = !empty(config('services.fcm.project_id'))
                       && file_exists(config('services.fcm.service_account_path', ''));
         $checks['push_notifications'] = [
-            'status'      => $fcmConfigured ? 'ok' : 'warning',
-            'configured'  => $fcmConfigured,
+            'status'     => $fcmConfigured ? 'ok' : 'warning',
+            'configured' => $fcmConfigured,
         ];
         if (!$fcmConfigured) {
             $checks['push_notifications']['warning'] = 'FCM not configured — push disabled';
@@ -102,7 +96,8 @@ class HealthController extends Controller
             $activeGps = Redis::keys('gps:mitra:*');
             $checks['gps'] = ['status' => 'ok', 'active_mitras' => count($activeGps)];
         } catch (\Throwable $e) {
-            $checks['gps'] = ['status' => 'error', 'message' => $e->getMessage()];
+            Log::error('Health GPS check failed', ['error' => $e->getMessage()]);
+            $checks['gps'] = ['status' => 'error'];
         }
 
         // ── App settings ──────────────────────────────────────────────────────
@@ -111,11 +106,10 @@ class HealthController extends Controller
             $checks['app'] = [
                 'status'           => 'ok',
                 'maintenance_mode' => $maintenance,
-                'env'              => app()->environment(),
-                'debug'            => config('app.debug'),
             ];
         } catch (\Throwable $e) {
-            $checks['app'] = ['status' => 'error', 'message' => $e->getMessage()];
+            Log::error('Health app check failed', ['error' => $e->getMessage()]);
+            $checks['app'] = ['status' => 'error'];
         }
 
         $httpStatus = $healthy ? 200 : 503;
