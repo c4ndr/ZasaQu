@@ -73,10 +73,10 @@ class OtpController extends Controller
         $otp = $this->otpService->send($data['phone'], $data['type'], $email);
 
         if ($otp->plain_code !== null) {
+            // OTP sudah di-log di OtpService::send() — jangan expose ke client
             return response()->json([
-                'message'  => 'Kode OTP ditampilkan karena WhatsApp dan Email tidak tersedia.',
-                'demo_otp' => $otp->plain_code,
-            ]);
+                'message' => 'Gagal mengirim OTP. Hubungi admin untuk mendapatkan kode.',
+            ], 503);
         }
 
         $via = $email ? "Email ({$email})" : 'WhatsApp';

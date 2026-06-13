@@ -21,6 +21,7 @@ frontend/android/app/build/
 frontend/android/build/
 frontend/android/local.properties
 frontend/.env.production
+frontend/.env.bak
 
 # Common
 .DS_Store
