@@ -9,7 +9,8 @@ const NAV_GROUPS = [
   {
     label: null,
     items: [
-      { to: '/admin', emoji: '📊', label: 'Dashboard', exact: true },
+      { to: '/admin',         emoji: '📊', label: 'Dashboard',  exact: true },
+      { to: '/admin/pending', emoji: '🔔', label: 'Pending Review', badgeKey: 'total' },
     ],
   },
   {
@@ -279,7 +280,8 @@ function SidebarContent({ onNavClick, counts }) {
 export default function AdminLayout({ children }) {
   const location              = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const counts                = usePendingCounts()
+  const rawCounts             = usePendingCounts()
+  const counts                = { ...rawCounts, total: Object.values(rawCounts).reduce((s, n) => s + n, 0) }
 
   useEffect(() => { setDrawerOpen(false) }, [location.pathname])
 
@@ -373,7 +375,7 @@ export default function AdminLayout({ children }) {
           </div>
 
           {/* Total pending badge */}
-          <PendingBadge counts={counts} />
+          <PendingBadge counts={rawCounts} />
         </header>
 
         {/* Konten halaman */}

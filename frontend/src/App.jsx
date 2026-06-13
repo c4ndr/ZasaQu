@@ -35,6 +35,7 @@ import WalletPage from './pages/WalletPage'
 import TopUpPage from './pages/TopUpPage'
 import WithdrawPage from './pages/WithdrawPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
+import AdminPendingReviewPage from './pages/admin/AdminPendingReviewPage'
 import AdminTopUpPage from './pages/admin/AdminTopUpPage'
 import AdminWithdrawPage from './pages/admin/AdminWithdrawPage'
 import AdminWalletPage from './pages/admin/AdminWalletPage'
@@ -303,6 +304,7 @@ function AppRoutes() {
       <Route path="/admin/mitra/review" element={<AdminRoute><AdminMitraReviewPage /></AdminRoute>} />
 
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+      <Route path="/admin/pending" element={<AdminRoute><AdminPendingReviewPage /></AdminRoute>} />
       <Route path="/admin/orders" element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />
       <Route path="/admin/food/merchants" element={<AdminRoute><AdminFoodMerchantsPage /></AdminRoute>} />
       <Route path="/admin/food/review" element={<AdminRoute><AdminFoodMerchantReviewPage /></AdminRoute>} />
