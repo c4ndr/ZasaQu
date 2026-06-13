@@ -69,6 +69,9 @@ import ServOrderDetailPage from './pages/zasaserv/ServOrderDetailPage'
 import HomeProviderDashboardPage from './pages/home_provider/HomeProviderDashboardPage'
 import HomeProviderServicesPage from './pages/home_provider/HomeProviderServicesPage'
 import HomeProviderSettingsPage from './pages/home_provider/HomeProviderSettingsPage'
+import ServProviderDashboardPage from './pages/serv_provider/ServProviderDashboardPage'
+import ServProviderServicesPage from './pages/serv_provider/ServProviderServicesPage'
+import ServProviderSettingsPage from './pages/serv_provider/ServProviderSettingsPage'
 import FoodPage from './pages/zasafood/FoodPage'
 import FoodMerchantPage from './pages/zasafood/FoodMerchantPage'
 import FoodCartPage from './pages/zasafood/FoodCartPage'
@@ -141,6 +144,13 @@ function HomeProviderRoute({ children }) {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
   if (user.role !== 'home_provider') return <Navigate to="/dashboard" replace />
+  return children
+}
+
+function ServProviderRoute({ children }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== 'serv_provider' && user.role !== 'admin') return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -268,6 +278,9 @@ function AppRoutes() {
       <Route path="/serv/checkout" element={<ModuleRoute featureKey="zasaserv"><ServCheckoutPage /></ModuleRoute>} />
       <Route path="/serv/orders" element={<ModuleRoute featureKey="zasaserv"><ServMyOrdersPage /></ModuleRoute>} />
       <Route path="/serv/orders/:id" element={<ModuleRoute featureKey="zasaserv"><ServOrderDetailPage /></ModuleRoute>} />
+      <Route path="/serv/provider" element={<ServProviderRoute><ServProviderDashboardPage /></ServProviderRoute>} />
+      <Route path="/serv/provider/services" element={<ServProviderRoute><ServProviderServicesPage /></ServProviderRoute>} />
+      <Route path="/serv/provider/settings" element={<ServProviderRoute><ServProviderSettingsPage /></ServProviderRoute>} />
 
       {/* ZasaFood */}
       <Route path="/food" element={<ModuleRoute featureKey="zasafood"><FoodPage /></ModuleRoute>} />

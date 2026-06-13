@@ -9,6 +9,7 @@ const CATEGORIES = [
   { value: 'listrik',   label: 'Listrik',    emoji: '⚡', grad: 'linear-gradient(135deg,#F59E0B,#EF4444)' },
   { value: 'air',       label: 'Pipa & Air', emoji: '💧', grad: 'linear-gradient(135deg,#0EA5E9,#6366F1)' },
   { value: 'bangunan',  label: 'Bangunan',   emoji: '🏗️', grad: 'linear-gradient(135deg,#78716C,#44403C)' },
+  { value: 'jahit',     label: 'Jahit/Permak', emoji: '🧵', grad: 'linear-gradient(135deg,#EC4899,#F43F5E)' },
   { value: 'lainnya',   label: 'Lainnya',    emoji: '🛠️', grad: 'linear-gradient(135deg,#6366F1,#EC4899)' },
 ]
 

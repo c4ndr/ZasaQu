@@ -71,7 +71,7 @@ class ServController extends Controller
     {
         $data = $request->validate([
             'name'           => ['required', 'string', 'max:100'],
-            'category'       => ['required', 'in:ac,elektronik,listrik,air,bangunan,lainnya'],
+            'category'       => ['required', 'in:ac,elektronik,listrik,air,bangunan,jahit,lainnya'],
             'address'        => ['required', 'string', 'max:255'],
             'phone'          => ['nullable', 'string', 'max:20'],
             'open_time'      => ['nullable', 'date_format:H:i'],
