@@ -149,6 +149,17 @@ function TrendChart({ data }) {
   )
 }
 
+// ── Section header konsisten ──────────────────────────────────────────────────
+function SectionHeader({ title, action }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>{title}</p>
+      <div style={{ flex: 1, height: 1, background: 'var(--k-border)' }} />
+      {action && <div style={{ flexShrink: 0 }}>{action}</div>}
+    </div>
+  )
+}
+
 // ── Halaman utama ─────────────────────────────────────────────────────────────
 export default function AdminDashboardPage() {
   const [stats,       setStats]       = useState(null)
@@ -297,7 +308,7 @@ export default function AdminDashboardPage() {
 
         {/* ── KPI Utama ── */}
         <section>
-          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Ringkasan Platform</p>
+          <SectionHeader title="Ringkasan Platform" />
           <div className="dash-kpi">
             <KPICard label="Total Pengguna"  value={stats.users?.total ?? 0}
               sub={`+${stats.users?.new_today ?? 0} hari ini`}
@@ -316,7 +327,7 @@ export default function AdminDashboardPage() {
 
         {/* ── Layanan breakdown ── */}
         <section>
-          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Layanan</p>
+          <SectionHeader title="Layanan" />
           <div className="dash-mod">
             {[
               { key: 'zasago', emoji: '🏍️', label: 'ZasaGo',   color: '#00C896', link: '/admin/orders'      },
@@ -387,8 +398,7 @@ export default function AdminDashboardPage() {
 
         {/* ── Komisi Platform ── */}
         <section>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Komisi Platform</p>
+          <SectionHeader title="Komisi Platform" action={
             <div style={{ display: 'flex', gap: 4 }}>
               {[['today','Hari ini'],['week','Minggu'],['month','Bulan'],['all','Semua']].map(([k,l]) => (
                 <button key={k} onClick={() => setCommPeriod(k)} style={{
@@ -399,7 +409,7 @@ export default function AdminDashboardPage() {
                 }}>{l}</button>
               ))}
             </div>
-          </div>
+          } />
 
           {commLoading || !commData ? (
             <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: 32, display: 'flex', justifyContent: 'center' }}>
@@ -515,10 +525,9 @@ export default function AdminDashboardPage() {
 
         {/* ── Top Mitra (by order) ── */}
         <section style={{ paddingBottom: 40 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Top Mitra (Order Selesai)</p>
+          <SectionHeader title="Top Mitra (Order Selesai)" action={
             <Link to="/admin/mitra/verify" style={{ fontSize: 12, color: 'var(--k-accent)', textDecoration: 'none', fontWeight: 600 }}>Kelola mitra →</Link>
-          </div>
+          } />
           {topMitra.length === 0 ? (
             <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '32px 20px', textAlign: 'center' }}>
               <p style={{ fontSize: 28, marginBottom: 8 }}>🏍️</p>
