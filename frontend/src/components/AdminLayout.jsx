@@ -30,6 +30,7 @@ const NAV_GROUPS = [
       { to: '/admin/serv/providers', emoji: '🔧', label: 'Provider Serv' },
       { to: '/admin/serv/review',   emoji: '⏳', label: 'Review Pending' },
       { to: '/admin/mart/sellers',   emoji: '🛍️', label: 'Seller Mart'   },
+      { to: '/admin/mart/review',   emoji: '⏳', label: 'Review Seller' },
       { to: '/admin/mart/products',  emoji: '📋', label: 'Produk Mart'   },
       { to: '/admin/mitra/verify',   emoji: '✅', label: 'Verif Mitra'   },
     ],
