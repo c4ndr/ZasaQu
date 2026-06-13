@@ -26,6 +26,7 @@ const NAV_GROUPS = [
     label: 'Merchant & Mitra',
     items: [
       { to: '/admin/food/merchants', emoji: '🍽️', label: 'Merchant Food' },
+      { to: '/admin/food/review',   emoji: '⏳', label: 'Review Food'   },
       { to: '/admin/home/providers', emoji: '🧺', label: 'Provider Home' },
       { to: '/admin/home/review',   emoji: '⏳', label: 'Review Home'   },
       { to: '/admin/serv/providers', emoji: '🔧', label: 'Provider Serv' },
