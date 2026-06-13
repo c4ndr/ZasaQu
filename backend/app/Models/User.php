@@ -12,6 +12,8 @@ use App\Models\HomeProvider;
 use App\Models\HomeOrder;
 use App\Models\MartSeller;
 use App\Models\MartOrder;
+use App\Models\ServProvider;
+use App\Models\ServOrder;
 
 class User extends Authenticatable
 {
@@ -100,6 +102,16 @@ class User extends Authenticatable
         return $this->hasMany(HomeOrder::class, 'customer_id');
     }
 
+    public function servProvider()
+    {
+        return $this->hasOne(ServProvider::class);
+    }
+
+    public function servOrders()
+    {
+        return $this->hasMany(ServOrder::class, 'customer_id');
+    }
+
     public function martSeller()
     {
         return $this->hasOne(MartSeller::class);
@@ -128,6 +140,11 @@ class User extends Authenticatable
     public function isHomeProvider(): bool
     {
         return $this->role === 'home_provider';
+    }
+
+    public function isServProvider(): bool
+    {
+        return $this->role === 'serv_provider';
     }
 
     public function isSeller(): bool

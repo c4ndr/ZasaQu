@@ -61,6 +61,11 @@ import HomeProviderPage from './pages/zasahome/HomeProviderPage'
 import HomeCheckoutPage from './pages/zasahome/HomeCheckoutPage'
 import HomeMyOrdersPage from './pages/zasahome/HomeMyOrdersPage'
 import HomeOrderDetailPage from './pages/zasahome/HomeOrderDetailPage'
+import ZasaServPage from './pages/zasaserv/ZasaServPage'
+import ServProviderPage from './pages/zasaserv/ServProviderPage'
+import ServCheckoutPage from './pages/zasaserv/ServCheckoutPage'
+import ServMyOrdersPage from './pages/zasaserv/ServMyOrdersPage'
+import ServOrderDetailPage from './pages/zasaserv/ServOrderDetailPage'
 import HomeProviderDashboardPage from './pages/home_provider/HomeProviderDashboardPage'
 import HomeProviderServicesPage from './pages/home_provider/HomeProviderServicesPage'
 import HomeProviderSettingsPage from './pages/home_provider/HomeProviderSettingsPage'
@@ -256,6 +261,13 @@ function AppRoutes() {
       <Route path="/home/provider" element={<HomeProviderRoute><HomeProviderDashboardPage /></HomeProviderRoute>} />
       <Route path="/home/provider/services" element={<HomeProviderRoute><HomeProviderServicesPage /></HomeProviderRoute>} />
       <Route path="/home/provider/settings" element={<HomeProviderRoute><HomeProviderSettingsPage /></HomeProviderRoute>} />
+
+      {/* ZasaServ */}
+      <Route path="/serv" element={<ModuleRoute featureKey="zasaserv"><ZasaServPage /></ModuleRoute>} />
+      <Route path="/serv/providers/:id" element={<ModuleRoute featureKey="zasaserv"><ServProviderPage /></ModuleRoute>} />
+      <Route path="/serv/checkout" element={<ModuleRoute featureKey="zasaserv"><ServCheckoutPage /></ModuleRoute>} />
+      <Route path="/serv/orders" element={<ModuleRoute featureKey="zasaserv"><ServMyOrdersPage /></ModuleRoute>} />
+      <Route path="/serv/orders/:id" element={<ModuleRoute featureKey="zasaserv"><ServOrderDetailPage /></ModuleRoute>} />
 
       {/* ZasaFood */}
       <Route path="/food" element={<ModuleRoute featureKey="zasafood"><FoodPage /></ModuleRoute>} />

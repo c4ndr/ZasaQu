@@ -237,6 +237,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // ─── ZasaMart ──────────────────────────────────────────────────────────
     require __DIR__ . '/modules/zasamart.php';
 
+    // ─── ZasaServ ──────────────────────────────────────────────────────────
+    require __DIR__ . '/modules/zasaserv.php';
+
     // ─── Admin ─────────────────────────────────────────────────────────────
     Route::prefix('admin')->middleware(['role:admin', 'throttle:60,1'])->group(function () {
 
