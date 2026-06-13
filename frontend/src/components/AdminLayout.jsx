@@ -18,6 +18,7 @@ const NAV_GROUPS = [
       { to: '/admin/orders',      emoji: '📦', label: 'ZasaGo'   },
       { to: '/admin/food/orders', emoji: '🍜', label: 'ZasaFood' },
       { to: '/admin/home/orders', emoji: '🏠', label: 'ZasaHome' },
+      { to: '/admin/serv/orders', emoji: '🔧', label: 'ZasaServ' },
       { to: '/admin/mart/orders', emoji: '🛒', label: 'ZasaShop' },
     ],
   },

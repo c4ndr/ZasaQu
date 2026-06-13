@@ -57,6 +57,7 @@ import AdminFoodMerchantsPage from './pages/admin/AdminFoodMerchantsPage'
 import AdminHomeProvidersPage from './pages/admin/AdminHomeProvidersPage'
 import AdminHomeOrdersPage from './pages/admin/AdminHomeOrdersPage'
 import AdminServProvidersPage from './pages/admin/AdminServProvidersPage'
+import AdminServOrdersPage from './pages/admin/AdminServOrdersPage'
 import ZasaHomePage from './pages/zasahome/ZasaHomePage'
 import HomeProviderPage from './pages/zasahome/HomeProviderPage'
 import HomeCheckoutPage from './pages/zasahome/HomeCheckoutPage'
@@ -302,6 +303,7 @@ function AppRoutes() {
       <Route path="/admin/home/providers" element={<AdminRoute><AdminHomeProvidersPage /></AdminRoute>} />
       <Route path="/admin/home/orders" element={<AdminRoute><AdminHomeOrdersPage /></AdminRoute>} />
       <Route path="/admin/serv/providers" element={<AdminRoute><AdminServProvidersPage /></AdminRoute>} />
+      <Route path="/admin/serv/orders" element={<AdminRoute><AdminServOrdersPage /></AdminRoute>} />
       <Route path="/admin/topup" element={<AdminRoute><AdminTopUpPage /></AdminRoute>} />
       <Route path="/admin/withdraw" element={<AdminRoute><AdminWithdrawPage /></AdminRoute>} />
       <Route path="/admin/wallet" element={<AdminRoute><AdminWalletPage /></AdminRoute>} />
