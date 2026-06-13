@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
@@ -26,16 +26,16 @@ const NAV_GROUPS = [
     label: 'Merchant & Mitra',
     items: [
       { to: '/admin/food/merchants', emoji: '🍽️', label: 'Merchant Food' },
-      { to: '/admin/food/review',   emoji: '⏳', label: 'Review Food'   },
+      { to: '/admin/food/review',   emoji: '⏳', label: 'Review Food',    badgeKey: 'food'  },
       { to: '/admin/home/providers', emoji: '🧺', label: 'Provider Home' },
-      { to: '/admin/home/review',   emoji: '⏳', label: 'Review Home'   },
+      { to: '/admin/home/review',   emoji: '⏳', label: 'Review Home',    badgeKey: 'home'  },
       { to: '/admin/serv/providers', emoji: '🔧', label: 'Provider Serv' },
-      { to: '/admin/serv/review',   emoji: '⏳', label: 'Review Pending' },
+      { to: '/admin/serv/review',   emoji: '⏳', label: 'Review Pending', badgeKey: 'serv'  },
       { to: '/admin/mart/sellers',   emoji: '🛍️', label: 'Seller Mart'   },
-      { to: '/admin/mart/review',   emoji: '⏳', label: 'Review Seller' },
+      { to: '/admin/mart/review',   emoji: '⏳', label: 'Review Seller',  badgeKey: 'mart'  },
       { to: '/admin/mart/products',  emoji: '📋', label: 'Produk Mart'   },
       { to: '/admin/mitra/verify',   emoji: '✅', label: 'Verif Mitra'   },
-      { to: '/admin/mitra/review',  emoji: '⏳', label: 'Review Mitra'  },
+      { to: '/admin/mitra/review',  emoji: '⏳', label: 'Review Mitra',   badgeKey: 'mitra' },
     ],
   },
   {
@@ -62,8 +62,38 @@ const ALL_ITEMS  = NAV_GROUPS.flatMap(g => g.items)
 const PAGE_TITLE = Object.fromEntries(ALL_ITEMS.map(i => [i.to, i.label]))
 const SIDEBAR_W  = 240
 
+// ── Hook: ambil jumlah pending untuk semua review queue ───────────────────────
+function usePendingCounts() {
+  const [counts, setCounts] = useState({ food: 0, home: 0, serv: 0, mart: 0, mitra: 0 })
+
+  const fetchAll = useCallback(async () => {
+    const [food, home, serv, mart, mitra] = await Promise.allSettled([
+      api.get('/admin/food/merchants?status=pending'),
+      api.get('/admin/home/providers?status=pending'),
+      api.get('/admin/serv/providers?status=pending'),
+      api.get('/admin/mart/sellers?status=pending'),
+      api.get('/admin/mitra/pending'),
+    ])
+    setCounts({
+      food:  food.status  === 'fulfilled' ? (food.value.data.meta?.total  ?? 0) : 0,
+      home:  home.status  === 'fulfilled' ? (home.value.data.meta?.total  ?? 0) : 0,
+      serv:  serv.status  === 'fulfilled' ? (serv.value.data.meta?.total  ?? 0) : 0,
+      mart:  mart.status  === 'fulfilled' ? (mart.value.data.meta?.total  ?? 0) : 0,
+      mitra: mitra.status === 'fulfilled' ? (mitra.value.data.meta?.total ?? 0) : 0,
+    })
+  }, [])
+
+  useEffect(() => {
+    fetchAll()
+    const id = setInterval(fetchAll, 60_000)
+    return () => clearInterval(id)
+  }, [fetchAll])
+
+  return counts
+}
+
 // ── Isi sidebar (dipakai di desktop & mobile drawer) ─────────────────────────
-function SidebarContent({ onNavClick }) {
+function SidebarContent({ onNavClick, counts }) {
   const { logout, user } = useAuth()
   const navigate         = useNavigate()
   const { app_name }     = useAppInfo()
@@ -100,22 +130,35 @@ function SidebarContent({ onNavClick }) {
                 padding: '8px 10px 4px',
               }}>{group.label}</p>
             )}
-            {group.items.map(item => (
-              <NavLink key={item.to} to={item.to} end={item.exact}
-                onClick={onNavClick}
-                style={({ isActive }) => ({
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '9px 10px', borderRadius: 10, textDecoration: 'none',
-                  fontSize: 13, fontWeight: isActive ? 700 : 500,
-                  color: isActive ? '#F97316' : 'var(--k-sub)',
-                  background: isActive ? 'rgba(249,115,22,0.1)' : 'transparent',
-                  marginBottom: 1, transition: 'all 0.15s',
-                })}
-              >
-                <span style={{ fontSize: 15, width: 20, textAlign: 'center', flexShrink: 0 }}>{item.emoji}</span>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-              </NavLink>
-            ))}
+            {group.items.map(item => {
+              const badgeCount = item.badgeKey ? (counts[item.badgeKey] ?? 0) : 0
+              return (
+                <NavLink key={item.to} to={item.to} end={item.exact}
+                  onClick={onNavClick}
+                  style={({ isActive }) => ({
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '9px 10px', borderRadius: 10, textDecoration: 'none',
+                    fontSize: 13, fontWeight: isActive ? 700 : 500,
+                    color: isActive ? '#F97316' : 'var(--k-sub)',
+                    background: isActive ? 'rgba(249,115,22,0.1)' : 'transparent',
+                    marginBottom: 1, transition: 'all 0.15s',
+                  })}
+                >
+                  <span style={{ fontSize: 15, width: 20, textAlign: 'center', flexShrink: 0 }}>{item.emoji}</span>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                  {badgeCount > 0 && (
+                    <span style={{
+                      flexShrink: 0, minWidth: 18, height: 18, borderRadius: 9,
+                      background: '#EF4444', color: '#fff',
+                      fontSize: 10, fontWeight: 800, lineHeight: '18px',
+                      textAlign: 'center', padding: '0 5px',
+                    }}>
+                      {badgeCount > 99 ? '99+' : badgeCount}
+                    </span>
+                  )}
+                </NavLink>
+              )
+            })}
           </div>
         ))}
       </nav>
@@ -154,6 +197,7 @@ function SidebarContent({ onNavClick }) {
 export default function AdminLayout({ children }) {
   const location              = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const counts                = usePendingCounts()
 
   useEffect(() => { setDrawerOpen(false) }, [location.pathname])
 
@@ -187,7 +231,7 @@ export default function AdminLayout({ children }) {
         background: 'var(--k-surface)', borderRight: '1px solid var(--k-border)',
         flexDirection: 'column', zIndex: 100,
       }}>
-        <SidebarContent onNavClick={null} />
+        <SidebarContent onNavClick={null} counts={counts} />
       </aside>
 
       {/* ── Mobile drawer ── */}
@@ -204,7 +248,7 @@ export default function AdminLayout({ children }) {
             zIndex: 210, display: 'flex', flexDirection: 'column',
             animation: 'slideInLeft 0.22s ease',
           }}>
-            <SidebarContent onNavClick={() => setDrawerOpen(false)} />
+            <SidebarContent onNavClick={() => setDrawerOpen(false)} counts={counts} />
           </aside>
         </>
       )}
