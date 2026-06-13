@@ -61,7 +61,17 @@ class MidtransService
         $orderId           = $notif->order_id;
         $transactionStatus = $notif->transaction_status;
         $fraudStatus       = $notif->fraud_status;
-        $grossAmount       = (int) $notif->gross_amount;
+        $grossAmount       = $notif->gross_amount; // tetap string untuk signature
+        $statusCode        = $notif->status_code;
+
+        // Verifikasi signature Midtrans: SHA512(order_id + status_code + gross_amount + server_key)
+        $expectedSig = hash('sha512', $orderId . $statusCode . $grossAmount . Config::$serverKey);
+        if (!hash_equals($expectedSig, (string) ($notif->signature_key ?? ''))) {
+            \Illuminate\Support\Facades\Log::warning('Midtrans callback signature invalid', [
+                'order_id' => $orderId,
+            ]);
+            return ['success' => false, 'error' => 'invalid_signature', 'order_id' => $orderId];
+        }
 
         $success = ($transactionStatus === 'capture' && $fraudStatus === 'accept')
                 || $transactionStatus === 'settlement';
@@ -70,7 +80,7 @@ class MidtransService
             'order_id'     => $orderId,
             'status'       => $transactionStatus,
             'fraud_status' => $fraudStatus,
-            'amount'       => $grossAmount,
+            'amount'       => (int) $grossAmount,
             'success'      => $success,
         ];
     }

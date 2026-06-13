@@ -82,11 +82,17 @@ class CustomerController extends Controller
         $totalPrice = 0;
         $orderItems = [];
 
+        // Pre-load semua service sekaligus — hindari N+1 query per item
+        $serviceIds = collect($data['items'])->pluck('service_id')->unique();
+        $services   = HomeService::whereIn('id', $serviceIds)
+            ->where('provider_id', $provider->id)
+            ->where('is_active', true)
+            ->keyBy('id')
+            ->get();
+
         foreach ($data['items'] as $item) {
-            $service = HomeService::where('id', $item['service_id'])
-                ->where('provider_id', $provider->id)
-                ->where('is_active', true)
-                ->firstOrFail();
+            $service = $services->get($item['service_id']);
+            abort_if(!$service, 422, 'Layanan tidak ditemukan atau tidak aktif.');
 
             $subtotal = (int) ($service->price * $item['quantity']);
             $totalPrice += $subtotal;

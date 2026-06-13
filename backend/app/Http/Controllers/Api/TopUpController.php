@@ -202,6 +202,11 @@ class TopUpController extends Controller
     public function ipaymuCallback(Request $request): \Illuminate\Http\Response
     {
         try {
+            if (!$this->ipaymuService->verifyCallback($request)) {
+                Log::warning('iPaymu callback signature invalid', ['ip' => $request->ip()]);
+                return response('Invalid signature', 401);
+            }
+
             Log::info('iPaymu callback', $request->all());
 
             // Support application/json dan application/x-www-form-urlencoded

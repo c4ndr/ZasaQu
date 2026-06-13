@@ -375,10 +375,24 @@ class CustomerController extends Controller
             ->findOrFail($data['order_id']);
 
         DB::transaction(function () use ($order, $data, $request) {
-            foreach ($data['reviews'] as $r) {
-                $item = MartOrderItem::where('order_id', $order->id)->findOrFail($r['order_item_id']);
+            // Pre-load semua order items dan reviewed item IDs sekaligus
+            $reviewItemIds   = collect($data['reviews'])->pluck('order_item_id');
+            $items           = MartOrderItem::where('order_id', $order->id)
+                ->whereIn('id', $reviewItemIds)
+                ->get()
+                ->keyBy('id');
 
-                if (MartReview::where('order_item_id', $item->id)->exists()) continue;
+            $alreadyReviewed = MartReview::whereIn('order_item_id', $reviewItemIds)
+                ->pluck('order_item_id')
+                ->flip();
+
+            $affectedProductIds = [];
+
+            foreach ($data['reviews'] as $r) {
+                $item = $items->get($r['order_item_id']);
+                abort_if(!$item, 422, 'Item pesanan tidak ditemukan.');
+
+                if ($alreadyReviewed->has($item->id)) continue;
 
                 MartReview::create([
                     'order_id'      => $order->id,
@@ -390,18 +404,28 @@ class CustomerController extends Controller
                     'comment'       => $r['comment'] ?? null,
                 ]);
 
-                // Recalculate product rating
-                $product = $item->product;
-                $avg = MartReview::where('product_id', $product->id)->avg('rating');
-                $cnt = MartReview::where('product_id', $product->id)->count();
-                $product->update(['average_rating' => round($avg, 2), 'total_ratings' => $cnt]);
+                $affectedProductIds[] = $item->product_id;
             }
 
-            // Recalculate seller rating
-            $seller = $order->seller;
-            $avg = MartReview::where('seller_id', $seller->id)->avg('rating');
-            $cnt = MartReview::where('seller_id', $seller->id)->count();
-            $seller->update(['average_rating' => round($avg, 2), 'total_ratings' => $cnt]);
+            // Batch recalculate product ratings — 1 query per product, bukan N+1
+            foreach (array_unique($affectedProductIds) as $productId) {
+                $stats = MartReview::where('product_id', $productId)
+                    ->selectRaw('AVG(rating) as avg_rating, COUNT(*) as total')
+                    ->first();
+                MartProduct::where('id', $productId)->update([
+                    'average_rating' => round($stats->avg_rating, 2),
+                    'total_ratings'  => $stats->total,
+                ]);
+            }
+
+            // Recalculate seller rating — 1 query
+            $sellerStats = MartReview::where('seller_id', $order->seller_id)
+                ->selectRaw('AVG(rating) as avg_rating, COUNT(*) as total')
+                ->first();
+            MartSeller::where('id', $order->seller_id)->update([
+                'average_rating' => round($sellerStats->avg_rating, 2),
+                'total_ratings'  => $sellerStats->total,
+            ]);
         });
 
         return response()->json(['message' => 'Ulasan berhasil dikirim.']);

@@ -238,7 +238,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     require __DIR__ . '/modules/zasamart.php';
 
     // ─── Admin ─────────────────────────────────────────────────────────────
-    Route::prefix('admin')->middleware('role:admin')->group(function () {
+    Route::prefix('admin')->middleware(['role:admin', 'throttle:60,1'])->group(function () {
 
         Route::prefix('topup')->group(function () {
             Route::get('/', [AdminTopUpController::class, 'index']);
