@@ -92,6 +92,88 @@ function usePendingCounts() {
   return counts
 }
 
+// ── Badge total pending di topbar ─────────────────────────────────────────────
+const PENDING_MODULES = [
+  { key: 'food',  label: 'Merchant Food', to: '/admin/food/review',  emoji: '🍜' },
+  { key: 'home',  label: 'Provider Home', to: '/admin/home/review',  emoji: '🏠' },
+  { key: 'serv',  label: 'Provider Serv', to: '/admin/serv/review',  emoji: '🔧' },
+  { key: 'mart',  label: 'Seller Mart',   to: '/admin/mart/review',  emoji: '🛒' },
+  { key: 'mitra', label: 'Mitra ZasaGo',  to: '/admin/mitra/review', emoji: '🏍️' },
+]
+
+function PendingBadge({ counts }) {
+  const navigate           = useNavigate()
+  const [open, setOpen]    = useState(false)
+  const total = Object.values(counts).reduce((s, n) => s + n, 0)
+
+  // Tutup popover saat klik di luar
+  useEffect(() => {
+    if (!open) return
+    const handler = () => setOpen(false)
+    setTimeout(() => window.addEventListener('click', handler), 0)
+    return () => window.removeEventListener('click', handler)
+  }, [open])
+
+  if (total === 0) return null
+
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '5px 12px', borderRadius: 20, border: '1.5px solid rgba(239,68,68,0.35)',
+          background: 'rgba(239,68,68,0.08)', cursor: 'pointer',
+          color: '#EF4444', fontWeight: 700, fontSize: 12,
+        }}
+      >
+        🔔 <span>{total} pending</span>
+      </button>
+
+      {open && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 200,
+            background: 'var(--k-surface)', border: '1px solid var(--k-border)',
+            borderRadius: 14, padding: '8px', minWidth: 210,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          }}
+        >
+          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 8px 8px' }}>
+            Antrian Review
+          </p>
+          {PENDING_MODULES.map(m => {
+            const n = counts[m.key] ?? 0
+            if (n === 0) return null
+            return (
+              <button key={m.key} onClick={() => { navigate(m.to); setOpen(false) }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 10px', borderRadius: 10, border: 'none', background: 'transparent',
+                  cursor: 'pointer', gap: 8, transition: 'background 0.12s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--k-input)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <span style={{ fontSize: 13, color: 'var(--k-text)', display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span>{m.emoji}</span> {m.label}
+                </span>
+                <span style={{
+                  minWidth: 20, height: 20, borderRadius: 10,
+                  background: '#EF4444', color: '#fff',
+                  fontSize: 11, fontWeight: 800, lineHeight: '20px',
+                  textAlign: 'center', padding: '0 6px',
+                }}>{n > 99 ? '99+' : n}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Isi sidebar (dipakai di desktop & mobile drawer) ─────────────────────────
 function SidebarContent({ onNavClick, counts }) {
   const { logout, user } = useAuth()
@@ -289,6 +371,9 @@ export default function AdminLayout({ children }) {
               {pageTitle}
             </span>
           </div>
+
+          {/* Total pending badge */}
+          <PendingBadge counts={counts} />
         </header>
 
         {/* Konten halaman */}
