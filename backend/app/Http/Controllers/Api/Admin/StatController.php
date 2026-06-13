@@ -7,6 +7,7 @@ use App\Models\FoodOrder;
 use App\Models\HomeOrder;
 use App\Models\MartOrder;
 use App\Models\Order;
+use App\Models\ServOrder;
 use App\Models\TopUpRequest;
 use App\Models\User;
 use App\Models\Wallet;
@@ -48,26 +49,30 @@ class StatController extends Controller
                 'food_commission'       => (float) (FoodOrder::where('status', 'completed')->sum('platform_commission_food') + FoodOrder::where('status', 'completed')->sum('platform_commission_delivery')),
                 'mart_commission'       => (float) MartOrder::where('status', 'completed')->sum('platform_commission'),
                 'home_commission'       => (float) HomeOrder::where('status', 'completed')->sum('platform_commission'),
+                'serv_commission'       => (float) ServOrder::where('status', 'completed')->sum('platform_commission'),
                 'total_commission'      => (float) (
                     Order::where('status', 'completed')->sum('platform_commission') +
                     FoodOrder::where('status', 'completed')->sum('platform_commission_food') +
                     FoodOrder::where('status', 'completed')->sum('platform_commission_delivery') +
                     MartOrder::where('status', 'completed')->sum('platform_commission') +
-                    HomeOrder::where('status', 'completed')->sum('platform_commission')
+                    HomeOrder::where('status', 'completed')->sum('platform_commission') +
+                    ServOrder::where('status', 'completed')->sum('platform_commission')
                 ),
                 'commission_today'      => (float) (
                     Order::where('status', 'completed')->whereDate('completed_at', $today)->sum('platform_commission') +
                     FoodOrder::where('status', 'completed')->whereDate('completed_at', $today)->sum('platform_commission_food') +
                     FoodOrder::where('status', 'completed')->whereDate('completed_at', $today)->sum('platform_commission_delivery') +
                     MartOrder::where('status', 'completed')->whereDate('completed_at', $today)->sum('platform_commission') +
-                    HomeOrder::where('status', 'completed')->whereDate('completed_at', $today)->sum('platform_commission')
+                    HomeOrder::where('status', 'completed')->whereDate('completed_at', $today)->sum('platform_commission') +
+                    ServOrder::where('status', 'completed')->whereDate('completed_at', $today)->sum('platform_commission')
                 ),
                 'commission_this_month' => (float) (
                     Order::where('status', 'completed')->where('completed_at', '>=', $thisMonth)->sum('platform_commission') +
                     FoodOrder::where('status', 'completed')->where('completed_at', '>=', $thisMonth)->sum('platform_commission_food') +
                     FoodOrder::where('status', 'completed')->where('completed_at', '>=', $thisMonth)->sum('platform_commission_delivery') +
                     MartOrder::where('status', 'completed')->where('completed_at', '>=', $thisMonth)->sum('platform_commission') +
-                    HomeOrder::where('status', 'completed')->where('completed_at', '>=', $thisMonth)->sum('platform_commission')
+                    HomeOrder::where('status', 'completed')->where('completed_at', '>=', $thisMonth)->sum('platform_commission') +
+                    ServOrder::where('status', 'completed')->where('completed_at', '>=', $thisMonth)->sum('platform_commission')
                 ),
             ],
             'topup' => [
@@ -98,7 +103,8 @@ class StatController extends Controller
                 FoodOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission_food') +
                 FoodOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission_delivery') +
                 MartOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission') +
-                HomeOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission')
+                HomeOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission') +
+                ServOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission')
             );
             return [
                 'date'      => $date->format('Y-m-d'),
@@ -130,6 +136,7 @@ class StatController extends Controller
         $foodQ  = $w(FoodOrder::where('status', 'completed'));
         $martQ  = $w(MartOrder::where('status', 'completed'));
         $homeQ  = $w(HomeOrder::where('status', 'completed'));
+        $servQ  = $w(ServOrder::where('status', 'completed'));
 
         $zgTotal    = (float) (clone $zgQ)->sum('platform_commission');
         $zgCount    = (int)   (clone $zgQ)->count();
@@ -145,18 +152,23 @@ class StatController extends Controller
         $homeTotal  = (float) (clone $homeQ)->sum('platform_commission');
         $homeCount  = (int)   (clone $homeQ)->count();
 
-        $grand = $zgTotal + $foodTotal + $martTotal + $homeTotal;
+        $servTotal  = (float) (clone $servQ)->sum('platform_commission');
+        $servCount  = (int)   (clone $servQ)->count();
+
+        $grand = $zgTotal + $foodTotal + $martTotal + $homeTotal + $servTotal;
 
         $modules = [
-            ['key'=>'zasago', 'label'=>'ZasaGo',  'emoji'=>'🏍️', 'color'=>'#00C896',
+            ['key'=>'zasago', 'label'=>'ZasaGo',   'emoji'=>'🏍️', 'color'=>'#00C896',
              'total'=>$zgTotal,   'count'=>$zgCount,   'avg'=>$zgCount>0   ? round($zgTotal/$zgCount)   : 0,
              'cod'=>$zgCod, 'wallet'=>$zgWallet],
-            ['key'=>'food',   'label'=>'ZasaFood', 'emoji'=>'🍜', 'color'=>'#F97316',
+            ['key'=>'food',   'label'=>'ZasaFood',  'emoji'=>'🍜', 'color'=>'#F97316',
              'total'=>$foodTotal, 'count'=>$foodCount, 'avg'=>$foodCount>0 ? round($foodTotal/$foodCount) : 0],
-            ['key'=>'mart',   'label'=>'ZasaMart', 'emoji'=>'🛒', 'color'=>'#3B82F6',
+            ['key'=>'mart',   'label'=>'ZasaMart',  'emoji'=>'🛒', 'color'=>'#3B82F6',
              'total'=>$martTotal, 'count'=>$martCount, 'avg'=>$martCount>0 ? round($martTotal/$martCount) : 0],
-            ['key'=>'home',   'label'=>'ZasaHome', 'emoji'=>'🏠', 'color'=>'#8B5CF6',
+            ['key'=>'home',   'label'=>'ZasaHome',  'emoji'=>'🏠', 'color'=>'#8B5CF6',
              'total'=>$homeTotal, 'count'=>$homeCount, 'avg'=>$homeCount>0 ? round($homeTotal/$homeCount) : 0],
+            ['key'=>'serv',   'label'=>'ZasaServ',  'emoji'=>'🔧', 'color'=>'#059669',
+             'total'=>$servTotal, 'count'=>$servCount, 'avg'=>$servCount>0 ? round($servTotal/$servCount) : 0],
         ];
 
         // ── Trend harian ─────────────────────────────────────────────────────────
@@ -168,8 +180,10 @@ class StatController extends Controller
                            + FoodOrder::where('status','completed')->whereDate('completed_at',$d)->sum('platform_commission_delivery'));
             $mart = (float) MartOrder::where('status','completed')->whereDate('completed_at',$d)->sum('platform_commission');
             $home = (float) HomeOrder::where('status','completed')->whereDate('completed_at',$d)->sum('platform_commission');
+            $serv = (float) ServOrder::where('status','completed')->whereDate('completed_at',$d)->sum('platform_commission');
             return ['date'=>$d->format('Y-m-d'), 'label'=>$d->format('d/m'),
-                    'zasago'=>$zg, 'food'=>$food, 'mart'=>$mart, 'home'=>$home, 'total'=>$zg+$food+$mart+$home];
+                    'zasago'=>$zg, 'food'=>$food, 'mart'=>$mart, 'home'=>$home, 'serv'=>$serv,
+                    'total'=>$zg+$food+$mart+$home+$serv];
         });
 
         // ── Top mitra by commission ───────────────────────────────────────────────
@@ -208,7 +222,8 @@ class StatController extends Controller
                 FoodOrder::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission_food') +
                 FoodOrder::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission_delivery') +
                 MartOrder::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission') +
-                HomeOrder::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission')
+                HomeOrder::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission') +
+                ServOrder::where('status','completed')->whereBetween('completed_at',[$prevFrom,$prevTo])->sum('platform_commission')
             );
         }
 

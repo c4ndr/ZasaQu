@@ -90,7 +90,7 @@ function ModuleCard({ emoji, label, color, orders, commission, link }) {
 }
 
 // ── Bar chart trend order ─────────────────────────────────────────────────────
-const MODULE_COLORS = { zasago: '#00C896', food: '#F97316', mart: '#3B82F6', home: '#8B5CF6' }
+const MODULE_COLORS = { zasago: '#00C896', food: '#F97316', mart: '#3B82F6', home: '#8B5CF6', serv: '#059669' }
 
 function CommissionTrendChart({ data }) {
   if (!data?.length) return null
@@ -104,7 +104,7 @@ function CommissionTrendChart({ data }) {
               <span style={{ fontSize: 9, color: 'var(--k-accent)', fontWeight: 700 }}>{formatRp(d.total)}</span>
             )}
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column-reverse', borderRadius: '3px 3px 0 0', overflow: 'hidden', minHeight: d.total > 0 ? 6 : 0 }}>
-              {['zasago','food','mart','home'].map(k => {
+              {['zasago','food','mart','home','serv'].map(k => {
                 const h = (d[k] / max) * 90
                 return h > 0 ? (
                   <div key={k} style={{ width: '100%', height: h, background: MODULE_COLORS[k] }} title={`${k}: ${formatRpFull(d[k])}`} />
@@ -116,7 +116,7 @@ function CommissionTrendChart({ data }) {
         ))}
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-        {[['zasago','ZasaGo'],['food','ZasaFood'],['mart','ZasaShop'],['home','ZasaHome']].map(([k,l]) => (
+        {[['zasago','ZasaGo'],['food','ZasaFood'],['mart','ZasaShop'],['home','ZasaHome'],['serv','ZasaServ']].map(([k,l]) => (
           <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: MODULE_COLORS[k] }} />
             <span style={{ fontSize: 10, color: 'var(--k-muted)' }}>{l}</span>
@@ -225,10 +225,11 @@ export default function AdminDashboardPage() {
         @keyframes spin   { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
         .dash-kpi    { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-        .dash-mod    { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .dash-mod    { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
         .dash-cols   { display: grid; grid-template-columns: 1fr 360px;     gap: 20px; }
         .dash-action { display: grid; grid-template-columns: 1fr 1fr;       gap: 12px; }
         @media (max-width: 1100px) { .dash-cols { grid-template-columns: 1fr; } }
+        @media (max-width: 1100px) { .dash-mod { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 900px)  { .dash-kpi, .dash-mod { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 500px)  { .dash-kpi, .dash-mod, .dash-action { grid-template-columns: 1fr 1fr; } }
       `}</style>
@@ -322,6 +323,7 @@ export default function AdminDashboardPage() {
               { key: 'food',   emoji: '🍜', label: 'ZasaFood', color: '#F97316', link: '/admin/food/orders' },
               { key: 'mart',   emoji: '🛒', label: 'ZasaShop', color: '#3B82F6', link: '/admin/mart/orders' },
               { key: 'home',   emoji: '🏠', label: 'ZasaHome', color: '#8B5CF6', link: '/admin/home/orders' },
+              { key: 'serv',   emoji: '🔧', label: 'ZasaServ', color: '#059669', link: '/admin/serv/orders' },
             ].map(m => {
               const mod = moduleMap[m.key]
               return (
