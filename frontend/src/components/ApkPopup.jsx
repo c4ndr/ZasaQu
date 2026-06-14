@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { isNative } from '../utils/nativePlatform'
 
 const AUTH_PATHS = ['/login', '/register', '/forgot-password']
+const ADMIN_PREFIX = '/admin'
 
 // Reset setiap refresh halaman (module variable)
 let shownThisLoad = false
@@ -14,6 +15,7 @@ export default function ApkPopup() {
 
   useEffect(() => {
     if (AUTH_PATHS.includes(pathname)) { setVisible(false); return }
+    if (pathname.startsWith(ADMIN_PREFIX)) { setVisible(false); return }
     if (isNative) return
     if (!shownThisLoad) {
       const t = setTimeout(() => setVisible(true), 2000)

@@ -344,6 +344,19 @@ export default function AdminLayout({ children, title }) {
 
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
+  useEffect(() => {
+    const root = document.getElementById('root')
+    if (!root) return
+    const prev = root.style.maxWidth
+    const prevMargin = root.style.margin
+    root.style.maxWidth = 'none'
+    root.style.margin = '0'
+    return () => {
+      root.style.maxWidth = prev
+      root.style.margin = prevMargin
+    }
+  }, [])
+
   const currentItem  = ALL_ITEMS.find(i =>
     i.exact
       ? location.pathname === i.to

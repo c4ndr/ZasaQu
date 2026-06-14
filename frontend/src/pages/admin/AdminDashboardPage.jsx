@@ -367,7 +367,7 @@ export default function AdminDashboardPage() {
         {/* ── Chart trend + Keuangan ── */}
         <div className="dash-cols">
           {/* Trend 7 hari */}
-          <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '20px 22px' }}>
+          <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '20px 22px', minWidth: 0, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--k-text)' }}>Trend Order 7 Hari</p>
               <Link to="/admin/orders" style={{ fontSize: 12, color: 'var(--k-accent)', textDecoration: 'none', fontWeight: 600 }}>Lihat semua →</Link>
@@ -459,7 +459,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {/* Breakdown + Trend side by side */}
-                <div style={{ display: 'grid', gridTemplateColumns: commData.trend?.length > 1 ? '1fr 1fr' : '1fr', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: commData.trend?.length > 1 ? '1fr 1fr' : '1fr', gap: 14, alignItems: 'start' }}>
                   {/* Breakdown per modul */}
                   <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, overflow: 'hidden' }}>
                     <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--k-border)' }}>
@@ -494,7 +494,7 @@ export default function AdminDashboardPage() {
 
                   {/* Trend chart komisi */}
                   {commData.trend?.length > 1 && (
-                    <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '16px 18px' }}>
+                    <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 16, padding: '16px 18px', minWidth: 0, overflow: 'hidden' }}>
                       <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-sub)', marginBottom: 14 }}>Trend Komisi Harian</p>
                       <CommissionTrendChart data={commData.trend} />
                     </div>
