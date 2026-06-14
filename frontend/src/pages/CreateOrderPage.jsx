@@ -72,7 +72,7 @@ function LocationPicker({ label, color, lat, lng, address, onchange }) {
     ? { lat: position.lat, lng: position.lng }
     : { lat: -6.2, lng: 106.816 }
 
-  const MAP_OPTS = { disableDefaultUI: true, gestureHandling: 'greedy', clickableIcons: false, styles: [{ featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }] }
+  const MAP_OPTS = { disableDefaultUI: true, gestureHandling: 'greedy', clickableIcons: false }
 
   return (
     <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 20, overflow: 'hidden' }}>

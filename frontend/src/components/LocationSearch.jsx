@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 
 function getPlacesService() {
   if (!window.google?.maps?.places) return null
@@ -42,6 +43,34 @@ export default function LocationSearch({
   const debounceRef    = useRef(null)
   const touchingRef    = useRef(false)
   const nearbyCacheKey = useRef(null)
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0, above: false })
+
+  // Hitung posisi dropdown relatif viewport — supaya tembus iframe Google Maps
+  const updateDropPos = useCallback(() => {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const above = spaceBelow < 260
+    setDropPos({
+      left: rect.left,
+      width: rect.width,
+      top: above ? rect.top - 4 : rect.bottom + 4,
+      above,
+    })
+  }, [])
+
+  useEffect(() => {
+    updateDropPos()
+  }, [open, nearbyOpen, updateDropPos])
+
+  useEffect(() => {
+    window.addEventListener('scroll', updateDropPos, true)
+    window.addEventListener('resize', updateDropPos)
+    return () => {
+      window.removeEventListener('scroll', updateDropPos, true)
+      window.removeEventListener('resize', updateDropPos)
+    }
+  }, [updateDropPos])
 
   // ── Pencarian utama: textSearch (sama seperti Google Maps app) ──────────────
   useEffect(() => {
@@ -209,10 +238,29 @@ export default function LocationSearch({
     onSelect({ lat: null, lng: null, display: value })
   }
 
-  const showNearby     = nearbyOpen && nearbyPlaces.length > 0 && value.length < 2
-  const showSuggest    = open && suggestions.length > 0
-  const showGeocode    = open && suggestions.length === 0 && geocodeFallback?.length > 0
-  const showFreeText   = open && suggestions.length === 0 && !geocodeFallback && value.length >= 2
+  const showNearby   = nearbyOpen && nearbyPlaces.length > 0 && value.length < 2
+  const showSuggest  = open && suggestions.length > 0
+  const showGeocode  = open && suggestions.length === 0 && geocodeFallback?.length > 0
+  const showFreeText = open && suggestions.length === 0 && !geocodeFallback && value.length >= 2
+  const showAny      = showNearby || showSuggest || showGeocode || showFreeText
+
+  // Style untuk dropdown via portal — position: fixed agar tembus iframe peta
+  const portalStyle = {
+    position: 'fixed',
+    left: dropPos.left,
+    width: dropPos.width,
+    zIndex: 999999,
+    background: 'var(--k-card)',
+    border: '1px solid var(--k-border)',
+    borderRadius: 12,
+    overflow: 'hidden',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    maxHeight: 320,
+    overflowY: 'auto',
+    ...(dropPos.above
+      ? { bottom: window.innerHeight - dropPos.top, top: 'auto' }
+      : { top: dropPos.top, bottom: 'auto' }),
+  }
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
@@ -240,167 +288,97 @@ export default function LocationSearch({
         </div>
       </div>
 
-      {/* ── Dropdown: Nearby Populer (fokus kosong) ── */}
-      {showNearby && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
-          background: 'var(--k-card)', border: '1px solid var(--k-border)',
-          borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-          maxHeight: 320, overflowY: 'auto',
-        }}>
-          <div style={{ padding: '8px 14px 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12 }}>📍</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-sub)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Populer di sekitarmu
-            </span>
-          </div>
-          {nearbyPlaces.map((place, i) => (
-            <button key={place.place_id ?? i} type="button"
-              onMouseDown={e => e.preventDefault()}
-              onTouchStart={() => { touchingRef.current = true }}
-              onTouchEnd={() => handleSelectNearby(place)}
-              onClick={() => handleSelectNearby(place)}
-              style={{
-                width: '100%', textAlign: 'left', padding: '10px 14px',
-                background: 'none', border: 'none', cursor: 'pointer',
-                borderBottom: i < nearbyPlaces.length - 1 ? '1px solid var(--k-border)' : 'none',
-                color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10,
-                WebkitTapHighlightColor: 'rgba(99,102,241,0.1)',
-              }}
-            >
-              <span style={{ flexShrink: 0, marginTop: 1, fontSize: 16 }}>{placeEmoji(place.types)}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {place.name}
-                </div>
-                {place.vicinity && (
-                  <div style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
-                    {place.vicinity}
-                  </div>
-                )}
-              </div>
-              {place.rating && (
-                <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2, marginTop: 2 }}>
-                  <span style={{ fontSize: 10, color: '#F6AD55' }}>★</span>
-                  <span style={{ fontSize: 10, color: 'var(--k-muted)', fontWeight: 600 }}>{place.rating}</span>
-                </div>
-              )}
-            </button>
-          ))}
-          <GoogleBadge />
-        </div>
-      )}
-
-      {/* ── Dropdown: textSearch results ── */}
-      {showSuggest && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
-          background: 'var(--k-card)', border: '1px solid var(--k-border)',
-          borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-          maxHeight: 320, overflowY: 'auto',
-        }}>
-          {suggestions.map((place, i) => (
-            <button key={place.place_id ?? i} type="button"
-              onMouseDown={e => e.preventDefault()}
-              onTouchStart={() => { touchingRef.current = true }}
-              onTouchEnd={() => handleSelect(place)}
-              onClick={() => handleSelect(place)}
-              style={{
-                width: '100%', textAlign: 'left', padding: '11px 14px',
-                background: 'none', border: 'none', cursor: 'pointer',
-                borderBottom: i < suggestions.length - 1 ? '1px solid var(--k-border)' : 'none',
-                color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10,
-                WebkitTapHighlightColor: 'rgba(99,102,241,0.1)',
-              }}
-            >
-              <span style={{ flexShrink: 0, marginTop: 2, fontSize: 16 }}>{placeEmoji(place.types)}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {place.name}
-                </div>
-                {place.formatted_address && (
-                  <div style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
-                    {place.formatted_address}
-                  </div>
-                )}
-              </div>
-              {place.rating && (
-                <div style={{ flexShrink: 0, fontSize: 10, color: '#F6AD55', fontWeight: 700, marginTop: 2 }}>
-                  ★ {place.rating}
-                </div>
-              )}
-            </button>
-          ))}
-          <GoogleBadge />
-        </div>
-      )}
-
-      {/* ── Dropdown: Geocoding fallback ── */}
-      {showGeocode && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
-          background: 'var(--k-card)', border: '1px solid var(--k-border)',
-          borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-        }}>
-          <div style={{ padding: '8px 14px 4px' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Hasil Pencarian Peta</span>
-          </div>
-          {geocodeFallback.map((hit, i) => (
-            <button key={hit.place_id ?? i} type="button"
-              onMouseDown={e => e.preventDefault()}
-              onTouchStart={() => { touchingRef.current = true }}
-              onTouchEnd={() => handleSelectGeocode(hit)}
-              onClick={() => handleSelectGeocode(hit)}
-              style={{
-                width: '100%', textAlign: 'left', padding: '11px 14px',
-                background: 'none', border: 'none', cursor: 'pointer',
-                borderBottom: i < geocodeFallback.length - 1 ? '1px solid var(--k-border)' : 'none',
-                color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10,
-                WebkitTapHighlightColor: 'rgba(99,102,241,0.1)',
-              }}
-            >
-              <span style={{ flexShrink: 0, marginTop: 2, fontSize: 16 }}>🗺️</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {hit.display.split(',')[0]}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
-                  {hit.display.split(',').slice(1).join(',').trim()}
-                </div>
-              </div>
-            </button>
-          ))}
-          <GoogleBadge />
-        </div>
-      )}
-
-      {/* ── Dropdown: Teks bebas (last resort) ── */}
-      {showFreeText && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
-          background: 'var(--k-card)', border: '1px solid var(--k-border)',
-          borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-        }}>
-          <button type="button"
-            onMouseDown={e => e.preventDefault()}
-            onTouchStart={() => { touchingRef.current = true }}
-            onTouchEnd={handleFreeText}
-            onClick={handleFreeText}
-            style={{
-              width: '100%', textAlign: 'left', padding: '12px 14px',
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10,
-              WebkitTapHighlightColor: 'rgba(99,102,241,0.1)',
-            }}
-          >
-            <span style={{ flexShrink: 0, marginTop: 2, fontSize: 15 }}>✏️</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 13 }}>Gunakan "{value}"</div>
-              <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 1 }}>⚠️ Lokasi tidak ditemukan — driver akan konfirmasi via chat</div>
+      {/* Dropdown via Portal — tembus iframe Google Maps */}
+      {showAny && createPortal(
+        <div style={portalStyle}>
+          {/* Nearby Populer */}
+          {showNearby && <>
+            <div style={{ padding: '8px 14px 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12 }}>📍</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-sub)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Populer di sekitarmu</span>
             </div>
-          </button>
-          <GoogleBadge />
-        </div>
+            {nearbyPlaces.map((place, i) => (
+              <button key={place.place_id ?? i} type="button"
+                onMouseDown={e => e.preventDefault()}
+                onTouchStart={() => { touchingRef.current = true }}
+                onTouchEnd={() => handleSelectNearby(place)}
+                onClick={() => handleSelectNearby(place)}
+                style={{ width: '100%', textAlign: 'left', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', borderBottom: i < nearbyPlaces.length - 1 ? '1px solid var(--k-border)' : 'none', color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10, WebkitTapHighlightColor: 'rgba(99,102,241,0.1)' }}
+              >
+                <span style={{ flexShrink: 0, marginTop: 1, fontSize: 16 }}>{placeEmoji(place.types)}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{place.name}</div>
+                  {place.vicinity && <div style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>{place.vicinity}</div>}
+                </div>
+                {place.rating && <div style={{ flexShrink: 0, fontSize: 10, color: '#F6AD55', fontWeight: 700, marginTop: 2 }}>★ {place.rating}</div>}
+              </button>
+            ))}
+            <GoogleBadge />
+          </>}
+
+          {/* textSearch results */}
+          {showSuggest && <>
+            {suggestions.map((place, i) => (
+              <button key={place.place_id ?? i} type="button"
+                onMouseDown={e => e.preventDefault()}
+                onTouchStart={() => { touchingRef.current = true }}
+                onTouchEnd={() => handleSelect(place)}
+                onClick={() => handleSelect(place)}
+                style={{ width: '100%', textAlign: 'left', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', borderBottom: i < suggestions.length - 1 ? '1px solid var(--k-border)' : 'none', color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10, WebkitTapHighlightColor: 'rgba(99,102,241,0.1)' }}
+              >
+                <span style={{ flexShrink: 0, marginTop: 2, fontSize: 16 }}>{placeEmoji(place.types)}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{place.name}</div>
+                  {place.formatted_address && <div style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>{place.formatted_address}</div>}
+                </div>
+                {place.rating && <div style={{ flexShrink: 0, fontSize: 10, color: '#F6AD55', fontWeight: 700, marginTop: 2 }}>★ {place.rating}</div>}
+              </button>
+            ))}
+            <GoogleBadge />
+          </>}
+
+          {/* Geocoding fallback */}
+          {showGeocode && <>
+            <div style={{ padding: '8px 14px 4px' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Hasil Pencarian Peta</span>
+            </div>
+            {geocodeFallback.map((hit, i) => (
+              <button key={hit.place_id ?? i} type="button"
+                onMouseDown={e => e.preventDefault()}
+                onTouchStart={() => { touchingRef.current = true }}
+                onTouchEnd={() => handleSelectGeocode(hit)}
+                onClick={() => handleSelectGeocode(hit)}
+                style={{ width: '100%', textAlign: 'left', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', borderBottom: i < geocodeFallback.length - 1 ? '1px solid var(--k-border)' : 'none', color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10, WebkitTapHighlightColor: 'rgba(99,102,241,0.1)' }}
+              >
+                <span style={{ flexShrink: 0, marginTop: 2, fontSize: 16 }}>🗺️</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.display.split(',')[0]}</div>
+                  <div style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>{hit.display.split(',').slice(1).join(',').trim()}</div>
+                </div>
+              </button>
+            ))}
+            <GoogleBadge />
+          </>}
+
+          {/* Teks bebas last resort */}
+          {showFreeText && <>
+            <button type="button"
+              onMouseDown={e => e.preventDefault()}
+              onTouchStart={() => { touchingRef.current = true }}
+              onTouchEnd={handleFreeText}
+              onClick={handleFreeText}
+              style={{ width: '100%', textAlign: 'left', padding: '12px 14px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10, WebkitTapHighlightColor: 'rgba(99,102,241,0.1)' }}
+            >
+              <span style={{ flexShrink: 0, marginTop: 2, fontSize: 15 }}>✏️</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>Gunakan "{value}"</div>
+                <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 1 }}>⚠️ Lokasi tidak ditemukan — driver akan konfirmasi via chat</div>
+              </div>
+            </button>
+            <GoogleBadge />
+          </>}
+        </div>,
+        document.body
       )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
