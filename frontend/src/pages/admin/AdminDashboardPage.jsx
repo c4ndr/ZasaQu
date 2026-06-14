@@ -94,24 +94,25 @@ const MODULE_COLORS = { zasago: '#00C896', food: '#F97316', mart: '#3B82F6', hom
 
 function CommissionTrendChart({ data }) {
   if (!data?.length) return null
-  const max = Math.max(...data.map(d => d.total), 1)
+  const max    = Math.max(...data.map(d => d.total), 1)
+  const step   = data.length > 14 ? Math.ceil(data.length / 7) : 1
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 100 }}>
+    <div style={{ overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 100 }}>
         {data.map((d, i) => (
-          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          <div key={i} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
             {d.total > 0 && (
-              <span style={{ fontSize: 9, color: 'var(--k-accent)', fontWeight: 700 }}>{formatRp(d.total)}</span>
+              <span style={{ fontSize: 8, color: 'var(--k-accent)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{formatRp(d.total)}</span>
             )}
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column-reverse', borderRadius: '3px 3px 0 0', overflow: 'hidden', minHeight: d.total > 0 ? 6 : 0 }}>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column-reverse', borderRadius: '2px 2px 0 0', overflow: 'hidden', minHeight: d.total > 0 ? 4 : 0 }}>
               {['zasago','food','mart','home','serv'].map(k => {
-                const h = (d[k] / max) * 90
+                const h = (d[k] / max) * 88
                 return h > 0 ? (
                   <div key={k} style={{ width: '100%', height: h, background: MODULE_COLORS[k] }} title={`${k}: ${formatRpFull(d[k])}`} />
                 ) : null
               })}
             </div>
-            <span style={{ fontSize: 9, color: 'var(--k-muted)', whiteSpace: 'nowrap' }}>{d.label}</span>
+            <span style={{ fontSize: 8, color: i % step === 0 ? 'var(--k-muted)' : 'transparent', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>{d.label}</span>
           </div>
         ))}
       </div>
@@ -129,15 +130,15 @@ function CommissionTrendChart({ data }) {
 
 function TrendChart({ data }) {
   if (!data?.length) return null
-  const max = Math.max(...data.map(d => d.orders), 1)
+  const max  = Math.max(...data.map(d => d.orders), 1)
   const KEYS = ['zasago','food','mart','home','serv']
   return (
-    <div>
+    <div style={{ overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 100 }}>
         {data.map((d, i) => {
           const totalH = Math.max((d.orders / max) * 90, d.orders > 0 ? 6 : 0)
           return (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+            <div key={i} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
               {d.orders > 0 && (
                 <span style={{ fontSize: 9, color: 'var(--k-sub)', fontWeight: 700 }}>{d.orders}</span>
               )}
@@ -149,7 +150,7 @@ function TrendChart({ data }) {
                   ) : null
                 })}
               </div>
-              <span style={{ fontSize: 9, color: 'var(--k-muted)', whiteSpace: 'nowrap' }}>{d.label}</span>
+              <span style={{ fontSize: 9, color: 'var(--k-muted)', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>{d.label}</span>
             </div>
           )
         })}
@@ -254,7 +255,7 @@ export default function AdminDashboardPage() {
         @keyframes fadeUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
         .dash-kpi    { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
         .dash-mod    { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-        .dash-cols   { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+        .dash-cols   { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
         .dash-action { display: grid; grid-template-columns: 1fr 1fr;   gap: 12px; }
         @media (max-width: 900px) { .dash-cols { grid-template-columns: 1fr; } }
         @media (max-width: 500px) { .dash-action { grid-template-columns: 1fr 1fr; } }
