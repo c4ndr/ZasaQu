@@ -130,21 +130,38 @@ function CommissionTrendChart({ data }) {
 function TrendChart({ data }) {
   if (!data?.length) return null
   const max = Math.max(...data.map(d => d.orders), 1)
+  const KEYS = ['zasago','food','mart','home','serv']
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 100 }}>
-      {data.map((d, i) => {
-        const h = Math.max((d.orders / max) * 80, d.orders > 0 ? 6 : 0)
-        return (
-          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 10, color: 'var(--k-accent)', fontWeight: 700, opacity: d.orders > 0 ? 1 : 0 }}>{d.orders}</span>
-            <div style={{ width: '100%', height: h, borderRadius: '4px 4px 0 0',
-              background: 'linear-gradient(180deg, var(--k-accent) 0%, rgba(0,200,150,0.35) 100%)',
-              transition: 'height 0.4s ease', minHeight: d.orders > 0 ? 6 : 0 }}
-              title={`${d.label}: ${d.orders} order`} />
-            <span style={{ fontSize: 10, color: 'var(--k-muted)', whiteSpace: 'nowrap' }}>{d.label}</span>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 100 }}>
+        {data.map((d, i) => {
+          const totalH = Math.max((d.orders / max) * 90, d.orders > 0 ? 6 : 0)
+          return (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              {d.orders > 0 && (
+                <span style={{ fontSize: 9, color: 'var(--k-sub)', fontWeight: 700 }}>{d.orders}</span>
+              )}
+              <div style={{ width: '100%', height: totalH, display: 'flex', flexDirection: 'column-reverse', borderRadius: '3px 3px 0 0', overflow: 'hidden', minHeight: d.orders > 0 ? 6 : 0 }}>
+                {KEYS.map(k => {
+                  const h = d.orders > 0 ? ((d[k] ?? 0) / max) * 90 : 0
+                  return h > 0 ? (
+                    <div key={k} style={{ width: '100%', height: h, background: MODULE_COLORS[k] }} title={`${k}: ${d[k] ?? 0} order`} />
+                  ) : null
+                })}
+              </div>
+              <span style={{ fontSize: 9, color: 'var(--k-muted)', whiteSpace: 'nowrap' }}>{d.label}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+        {[['zasago','ZasaGo'],['food','ZasaFood'],['mart','ZasaShop'],['home','ZasaHome'],['serv','ZasaServ']].map(([k,l]) => (
+          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: MODULE_COLORS[k] }} />
+            <span style={{ fontSize: 10, color: 'var(--k-muted)' }}>{l}</span>
           </div>
-        )
-      })}
+        ))}
+      </div>
     </div>
   )
 }
@@ -235,14 +252,12 @@ export default function AdminDashboardPage() {
       <style>{`
         @keyframes spin   { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
-        .dash-kpi    { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-        .dash-mod    { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-        .dash-cols   { display: grid; grid-template-columns: 1fr 360px;     gap: 20px; }
-        .dash-action { display: grid; grid-template-columns: 1fr 1fr;       gap: 12px; }
-        @media (max-width: 1100px) { .dash-cols { grid-template-columns: 1fr; } }
-        @media (max-width: 1100px) { .dash-mod { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 900px)  { .dash-kpi, .dash-mod { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 500px)  { .dash-kpi, .dash-mod, .dash-action { grid-template-columns: 1fr 1fr; } }
+        .dash-kpi    { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+        .dash-mod    { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+        .dash-cols   { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+        .dash-action { display: grid; grid-template-columns: 1fr 1fr;   gap: 12px; }
+        @media (max-width: 900px) { .dash-cols { grid-template-columns: 1fr; } }
+        @media (max-width: 500px) { .dash-action { grid-template-columns: 1fr 1fr; } }
       `}</style>
 
       {/* ── Header ── */}
@@ -314,7 +329,7 @@ export default function AdminDashboardPage() {
               sub={`+${stats.users?.new_today ?? 0} hari ini`}
               color="blue" icon="👥" link="/admin/users" />
             <KPICard label="Order Hari Ini"  value={stats.orders?.today ?? 0}
-              sub={`${stats.orders?.active ?? 0} sedang aktif`}
+              sub={`${stats.orders?.active ?? 0} aktif · ${stats.orders?.this_month ?? 0} bulan ini`}
               color="green" icon="📦" link="/admin/orders" />
             <KPICard label="Komisi Hari Ini" value={formatRp(stats.revenue?.commission_today)}
               sub={`Bulan ini: ${formatRp(stats.revenue?.commission_this_month)}`}

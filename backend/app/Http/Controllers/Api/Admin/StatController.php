@@ -35,13 +35,32 @@ class StatController extends Controller
                 'banned'    => User::where('status', 'banned')->count(),
             ],
             'orders' => [
-                'total'       => Order::count(),
-                'today'       => Order::whereDate('created_at', $today)->count(),
-                'this_month'  => Order::where('created_at', '>=', $thisMonth)->count(),
-                'pending'     => Order::where('status', 'pending')->count(),
-                'active'      => Order::whereIn('status', ['accepted', 'on_pickup', 'picked_up', 'on_delivery'])->count(),
-                'completed'   => Order::where('status', 'completed')->count(),
-                'cancelled'   => Order::where('status', 'cancelled')->count(),
+                'total'       => Order::count() + FoodOrder::count() + MartOrder::count() + HomeOrder::count() + ServOrder::count(),
+                'today'       => Order::whereDate('created_at', $today)->count()
+                               + FoodOrder::whereDate('created_at', $today)->count()
+                               + MartOrder::whereDate('created_at', $today)->count()
+                               + HomeOrder::whereDate('created_at', $today)->count()
+                               + ServOrder::whereDate('created_at', $today)->count(),
+                'this_month'  => Order::where('created_at', '>=', $thisMonth)->count()
+                               + FoodOrder::where('created_at', '>=', $thisMonth)->count()
+                               + MartOrder::where('created_at', '>=', $thisMonth)->count()
+                               + HomeOrder::where('created_at', '>=', $thisMonth)->count()
+                               + ServOrder::where('created_at', '>=', $thisMonth)->count(),
+                'active'      => Order::whereIn('status', ['accepted', 'on_pickup', 'picked_up', 'on_delivery'])->count()
+                               + FoodOrder::whereIn('status', ['accepted', 'on_delivery'])->count()
+                               + MartOrder::whereIn('status', ['accepted', 'processing', 'on_delivery'])->count()
+                               + HomeOrder::whereIn('status', ['accepted', 'on_the_way', 'in_progress'])->count()
+                               + ServOrder::whereIn('status', ['accepted', 'on_the_way', 'in_progress'])->count(),
+                'completed'   => Order::where('status', 'completed')->count()
+                               + FoodOrder::where('status', 'completed')->count()
+                               + MartOrder::where('status', 'completed')->count()
+                               + HomeOrder::where('status', 'completed')->count()
+                               + ServOrder::where('status', 'completed')->count(),
+                'cancelled'   => Order::where('status', 'cancelled')->count()
+                               + FoodOrder::where('status', 'cancelled')->count()
+                               + MartOrder::where('status', 'cancelled')->count()
+                               + HomeOrder::where('status', 'cancelled')->count()
+                               + ServOrder::where('status', 'cancelled')->count(),
                 'jastip_total'=> Order::where('type', 'jastip')->count(),
             ],
             'revenue' => [
@@ -98,20 +117,22 @@ class StatController extends Controller
 
         $trend = collect(range($days - 1, 0))->map(function ($i) {
             $date = today()->subDays($i);
-            $revenue = (float) (
-                Order::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission') +
-                FoodOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission_food') +
-                FoodOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission_delivery') +
-                MartOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission') +
-                HomeOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission') +
-                ServOrder::where('status', 'completed')->whereDate('completed_at', $date)->sum('platform_commission')
-            );
+
+            $zasago = Order::whereDate('created_at', $date)->count();
+            $food   = FoodOrder::whereDate('created_at', $date)->count();
+            $mart   = MartOrder::whereDate('created_at', $date)->count();
+            $home   = HomeOrder::whereDate('created_at', $date)->count();
+            $serv   = ServOrder::whereDate('created_at', $date)->count();
+
             return [
-                'date'      => $date->format('Y-m-d'),
-                'label'     => $date->format('d/m'),
-                'orders'    => Order::whereDate('created_at', $date)->count(),
-                'completed' => Order::whereDate('completed_at', $date)->count(),
-                'revenue'   => $revenue,
+                'date'   => $date->format('Y-m-d'),
+                'label'  => $date->format('d/m'),
+                'orders' => $zasago + $food + $mart + $home + $serv,
+                'zasago' => $zasago,
+                'food'   => $food,
+                'mart'   => $mart,
+                'home'   => $home,
+                'serv'   => $serv,
             ];
         });
 
