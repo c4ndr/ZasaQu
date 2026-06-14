@@ -31,8 +31,9 @@ Thumbs.db
 # Storage uploads (tidak di-track di git)
 backend/storage/app/public/order-photos/
 
-# APK binary — disajikan nginx dari /releases/, tidak masuk git (245MB)
+# APK binary — di-copy langsung ke server saat deploy, tidak masuk git
 frontend/public/*.apk
+backend/public/zasaqu.apk
 releases/
 
 # Build artifacts web — di-generate ulang saat deploy, tidak perlu di git
