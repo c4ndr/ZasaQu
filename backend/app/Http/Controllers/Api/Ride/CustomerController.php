@@ -50,6 +50,9 @@ class CustomerController extends Controller
     {
         $data = $request->validate([
             'vehicle_type'        => ['required', 'in:motor,mobil'],
+            'ride_type'           => ['nullable', 'in:regular,school'],
+            'passenger_name'      => ['nullable', 'string', 'max:100'],
+            'school_name'         => ['nullable', 'string', 'max:150'],
             'pickup_address'      => ['required', 'string', 'max:255'],
             'pickup_lat'          => ['required', 'numeric', 'between:-90,90'],
             'pickup_lng'          => ['required', 'numeric', 'between:-180,180'],
@@ -59,6 +62,11 @@ class CustomerController extends Controller
             'payment_method'      => ['required', 'in:wallet,cod'],
             'notes'               => ['nullable', 'string', 'max:255'],
         ]);
+
+        if (($data['ride_type'] ?? 'regular') === 'school') {
+            if (empty($data['passenger_name'])) return response()->json(['message' => 'Nama anak wajib diisi untuk antar sekolah.'], 422);
+            if (empty($data['school_name']))    return response()->json(['message' => 'Nama sekolah wajib diisi.'], 422);
+        }
 
         $user = $request->user();
 
@@ -90,6 +98,9 @@ class CustomerController extends Controller
                 'order_number'        => RideOrder::generateNumber(),
                 'customer_id'         => $user->id,
                 'vehicle_type'        => $data['vehicle_type'],
+                'ride_type'           => $data['ride_type'] ?? 'regular',
+                'passenger_name'      => $data['passenger_name'] ?? null,
+                'school_name'         => $data['school_name'] ?? null,
                 'pickup_address'      => $data['pickup_address'],
                 'pickup_lat'          => $data['pickup_lat'],
                 'pickup_lng'          => $data['pickup_lng'],

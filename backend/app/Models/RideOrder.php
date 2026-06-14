@@ -8,12 +8,13 @@ class RideOrder extends Model
 {
     protected $fillable = [
         'order_number', 'customer_id', 'mitra_id', 'vehicle_type',
+        'ride_type', 'passenger_name', 'school_name',
         'pickup_address', 'pickup_lat', 'pickup_lng',
         'destination_address', 'destination_lat', 'destination_lng',
         'distance_km', 'fare', 'platform_commission', 'mitra_income',
         'payment_method', 'payment_status', 'status', 'notes',
         'accepted_at', 'on_pickup_at', 'on_ride_at',
-        'completed_at', 'cancelled_at', 'cancel_reason',
+        'completed_at', 'cancelled_at', 'cancel_reason', 'proof_photo_path',
     ];
 
     protected function casts(): array

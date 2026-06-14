@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
@@ -13,12 +13,31 @@ const STATUS_LABEL = {
 }
 
 function ActiveRideCard({ order, onUpdate }) {
-  const navigate  = useNavigate()
-  const [loading, setLoading] = useState(false)
-  const info = STATUS_LABEL[order.status]
+  const navigate    = useNavigate()
+  const [loading,   setLoading]   = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [photoURL,  setPhotoURL]  = useState(order.proof_photo_path ? `/storage/${order.proof_photo_path}` : null)
+  const fileRef     = useRef(null)
+  const info        = STATUS_LABEL[order.status]
+  const needPhoto   = order.ride_type === 'school' && info?.next === 'completed' && !photoURL
+
+  const uploadPhoto = async (file) => {
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('photo', file)
+      const res = await api.post(`/ride/mitra/orders/${order.id}/proof-photo`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      setPhotoURL(res.data.url)
+    } catch (e) {
+      alert(e.response?.data?.message || 'Gagal upload foto.')
+    } finally { setUploading(false) }
+  }
 
   const updateStatus = async () => {
     if (!info?.next) return
+    if (needPhoto) { alert('Upload foto bukti tiba di sekolah dulu.'); return }
     setLoading(true)
     try {
       await api.patch(`/ride/mitra/orders/${order.id}/status`, { status: info.next })
@@ -98,15 +117,55 @@ function ActiveRideCard({ order, onUpdate }) {
         >💬 Chat</button>
       </div>
 
+      {/* Foto wajib antar sekolah */}
+      {order.ride_type === 'school' && info?.next === 'completed' && (
+        <div style={{
+          background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)',
+          borderRadius: 14, padding: '12px', marginBottom: 12,
+        }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: '#3B82F6', marginBottom: 4 }}>
+            🎒 Antar Sekolah: {order.passenger_name} → {order.school_name}
+          </p>
+          <p style={{ fontSize: 11, color: 'var(--k-muted)', marginBottom: 10 }}>
+            📸 Foto bukti tiba di sekolah wajib sebelum selesai
+          </p>
+          {photoURL ? (
+            <div>
+              <img src={photoURL} alt="Bukti" style={{ width: '100%', borderRadius: 10, maxHeight: 160, objectFit: 'cover', marginBottom: 8 }} />
+              <p style={{ fontSize: 11, color: 'var(--k-accent)', fontWeight: 700 }}>✅ Foto terkirim ke orang tua</p>
+            </div>
+          ) : (
+            <>
+              <input
+                ref={fileRef} type="file" accept="image/*" capture="environment"
+                style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }}
+              />
+              <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{
+                width: '100%', padding: '11px', borderRadius: 12,
+                background: '#3B82F6', color: '#fff',
+                border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                opacity: uploading ? 0.7 : 1,
+              }}>
+                {uploading ? '⏳ Mengupload...' : '📷 Ambil Foto Bukti Tiba'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {info?.next && (
-        <button onClick={updateStatus} disabled={loading} style={{
+        <button onClick={updateStatus} disabled={loading || needPhoto} style={{
           width: '100%', padding: '14px', borderRadius: 16,
-          background: 'var(--k-accent)', color: '#0C0C16',
-          fontSize: 14, fontWeight: 800, border: 'none', cursor: 'pointer',
-          boxShadow: '0 4px 16px rgba(0,200,150,0.35)',
+          background: needPhoto ? 'var(--k-card)' : 'var(--k-accent)',
+          color: needPhoto ? 'var(--k-muted)' : '#0C0C16',
+          fontSize: 14, fontWeight: 800,
+          border: needPhoto ? '1px solid var(--k-border)' : 'none',
+          cursor: needPhoto ? 'not-allowed' : 'pointer',
+          boxShadow: needPhoto ? 'none' : '0 4px 16px rgba(0,200,150,0.35)',
           opacity: loading ? 0.7 : 1,
         }}>
-          {loading ? 'Memproses...' : info.nextLabel}
+          {loading ? 'Memproses...' : needPhoto ? '📸 Upload foto dulu' : info.nextLabel}
         </button>
       )}
     </div>

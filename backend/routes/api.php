@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\Admin\PromoController as AdminPromoController;
 use App\Http\Controllers\Api\Admin\RideController as AdminRideController;
 use App\Http\Controllers\Api\Ride\CustomerController as RideCustomerController;
 use App\Http\Controllers\Api\Ride\MitraController as MitraRideController;
+use App\Http\Controllers\Api\Ride\SavedPlaceController as RideSavedPlaceController;
 use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\NotificationController;
@@ -252,6 +253,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('orders/{id}', [RideCustomerController::class, 'show']);
         Route::post('orders/{id}/cancel', [RideCustomerController::class, 'cancel']);
 
+        // Saved places (customer)
+        Route::prefix('saved-places')->group(function () {
+            Route::get('/', [RideSavedPlaceController::class, 'index']);
+            Route::post('/', [RideSavedPlaceController::class, 'store']);
+            Route::delete('{id}', [RideSavedPlaceController::class, 'destroy']);
+        });
+
         // Mitra
         Route::prefix('mitra')->middleware('role:mitra_motor,mitra_mobil')->group(function () {
             Route::get('available', [MitraRideController::class, 'available']);
@@ -259,6 +267,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
             Route::get('history', [MitraRideController::class, 'history']);
             Route::post('orders/{id}/accept', [MitraRideController::class, 'accept']);
             Route::patch('orders/{id}/status', [MitraRideController::class, 'updateStatus']);
+            Route::post('orders/{id}/proof-photo', [MitraRideController::class, 'uploadProofPhoto']);
         });
     });
 

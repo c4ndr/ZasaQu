@@ -89,6 +89,11 @@ class MitraController extends Controller
             return response()->json(['message' => 'Perubahan status tidak valid.'], 422);
         }
 
+        // Foto wajib untuk order sekolah sebelum completed
+        if ($newStatus === 'completed' && $order->ride_type === 'school' && !$order->proof_photo_path) {
+            return response()->json(['message' => 'Upload foto bukti tiba di sekolah terlebih dahulu.', 'require_photo' => true], 422);
+        }
+
         $timestamps = [
             'on_pickup' => ['on_pickup_at' => now()],
             'on_ride'   => ['on_ride_at'   => now()],
@@ -128,6 +133,22 @@ class MitraController extends Controller
 
         broadcast(new RideStatusUpdated($order->fresh(['mitra']), $prev));
         return response()->json($order->fresh(['customer', 'mitra']));
+    }
+
+    // Upload foto bukti tiba di sekolah
+    public function uploadProofPhoto(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['photo' => ['required', 'image', 'max:2048']]);
+
+        $order = RideOrder::where('mitra_id', $request->user()->id)
+            ->where('ride_type', 'school')
+            ->whereIn('status', ['on_pickup', 'on_ride'])
+            ->findOrFail($id);
+
+        $path = $request->file('photo')->store("ride_proof/{$order->id}", 'public');
+        $order->update(['proof_photo_path' => $path]);
+
+        return response()->json(['path' => $path, 'url' => asset("storage/{$path}")]);
     }
 
     // Riwayat ride mitra
