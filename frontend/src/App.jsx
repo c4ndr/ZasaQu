@@ -111,7 +111,11 @@ import AdminMartSellersPage from './pages/admin/AdminMartSellersPage'
 import AdminMartSellerReviewPage from './pages/admin/AdminMartSellerReviewPage'
 import AdminMartProductsPage from './pages/admin/AdminMartProductsPage'
 import AdminMartOrdersPage from './pages/admin/AdminMartOrdersPage'
+import AdminRideOrdersPage from './pages/admin/AdminRideOrdersPage'
 import AdminModulesPage from './pages/admin/AdminModulesPage'
+import RidePage from './pages/zasaride/RidePage'
+import RideOrdersPage from './pages/zasaride/RideOrdersPage'
+import MitraRidePage from './pages/mitra/MitraRidePage'
 import NotFoundPage from './pages/NotFoundPage'
 import LandingPage from './pages/LandingPage'
 import AboutPage from './pages/AboutPage'
@@ -344,6 +348,14 @@ function AppRoutes() {
       <Route path="/admin/mart/review" element={<AdminRoute><AdminMartSellerReviewPage /></AdminRoute>} />
       <Route path="/admin/mart/products" element={<AdminRoute><AdminMartProductsPage /></AdminRoute>} />
       <Route path="/admin/mart/orders" element={<AdminRoute><AdminMartOrdersPage /></AdminRoute>} />
+
+      {/* ZasaRide */}
+      <Route path="/ride" element={<ModuleRoute featureKey="zasaride"><RidePage /></ModuleRoute>} />
+      <Route path="/ride/orders" element={<ModuleRoute featureKey="zasaride"><RideOrdersPage /></ModuleRoute>} />
+      <Route path="/ride/chat/:id" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/mitra/ride" element={<MitraRoute><ModuleRoute featureKey="zasaride"><MitraRidePage /></ModuleRoute></MitraRoute>} />
+      <Route path="/ride/mitra/chat/:id" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/admin/ride" element={<AdminRoute><AdminRideOrdersPage /></AdminRoute>} />
 
       {/* Admin Modules */}
       <Route path="/admin/modules" element={<AdminRoute><AdminModulesPage /></AdminRoute>} />

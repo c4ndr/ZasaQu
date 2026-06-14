@@ -4,6 +4,7 @@ use App\Models\ChatRoom;
 use App\Models\FoodOrder;
 use App\Models\MartOrder;
 use App\Models\Order;
+use App\Models\RideOrder;
 use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
@@ -41,12 +42,26 @@ Broadcast::channel('chat.{roomId}', function ($user, $roomId) {
     return $user->id === $order->customer_id || $user->id === $order->mitra_id;
 });
 
+// Ride order tracking channel
+Broadcast::channel('ride.orders.{orderId}', function ($user, $orderId) {
+    if ($user->role === 'admin') return true;
+    return RideOrder::where('id', $orderId)
+        ->where(fn($q) => $q->where('customer_id', $user->id)->orWhere('mitra_id', $user->id))
+        ->exists();
+});
+
+// Ride available — semua mitra aktif subscribe untuk terima order baru
+Broadcast::channel('ride.available', function ($user) {
+    return in_array($user->role, ['mitra_motor', 'mitra_mobil', 'admin']);
+});
+
 // WebRTC call channel — hanya customer & mitra order tersebut
 Broadcast::channel('call.{orderType}.{orderId}', function ($user, $orderType, $orderId) {
     $order = match($orderType) {
-        'zasafood' => FoodOrder::find($orderId),
-        'zasamart' => MartOrder::find($orderId),
-        default    => Order::find($orderId),
+        'zasafood'  => FoodOrder::find($orderId),
+        'zasamart'  => MartOrder::find($orderId),
+        'zasaride'  => RideOrder::find($orderId),
+        default     => Order::find($orderId),
     };
     if (!$order) return false;
     return $user->id === $order->customer_id || $user->id === $order->mitra_id;

@@ -1,0 +1,308 @@
+import { useState, useEffect, useCallback } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import api from '../../services/api'
+import echo from '../../services/echo'
+
+const fmt = (n) => new Intl.NumberFormat('id-ID').format(n)
+
+const STATUS_LABEL = {
+  accepted:  { label: 'Menuju Pickup',     next: 'on_pickup',  nextLabel: 'Saya Sudah Tiba di Pickup',   emoji: '📍' },
+  on_pickup: { label: 'Menunggu Customer', next: 'on_ride',    nextLabel: 'Mulai Perjalanan',             emoji: '🚗' },
+  on_ride:   { label: 'Dalam Perjalanan',  next: 'completed',  nextLabel: 'Selesai - Sudah Sampai Tujuan', emoji: '🎉' },
+}
+
+function ActiveRideCard({ order, onUpdate }) {
+  const navigate  = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const info = STATUS_LABEL[order.status]
+
+  const updateStatus = async () => {
+    if (!info?.next) return
+    setLoading(true)
+    try {
+      await api.patch(`/ride/mitra/orders/${order.id}/status`, { status: info.next })
+      onUpdate()
+    } catch (e) {
+      alert(e.response?.data?.message || 'Gagal update status.')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div style={{
+      background: 'var(--k-card)', border: '1px solid var(--k-border)',
+      borderRadius: 20, padding: '18px 16px', marginBottom: 16,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 14, fontSize: 22,
+          background: 'var(--k-glow)', border: '1px solid rgba(0,200,150,0.25)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>{info?.emoji || '🚗'}</div>
+        <div>
+          <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--k-text)' }}>{info?.label || order.status}</p>
+          <p style={{ fontSize: 11, color: 'var(--k-muted)', fontFamily: 'monospace' }}>#{order.order_number}</p>
+        </div>
+        <p style={{ marginLeft: 'auto', fontSize: 18, fontWeight: 900, color: 'var(--k-accent)' }}>
+          Rp {fmt(order.fare)}
+        </p>
+      </div>
+
+      {/* Rute */}
+      <div style={{ marginBottom: 14 }}>
+        {[
+          { icon: '📍', label: 'Jemput', addr: order.pickup_address },
+          { icon: '🏁', label: 'Tujuan', addr: order.destination_address },
+        ].map(({ icon, label, addr }) => (
+          <div key={label} style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 16, marginTop: 1 }}>{icon}</span>
+            <div>
+              <p style={{ fontSize: 10, color: 'var(--k-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{label}</p>
+              <p style={{ fontSize: 13, color: 'var(--k-text)' }}>{addr}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Info */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
+        {[
+          { label: 'Jarak', value: `${order.distance_km} km` },
+          { label: 'Bayar', value: order.payment_method === 'wallet' ? 'Wallet' : 'Tunai' },
+          { label: 'Pendapatan', value: `Rp ${fmt(order.mitra_income)}` },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ background: 'var(--k-surface)', borderRadius: 10, padding: '8px 10px' }}>
+            <p style={{ fontSize: 10, color: 'var(--k-muted)', fontWeight: 700 }}>{label}</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-text)' }}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Customer */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10, fontSize: 16, fontWeight: 700,
+          background: 'var(--k-surface)', border: '1px solid var(--k-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--k-accent)',
+        }}>{order.customer?.name?.[0]?.toUpperCase()}</div>
+        <p style={{ fontSize: 13, fontWeight: 700 }}>{order.customer?.name}</p>
+        <button
+          onClick={() => navigate(`/ride/mitra/chat/${order.id}`, { state: { otherName: order.customer?.name } })}
+          style={{
+            marginLeft: 'auto', background: 'var(--k-glow)',
+            border: '1px solid rgba(0,200,150,0.3)', borderRadius: 10,
+            padding: '7px 12px', cursor: 'pointer', fontSize: 12,
+            color: 'var(--k-accent)', fontWeight: 700,
+          }}
+        >💬 Chat</button>
+      </div>
+
+      {info?.next && (
+        <button onClick={updateStatus} disabled={loading} style={{
+          width: '100%', padding: '14px', borderRadius: 16,
+          background: 'var(--k-accent)', color: '#0C0C16',
+          fontSize: 14, fontWeight: 800, border: 'none', cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(0,200,150,0.35)',
+          opacity: loading ? 0.7 : 1,
+        }}>
+          {loading ? 'Memproses...' : info.nextLabel}
+        </button>
+      )}
+    </div>
+  )
+}
+
+function AvailableCard({ order, onAccept }) {
+  const [loading, setLoading] = useState(false)
+  const accept = async () => {
+    setLoading(true)
+    try {
+      await api.post(`/ride/mitra/orders/${order.id}/accept`)
+      onAccept()
+    } catch (e) {
+      alert(e.response?.data?.message || 'Gagal menerima order.')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div style={{
+      background: 'var(--k-card)', border: '1px solid var(--k-border)',
+      borderRadius: 16, padding: '14px 16px', marginBottom: 10,
+      animation: 'slideIn 0.3s ease',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+        <p style={{ fontSize: 12, color: 'var(--k-muted)', fontFamily: 'monospace' }}>#{order.order_number}</p>
+        <p style={{ fontSize: 18, fontWeight: 900, color: 'var(--k-accent)' }}>Rp {fmt(order.fare)}</p>
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+          <span>📍</span><p style={{ fontSize: 13 }}>{order.pickup_address}</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <span>🏁</span><p style={{ fontSize: 13 }}>{order.destination_address}</p>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <span style={{ fontSize: 12, color: 'var(--k-muted)' }}>{order.distance_km} km</span>
+          <span style={{ fontSize: 12, color: 'var(--k-muted)' }}>{order.payment_method === 'wallet' ? '💳 Wallet' : '💵 Tunai'}</span>
+        </div>
+        <button onClick={accept} disabled={loading} style={{
+          background: 'var(--k-accent)', color: '#0C0C16',
+          border: 'none', borderRadius: 12, padding: '9px 18px',
+          fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          opacity: loading ? 0.7 : 1,
+        }}>
+          {loading ? '...' : 'Terima'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default function MitraRidePage() {
+  const { user }       = useAuth()
+  const [active,   setActive]   = useState(null)
+  const [available, setAvailable] = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [tab,      setTab]      = useState('available') // 'available' | 'history'
+  const [history,  setHistory]  = useState([])
+
+  const vehicleType = user?.role?.includes('mobil') ? 'mobil' : 'motor'
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [actRes, avRes] = await Promise.all([
+        api.get('/ride/mitra/active'),
+        api.get('/ride/mitra/available'),
+      ])
+      setActive(actRes.data || null)
+      setAvailable(avRes.data || [])
+    } catch {}
+    setLoading(false)
+  }, [])
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await api.get('/ride/mitra/history')
+      setHistory(res.data.data || [])
+    } catch {}
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  useEffect(() => {
+    if (tab === 'history') fetchHistory()
+  }, [tab, fetchHistory])
+
+  // Subscribe untuk order baru masuk
+  useEffect(() => {
+    const ch = echo.channel('ride.available')
+    ch.listen('.ride.placed', (data) => {
+      if (data.vehicle_type === vehicleType) {
+        setAvailable(prev => [data, ...prev.filter(o => o.id !== data.id)])
+      }
+    })
+    return () => echo.leave('ride.available')
+  }, [vehicleType])
+
+  // Update status realtime untuk ride aktif
+  useEffect(() => {
+    if (!active) return
+    const ch = echo.channel(`ride.orders.${active.id}`)
+    ch.listen('.ride.status.updated', () => fetchData())
+    return () => echo.leave(`ride.orders.${active.id}`)
+  }, [active?.id, fetchData])
+
+  return (
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', color: 'var(--k-text)', fontFamily: 'system-ui,sans-serif' }}>
+      <nav style={{
+        background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)',
+        padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
+        position: 'sticky', top: 0, zIndex: 30,
+      }}>
+        <Link to="/mitra/orders" style={{
+          width: 36, height: 36, borderRadius: 10, background: 'var(--k-card)',
+          border: '1px solid var(--k-border)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', color: 'var(--k-muted)', textDecoration: 'none', fontSize: 18,
+        }}>←</Link>
+        <div>
+          <p style={{ fontWeight: 800, fontSize: 16 }}>ZasaRide</p>
+          <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{vehicleType === 'mobil' ? '🚗 Mobil' : '🏍️ Motor'}</p>
+        </div>
+        <button onClick={fetchData} style={{
+          marginLeft: 'auto', background: 'var(--k-card)', border: '1px solid var(--k-border)',
+          borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--k-muted)',
+        }}>↻</button>
+      </nav>
+
+      <div style={{ padding: '16px 16px 32px' }}>
+        {/* Ride aktif */}
+        {active && <ActiveRideCard order={active} onUpdate={fetchData} />}
+
+        {/* Tab */}
+        {!active && (
+          <>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, background: 'var(--k-card)', borderRadius: 12, padding: 4 }}>
+              {[
+                { key: 'available', label: `Order Tersedia (${available.length})` },
+                { key: 'history',   label: 'Riwayat' },
+              ].map(t => (
+                <button key={t.key} onClick={() => setTab(t.key)} style={{
+                  flex: 1, padding: '10px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: tab === t.key ? 'var(--k-accent)' : 'transparent',
+                  color: tab === t.key ? '#0C0C16' : 'var(--k-muted)',
+                  fontWeight: 700, fontSize: 13, transition: 'all 0.2s',
+                }}>{t.label}</button>
+              ))}
+            </div>
+
+            {loading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+                <div style={{ width: 28, height: 28, border: '2.5px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              </div>
+            ) : tab === 'available' ? (
+              available.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '50px 0' }}>
+                  <p style={{ fontSize: 40, marginBottom: 10 }}>🔍</p>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--k-text)', marginBottom: 6 }}>Tidak ada order saat ini</p>
+                  <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>Order baru akan muncul otomatis</p>
+                </div>
+              ) : (
+                available.map(o => <AvailableCard key={o.id} order={o} onAccept={fetchData} />)
+              )
+            ) : (
+              history.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '50px 0' }}>
+                  <p style={{ fontSize: 40, marginBottom: 10 }}>📋</p>
+                  <p style={{ fontSize: 15, fontWeight: 700 }}>Belum ada riwayat perjalanan</p>
+                </div>
+              ) : (
+                history.map(o => (
+                  <div key={o.id} style={{
+                    background: 'var(--k-card)', border: '1px solid var(--k-border)',
+                    borderRadius: 14, padding: '12px 14px', marginBottom: 10,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <p style={{ fontSize: 11, color: 'var(--k-muted)', fontFamily: 'monospace' }}>#{o.order_number}</p>
+                      <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--k-accent)' }}>+Rp {fmt(o.mitra_income)}</p>
+                    </div>
+                    <p style={{ fontSize: 12, color: 'var(--k-text)', marginBottom: 3 }}>→ {o.destination_address}</p>
+                    <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{o.distance_km} km · {new Date(o.created_at).toLocaleDateString('id-ID')}</p>
+                  </div>
+                ))
+              )
+            )}
+          </>
+        )}
+      </div>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: translateY(0) } }
+      `}</style>
+    </div>
+  )
+}

@@ -10,6 +10,7 @@ use App\Models\FoodOrder;
 use App\Models\HomeOrder;
 use App\Models\MartOrder;
 use App\Models\Order;
+use App\Models\RideOrder;
 use App\Services\NotificationService;
 use App\Services\PhoneDetectionService;
 use App\Services\ViolationService;
@@ -42,6 +43,7 @@ class ChatController extends Controller
             'zasafood'  => FoodOrder::with(['customer', 'mitra'])->findOrFail($orderId),
             'zasamart'  => MartOrder::with(['customer', 'mitra'])->findOrFail($orderId),
             'zasahome'  => HomeOrder::with(['customer', 'provider.user'])->findOrFail($orderId),
+            'zasaride'  => RideOrder::with(['customer', 'mitra'])->findOrFail($orderId),
             default     => Order::with(['customer', 'mitra'])->findOrFail($orderId),
         };
     }

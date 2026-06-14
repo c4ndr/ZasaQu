@@ -22,6 +22,9 @@ use App\Http\Controllers\Api\Admin\AuditLogController as AdminAuditLogController
 use App\Http\Controllers\Api\Admin\StatController as AdminStatController;
 use App\Http\Controllers\Api\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\Admin\PromoController as AdminPromoController;
+use App\Http\Controllers\Api\Admin\RideController as AdminRideController;
+use App\Http\Controllers\Api\Ride\CustomerController as RideCustomerController;
+use App\Http\Controllers\Api\Ride\MitraController as MitraRideController;
 use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\NotificationController;
@@ -240,6 +243,25 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // ─── ZasaServ ──────────────────────────────────────────────────────────
     require __DIR__ . '/modules/zasaserv.php';
 
+    // ─── ZasaRide ──────────────────────────────────────────────────────────
+    Route::prefix('ride')->group(function () {
+        // Customer
+        Route::get('estimate', [RideCustomerController::class, 'estimate']);
+        Route::get('orders', [RideCustomerController::class, 'index']);
+        Route::post('orders', [RideCustomerController::class, 'store']);
+        Route::get('orders/{id}', [RideCustomerController::class, 'show']);
+        Route::post('orders/{id}/cancel', [RideCustomerController::class, 'cancel']);
+
+        // Mitra
+        Route::prefix('mitra')->middleware('role:mitra_motor,mitra_mobil')->group(function () {
+            Route::get('available', [MitraRideController::class, 'available']);
+            Route::get('active', [MitraRideController::class, 'active']);
+            Route::get('history', [MitraRideController::class, 'history']);
+            Route::post('orders/{id}/accept', [MitraRideController::class, 'accept']);
+            Route::patch('orders/{id}/status', [MitraRideController::class, 'updateStatus']);
+        });
+    });
+
     // ─── Admin ─────────────────────────────────────────────────────────────
     Route::prefix('admin')->middleware(['role:admin', 'throttle:60,1'])->group(function () {
 
@@ -292,6 +314,14 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         });
 
         Route::get('audit-logs', [AdminAuditLogController::class, 'index']);
+
+        // ZasaRide admin
+        Route::prefix('ride')->group(function () {
+            Route::get('orders', [AdminRideController::class, 'orders']);
+            Route::get('fares', [AdminRideController::class, 'fares']);
+            Route::patch('fares/{id}', [AdminRideController::class, 'updateFare']);
+            Route::get('stats', [AdminRideController::class, 'stats']);
+        });
 
         // Statistik & analytics
         Route::prefix('stats')->group(function () {
