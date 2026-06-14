@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { Link } from 'react-router-dom'
 import { GoogleMap, OverlayView } from '@react-google-maps/api'
+import LocationSearch from '../../components/LocationSearch'
 import { fitGoogleMap, distanceMeter } from '../../utils/geo'
 import RoadPolyline from '../../components/RoadPolyline'
 import MapSatToggle from '../../components/MapSatToggle'
@@ -943,19 +944,26 @@ export default function MitraFoodOrdersPage() {
                     <div style={{ fontWeight: 800, fontSize: 16 }}>🚀 Buka Sesi Kuliner</div>
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-sub)', marginBottom: 6 }}>Lokasi Awal</div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input value={sessionForm.origin_address} onChange={e => setSessionForm(f => ({ ...f, origin_address: e.target.value }))} placeholder="Nama lokasi awal..."
-                          style={{ flex: 1, padding: '10px 12px', borderRadius: 10, fontSize: 13, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)' }} />
-                        <button onClick={getGps} disabled={gettingGps} style={{ padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: sessionForm.origin_lat ? 'rgba(0,200,150,0.15)' : 'var(--k-input)', color: sessionForm.origin_lat ? '#027A48' : 'var(--k-sub)', fontWeight: 700, fontSize: 13 }}>
-                          {gettingGps ? <div style={{ width: 14, height: 14, border: '2px solid #F97316', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : sessionForm.origin_lat ? '✓' : '📍 GPS'}
-                        </button>
-                      </div>
-                      {sessionForm.origin_lat && <div style={{ fontSize: 11, color: '#027A48', marginTop: 4 }}>✓ Koordinat terdeteksi</div>}
+                      <LocationSearch
+                        value={sessionForm.origin_address}
+                        confirmed={!!sessionForm.origin_lat}
+                        placeholder="Ketik nama jalan atau area awal..."
+                        onChange={v => setSessionForm(f => ({ ...f, origin_address: v, origin_lat: null, origin_lng: null }))}
+                        onSelect={r => setSessionForm(f => ({ ...f, origin_address: r.display, origin_lat: r.lat, origin_lng: r.lng }))}
+                      />
+                      <button onClick={getGps} disabled={gettingGps} style={{ marginTop: 6, padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: sessionForm.origin_lat ? 'rgba(0,200,150,0.15)' : 'var(--k-input)', color: sessionForm.origin_lat ? '#027A48' : 'var(--k-sub)', fontWeight: 700, fontSize: 12 }}>
+                        {gettingGps ? '...' : sessionForm.origin_lat ? '✓ GPS aktif' : '📍 Gunakan GPS saya'}
+                      </button>
                     </div>
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-sub)', marginBottom: 6 }}>Area / Tujuan Rute</div>
-                      <input value={sessionForm.destination_address} onChange={e => setSessionForm(f => ({ ...f, destination_address: e.target.value }))} placeholder="cth: Perumahan Griya Utama, Kel. Sukamaju..."
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 13, boxSizing: 'border-box', border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)' }} />
+                      <LocationSearch
+                        value={sessionForm.destination_address}
+                        confirmed={false}
+                        placeholder="Ketik nama perumahan, kelurahan, atau area tujuan..."
+                        onChange={v => setSessionForm(f => ({ ...f, destination_address: v }))}
+                        onSelect={r => setSessionForm(f => ({ ...f, destination_address: r.display }))}
+                      />
                     </div>
                     <div style={{ display: 'flex', gap: 12 }}>
                       <div style={{ flex: 1 }}>

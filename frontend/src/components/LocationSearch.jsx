@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-function getAutocompleteService() {
-  return window.google?.maps?.places ? new window.google.maps.places.AutocompleteService() : null
+function getPlacesService() {
+  if (!window.google?.maps?.places) return null
+  if (!window.__locationSearchMapDiv) window.__locationSearchMapDiv = document.createElement('div')
+  return new window.google.maps.places.PlacesService(window.__locationSearchMapDiv)
 }
 
 function getGeocoder() {
@@ -29,84 +31,107 @@ export default function LocationSearch({
   confirmed = false, inputStyle = {},
   nearLat = null, nearLng = null,
 }) {
-  const [suggestions,   setSuggestions]   = useState([])
+  const [suggestions,   setSuggestions]   = useState([])  // textSearch results
   const [open,          setOpen]          = useState(false)
   const [loading,       setLoading]       = useState(false)
   const [nearbyPlaces,  setNearbyPlaces]  = useState([])
   const [nearbyOpen,    setNearbyOpen]    = useState(false)
   const [nearbyLoading, setNearbyLoading] = useState(false)
+  const [geocodeFallback, setGeocodeFallback] = useState(null)
   const containerRef   = useRef(null)
   const debounceRef    = useRef(null)
   const touchingRef    = useRef(false)
-  const sessionToken   = useRef(null)
-  const mapDivRef      = useRef(null)
   const nearbyCacheKey = useRef(null)
 
-  const refreshToken = useCallback(() => {
-    if (window.google?.maps?.places) {
-      sessionToken.current = new window.google.maps.places.AutocompleteSessionToken()
-    }
-  }, [])
-
-  useEffect(() => {
-    const timer = setTimeout(refreshToken, 800)
-    return () => clearTimeout(timer)
-  }, [refreshToken])
-
-  // Autocomplete saat mengetik
+  // ── Pencarian utama: textSearch (sama seperti Google Maps app) ──────────────
   useEffect(() => {
     clearTimeout(debounceRef.current)
     if (value.length < 2) {
       setSuggestions([])
+      setGeocodeFallback(null)
       setOpen(false)
       return
     }
     setNearbyOpen(false)
 
     debounceRef.current = setTimeout(() => {
-      const svc = getAutocompleteService()
+      const svc = getPlacesService()
       if (!svc) return
 
       setLoading(true)
-      if (!sessionToken.current) refreshToken()
+      setGeocodeFallback(null)
 
       const req = {
-        input: value,
-        componentRestrictions: { country: 'id' },
+        query: value,
+        region: 'id',
         language: 'id',
-        sessionToken: sessionToken.current,
       }
+      // Bias ke lokasi pengguna jika tersedia — prioritaskan hasil terdekat
       if (nearLat && nearLng) {
         req.location = new window.google.maps.LatLng(nearLat, nearLng)
-        req.radius = 30000
+        req.radius = 50000
       }
 
-      svc.getPlacePredictions(req, (results, status) => {
-        setLoading(false)
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && results?.length) {
-          setSuggestions(results)
+      svc.textSearch(req, (results, status) => {
+        const OK = window.google.maps.places.PlacesServiceStatus.OK
+        if (status === OK && results?.length) {
+          setLoading(false)
+          setSuggestions(results.slice(0, 6))
           setOpen(true)
         } else {
+          // Fallback: Geocoding API (coverage lebih luas untuk alamat pelosok)
           setSuggestions([])
-          setOpen(false)
+          const geocoder = getGeocoder()
+          if (!geocoder) { setLoading(false); setOpen(false); return }
+
+          const biasedQuery = nearLat && nearLng
+            ? value  // sudah ada lokasi acuan, biarkan google pakai bias dari latlng
+            : value + ', Indonesia'
+
+          geocoder.geocode(
+            { address: biasedQuery, language: 'id',
+              ...(nearLat && nearLng ? { bounds: new window.google.maps.LatLngBounds(
+                { lat: nearLat - 0.5, lng: nearLng - 0.5 },
+                { lat: nearLat + 0.5, lng: nearLng + 0.5 }
+              ) } : {})
+            },
+            (gResults, gStatus) => {
+              setLoading(false)
+              if (gStatus === 'OK' && gResults?.length) {
+                // Ambil semua hasil geocode (bisa lebih dari 1)
+                const hits = gResults.slice(0, 4).map(r => ({
+                  _type: 'geocode',
+                  place_id: r.place_id,
+                  display: r.formatted_address,
+                  lat: r.geometry.location.lat(),
+                  lng: r.geometry.location.lng(),
+                  types: r.types || [],
+                }))
+                setGeocodeFallback(hits)
+                setOpen(true)
+              } else {
+                setGeocodeFallback(null)
+                setOpen(false)
+              }
+            }
+          )
         }
       })
-    }, 350)
+    }, 400)
 
     return () => clearTimeout(debounceRef.current)
-  }, [value, nearLat, nearLng, refreshToken])
+  }, [value, nearLat, nearLng])
 
-  // Fetch nearby places saat fokus & input kosong
+  // ── Nearby places saat fokus & input kosong ────────────────────────────────
   const fetchNearby = useCallback(() => {
     if (!nearLat || !nearLng || !window.google?.maps?.places) return
     const cacheKey = `${nearLat.toFixed(3)},${nearLng.toFixed(3)}`
     if (nearbyCacheKey.current === cacheKey && nearbyPlaces.length > 0) {
-      setNearbyOpen(true)
-      return
+      setNearbyOpen(true); return
     }
-    if (!mapDivRef.current) mapDivRef.current = document.createElement('div')
     setNearbyLoading(true)
-    const svc = new window.google.maps.places.PlacesService(mapDivRef.current)
+    const svc = getPlacesService()
+    if (!svc) { setNearbyLoading(false); return }
     svc.nearbySearch(
       { location: new window.google.maps.LatLng(nearLat, nearLng), radius: 1500 },
       (results, status) => {
@@ -120,19 +145,17 @@ export default function LocationSearch({
     )
   }, [nearLat, nearLng, nearbyPlaces.length])
 
-  // Reset cache saat lokasi acuan berubah signifikan
   useEffect(() => {
     nearbyCacheKey.current = null
     setNearbyPlaces([])
   }, [Math.round((nearLat ?? 0) * 100), Math.round((nearLng ?? 0) * 100)]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Tutup dropdown saat klik di luar
+  // ── Tutup dropdown saat klik di luar ──────────────────────────────────────
   useEffect(() => {
     function handleOutside(e) {
       if (touchingRef.current) return
       if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setOpen(false)
-        setNearbyOpen(false)
+        setOpen(false); setNearbyOpen(false)
       }
     }
     document.addEventListener('mousedown', handleOutside)
@@ -144,28 +167,28 @@ export default function LocationSearch({
   }, [])
 
   function handleFocus() {
-    if (value.length >= 2 && suggestions.length > 0) { setOpen(true); return }
+    if (value.length >= 2 && (suggestions.length > 0 || geocodeFallback)) { setOpen(true); return }
     if (value.length < 2) fetchNearby()
   }
 
-  function handleSelect(prediction) {
-    setOpen(false)
-    setSuggestions([])
+  // textSearch result sudah punya geometry.location — tidak perlu geocode lagi
+  function handleSelect(place) {
+    setOpen(false); setSuggestions([]); setGeocodeFallback(null)
     touchingRef.current = false
-    onChange(prediction.description)
+    const display = place.name + (place.formatted_address ? `, ${place.formatted_address}` : '')
+    onChange(display)
+    if (place.geometry?.location) {
+      onSelect({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng(), display })
+    } else {
+      onSelect({ lat: null, lng: null, display })
+    }
+  }
 
-    const geocoder = getGeocoder()
-    if (!geocoder) { onSelect({ lat: null, lng: null, display: prediction.description }); return }
-
-    geocoder.geocode({ placeId: prediction.place_id, language: 'id' }, (results, status) => {
-      if (status === 'OK' && results[0]) {
-        const loc = results[0].geometry.location
-        onSelect({ lat: loc.lat(), lng: loc.lng(), display: prediction.description })
-      } else {
-        onSelect({ lat: null, lng: null, display: prediction.description })
-      }
-    })
-    refreshToken()
+  function handleSelectGeocode(hit) {
+    setOpen(false); setSuggestions([]); setGeocodeFallback(null)
+    touchingRef.current = false
+    onChange(hit.display)
+    onSelect({ lat: hit.lat, lng: hit.lng, display: hit.display })
   }
 
   function handleSelectNearby(place) {
@@ -173,34 +196,23 @@ export default function LocationSearch({
     touchingRef.current = false
     const display = place.name + (place.vicinity ? `, ${place.vicinity}` : '')
     onChange(display)
-
     if (place.geometry?.location) {
       onSelect({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng(), display })
-    } else if (place.place_id) {
-      const geocoder = getGeocoder()
-      if (geocoder) {
-        geocoder.geocode({ placeId: place.place_id, language: 'id' }, (results, status) => {
-          if (status === 'OK' && results[0]) {
-            const loc = results[0].geometry.location
-            onSelect({ lat: loc.lat(), lng: loc.lng(), display })
-          } else {
-            onSelect({ lat: null, lng: null, display })
-          }
-        })
-      }
+    } else {
+      onSelect({ lat: null, lng: null, display })
     }
-    refreshToken()
   }
 
-  function mainText(p) {
-    return p.structured_formatting?.main_text ?? p.description.split(',')[0]
-  }
-  function secondaryText(p) {
-    return p.structured_formatting?.secondary_text ?? ''
+  function handleFreeText() {
+    setOpen(false); setSuggestions([]); setGeocodeFallback(null)
+    touchingRef.current = false
+    onSelect({ lat: null, lng: null, display: value })
   }
 
-  const showNearby = nearbyOpen && nearbyPlaces.length > 0 && value.length < 2
-  const showSuggest = open && suggestions.length > 0
+  const showNearby     = nearbyOpen && nearbyPlaces.length > 0 && value.length < 2
+  const showSuggest    = open && suggestions.length > 0
+  const showGeocode    = open && suggestions.length === 0 && geocodeFallback?.length > 0
+  const showFreeText   = open && suggestions.length === 0 && !geocodeFallback && value.length >= 2
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
@@ -228,13 +240,12 @@ export default function LocationSearch({
         </div>
       </div>
 
-      {/* ── Dropdown Nearby Populer ── */}
+      {/* ── Dropdown: Nearby Populer (fokus kosong) ── */}
       {showNearby && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
           background: 'var(--k-card)', border: '1px solid var(--k-border)',
-          borderRadius: 12, overflow: 'hidden',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+          borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
           maxHeight: 320, overflowY: 'auto',
         }}>
           <div style={{ padding: '8px 14px 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -276,57 +287,132 @@ export default function LocationSearch({
               )}
             </button>
           ))}
-          <div style={{ padding: '6px 14px', borderTop: '1px solid var(--k-border)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-            <img src="https://maps.gstatic.com/mapfiles/api-3/images/google_white5.png" alt="Google" style={{ height: 12, opacity: 0.5 }} />
-            <span style={{ fontSize: 10, color: 'var(--k-muted)' }}>Powered by Google</span>
-          </div>
+          <GoogleBadge />
         </div>
       )}
 
-      {/* ── Dropdown Autocomplete ── */}
+      {/* ── Dropdown: textSearch results ── */}
       {showSuggest && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
           background: 'var(--k-card)', border: '1px solid var(--k-border)',
-          borderRadius: 12, overflow: 'hidden',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-          maxHeight: 300, overflowY: 'auto',
+          borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+          maxHeight: 320, overflowY: 'auto',
         }}>
-          {suggestions.map((s, i) => (
-            <button key={s.place_id} type="button"
+          {suggestions.map((place, i) => (
+            <button key={place.place_id ?? i} type="button"
               onMouseDown={e => e.preventDefault()}
               onTouchStart={() => { touchingRef.current = true }}
-              onTouchEnd={() => handleSelect(s)}
-              onClick={() => handleSelect(s)}
+              onTouchEnd={() => handleSelect(place)}
+              onClick={() => handleSelect(place)}
               style={{
-                width: '100%', textAlign: 'left', padding: '12px 14px',
+                width: '100%', textAlign: 'left', padding: '11px 14px',
                 background: 'none', border: 'none', cursor: 'pointer',
                 borderBottom: i < suggestions.length - 1 ? '1px solid var(--k-border)' : 'none',
                 color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10,
                 WebkitTapHighlightColor: 'rgba(99,102,241,0.1)',
               }}
             >
-              <span style={{ flexShrink: 0, marginTop: 2, fontSize: 15 }}>📍</span>
+              <span style={{ flexShrink: 0, marginTop: 2, fontSize: 16 }}>{placeEmoji(place.types)}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {mainText(s)}
+                  {place.name}
                 </div>
-                {secondaryText(s) && (
+                {place.formatted_address && (
                   <div style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
-                    {secondaryText(s)}
+                    {place.formatted_address}
                   </div>
                 )}
               </div>
+              {place.rating && (
+                <div style={{ flexShrink: 0, fontSize: 10, color: '#F6AD55', fontWeight: 700, marginTop: 2 }}>
+                  ★ {place.rating}
+                </div>
+              )}
             </button>
           ))}
-          <div style={{ padding: '6px 14px', borderTop: '1px solid var(--k-border)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-            <img src="https://maps.gstatic.com/mapfiles/api-3/images/google_white5.png" alt="Google" style={{ height: 12, opacity: 0.5 }} />
-            <span style={{ fontSize: 10, color: 'var(--k-muted)' }}>Powered by Google</span>
+          <GoogleBadge />
+        </div>
+      )}
+
+      {/* ── Dropdown: Geocoding fallback ── */}
+      {showGeocode && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
+          background: 'var(--k-card)', border: '1px solid var(--k-border)',
+          borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+        }}>
+          <div style={{ padding: '8px 14px 4px' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Hasil Pencarian Peta</span>
           </div>
+          {geocodeFallback.map((hit, i) => (
+            <button key={hit.place_id ?? i} type="button"
+              onMouseDown={e => e.preventDefault()}
+              onTouchStart={() => { touchingRef.current = true }}
+              onTouchEnd={() => handleSelectGeocode(hit)}
+              onClick={() => handleSelectGeocode(hit)}
+              style={{
+                width: '100%', textAlign: 'left', padding: '11px 14px',
+                background: 'none', border: 'none', cursor: 'pointer',
+                borderBottom: i < geocodeFallback.length - 1 ? '1px solid var(--k-border)' : 'none',
+                color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10,
+                WebkitTapHighlightColor: 'rgba(99,102,241,0.1)',
+              }}
+            >
+              <span style={{ flexShrink: 0, marginTop: 2, fontSize: 16 }}>🗺️</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {hit.display.split(',')[0]}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--k-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+                  {hit.display.split(',').slice(1).join(',').trim()}
+                </div>
+              </div>
+            </button>
+          ))}
+          <GoogleBadge />
+        </div>
+      )}
+
+      {/* ── Dropdown: Teks bebas (last resort) ── */}
+      {showFreeText && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
+          background: 'var(--k-card)', border: '1px solid var(--k-border)',
+          borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+        }}>
+          <button type="button"
+            onMouseDown={e => e.preventDefault()}
+            onTouchStart={() => { touchingRef.current = true }}
+            onTouchEnd={handleFreeText}
+            onClick={handleFreeText}
+            style={{
+              width: '100%', textAlign: 'left', padding: '12px 14px',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--k-text)', display: 'flex', alignItems: 'flex-start', gap: 10,
+              WebkitTapHighlightColor: 'rgba(99,102,241,0.1)',
+            }}
+          >
+            <span style={{ flexShrink: 0, marginTop: 2, fontSize: 15 }}>✏️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 13 }}>Gunakan "{value}"</div>
+              <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 1 }}>⚠️ Lokasi tidak ditemukan — driver akan konfirmasi via chat</div>
+            </div>
+          </button>
+          <GoogleBadge />
         </div>
       )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
+function GoogleBadge() {
+  return (
+    <div style={{ padding: '5px 14px', borderTop: '1px solid var(--k-border)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+      <img src="https://maps.gstatic.com/mapfiles/api-3/images/google_white5.png" alt="Google" style={{ height: 12, opacity: 0.5 }} />
+      <span style={{ fontSize: 10, color: 'var(--k-muted)' }}>Powered by Google</span>
     </div>
   )
 }

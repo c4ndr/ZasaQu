@@ -316,17 +316,36 @@ export default function RidePage() {
 
   const getMyLocation = () => {
     if (!navigator.geolocation) return alert('Browser tidak mendukung GPS.')
+    setPickup('Mencari lokasi...')
     navigator.geolocation.getCurrentPosition(
       pos => {
-        setPickupC({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        setPickupC({ lat, lng })
         setPickup('Lokasi saya saat ini')
+
+        // Reverse geocode untuk tampilkan alamat asli
+        if (window.google?.maps) {
+          const geocoder = new window.google.maps.Geocoder()
+          geocoder.geocode({ location: { lat, lng }, language: 'id' }, (results, status) => {
+            if (status === 'OK' && results?.[0]) {
+              setPickup(results[0].formatted_address)
+            }
+          })
+        }
       },
-      () => alert('Gagal mendapatkan lokasi. Coba ketik alamat manual.')
+      () => {
+        setPickup('')
+        alert('Gagal mendapatkan lokasi. Pastikan GPS aktif dan izin lokasi diberikan.')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
   }
 
   const handleEstimate = async () => {
-    if (!pickupCoord || !destCoord) return setError('Pilih lokasi pickup dan tujuan terlebih dahulu.')
+    if (!pickupCoord) return setError('Pilih lokasi jemput terlebih dahulu.')
+    if (!dest.trim()) return setError('Isi alamat tujuan terlebih dahulu.')
+    if (!destCoord?.lat) return setError('Lokasi tujuan tidak terdeteksi di Maps. Coba ketik nama jalan atau desa yang lebih lengkap.')
     if (rideType === 'school' && !passengerName.trim()) return setError('Isi nama anak.')
     if (rideType === 'school' && !schoolName.trim()) return setError('Isi nama sekolah.')
     setLoading(true); setError(null)
