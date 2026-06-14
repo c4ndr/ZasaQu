@@ -52,6 +52,12 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
+        <!-- Floating bubble foreground service -->
+        <service
+            android:name=".FloatingBubbleService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -65,6 +71,8 @@
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Floating bubble overlay -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- GPS & Lokasi -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

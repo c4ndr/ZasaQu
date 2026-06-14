@@ -18,6 +18,7 @@ import { App as CapApp } from '@capacitor/app'
 import { registerPlugin } from '@capacitor/core'
 const AgoraVoice = registerPlugin('AgoraVoice')
 import useAppInfo from './hooks/useAppInfo'
+import useFloatingBubble from './hooks/useFloatingBubble'
 
 // Guard route modul — redirect ke dashboard jika modul dinonaktifkan admin
 function ModuleRoute({ featureKey, children }) {
@@ -218,6 +219,9 @@ function AppRoutes() {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
     libraries: _GMAPS_LIBS,
   })
+
+  // Floating bubble — Android only, kelola bubble notifikasi order aktif
+  useFloatingBubble()
 
   useEffect(() => {
     const handler = () => { logout(); navigate('/login', { replace: true }) }
