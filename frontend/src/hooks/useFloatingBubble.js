@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { useAuth } from '../context/AuthContext'
 import echo from '../services/echo'
-import { showBubble, dismissBubble, resetBubbleBadge, hasOverlayPermission, requestOverlayPermission } from '../services/floatingBubble'
+import { showBubble, resetBubbleBadge, hasOverlayPermission, requestOverlayPermission } from '../services/floatingBubble'
 
 const IS_ANDROID = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
 

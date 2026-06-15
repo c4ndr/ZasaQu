@@ -41,10 +41,11 @@ public class FloatingBubbleService extends Service {
     private int           unreadCount   = 0;
     private long          lastSoundTime = 0;
 
-    private int screenWidth;
-    private int screenHeight;
-    private int bubbleSize;
-    private int trashThreshold;
+    private int   screenWidth;
+    private int   screenHeight;
+    private int   bubbleSize;
+    private int   trashThreshold;
+    private float density;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -64,6 +65,7 @@ public class FloatingBubbleService extends Service {
                 playNotifSound();
                 break;
             case "RESET_BADGE":
+                if (bubbleView == null) { stopSelf(); break; } // bubble sudah ditutup
                 unreadCount = 0;
                 updateBadge();
                 break;
@@ -98,10 +100,11 @@ public class FloatingBubbleService extends Service {
 
     private void initMetrics() {
         DisplayMetrics dm = getResources().getDisplayMetrics();
+        density        = dm.density;
         screenWidth    = dm.widthPixels;
         screenHeight   = dm.heightPixels;
-        bubbleSize     = (int) (80 * dm.density);
-        trashThreshold = (int) (130 * dm.density);
+        bubbleSize     = (int) (80 * density);
+        trashThreshold = (int) (130 * density);
     }
 
     // ── Bubble — Logo ZasaQu (bubble_logo.png) ───────────────────────────────
@@ -266,8 +269,9 @@ public class FloatingBubbleService extends Service {
     }
 
     private void snapToEdge(WindowManager.LayoutParams lp) {
-        int mid = screenWidth / 2;
-        lp.x = (lp.x + bubbleSize / 2 < mid) ? 0 : screenWidth - bubbleSize - 16;
+        int mid    = screenWidth / 2;
+        int margin = (int)(16 * density);
+        lp.x = (lp.x + bubbleSize / 2 < mid) ? 0 : screenWidth - bubbleSize - margin;
         windowManager.updateViewLayout(bubbleView, lp);
     }
 

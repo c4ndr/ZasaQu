@@ -67,11 +67,9 @@ public class FloatingBubblePlugin extends Plugin {
     public void resetBadge(PluginCall call) {
         Intent i = new Intent(getContext(), FloatingBubbleService.class);
         i.setAction("RESET_BADGE");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            getContext().startForegroundService(i);
-        } else {
-            getContext().startService(i);
-        }
+        // Selalu pakai startService — service mungkin tidak sedang berjalan (bubble sudah ditutup)
+        // startForegroundService akan crash jika service tidak panggil startForeground() dalam 5 detik
+        getContext().startService(i);
         call.resolve();
     }
 
