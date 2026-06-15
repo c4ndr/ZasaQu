@@ -20,8 +20,8 @@ class GpsController extends Controller
 {
     // Interval update GPS (detik)
     const GPS_INTERVAL = 5;
-    // Redis TTL: 150 detik — toleran untuk jeda sinyal, layar HP mati, background app
-    const GPS_TTL = 150;
+    // Redis TTL: 300 detik — toleran untuk background throttling Android (send tiap 8 detik)
+    const GPS_TTL = 300;
 
     public function __construct(
         private OrderService $orderService,
