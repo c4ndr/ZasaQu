@@ -195,8 +195,7 @@ export default function MitraHomeOrdersPage() {
   const [loading,   setLoading]   = useState(true)
   const [tab,       setTab]       = useState('available')
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  const silentRefresh = useCallback(async () => {
     try {
       const [actRes, avRes] = await Promise.all([
         api.get('/home/mitra/active'),
@@ -205,8 +204,13 @@ export default function MitraHomeOrdersPage() {
       setActive(actRes.data || null)
       setAvailable(avRes.data || [])
     } catch {}
-    setLoading(false)
   }, [])
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    await silentRefresh()
+    setLoading(false)
+  }, [silentRefresh])
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -242,7 +246,7 @@ export default function MitraHomeOrdersPage() {
       </nav>
 
       <div style={{ padding: '16px 16px 32px' }}>
-        {active && <ActiveCard order={active} onUpdate={fetchData} />}
+        {active && <ActiveCard order={active} onUpdate={silentRefresh} />}
 
         {!active && (
           <>

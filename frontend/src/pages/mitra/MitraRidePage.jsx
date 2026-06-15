@@ -230,8 +230,7 @@ export default function MitraRidePage() {
 
   const vehicleType = user?.role?.includes('mobil') ? 'mobil' : 'motor'
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  const silentRefresh = useCallback(async () => {
     try {
       const [actRes, avRes] = await Promise.all([
         api.get('/ride/mitra/active'),
@@ -240,8 +239,13 @@ export default function MitraRidePage() {
       setActive(actRes.data || null)
       setAvailable(avRes.data || [])
     } catch {}
-    setLoading(false)
   }, [])
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    await silentRefresh()
+    setLoading(false)
+  }, [silentRefresh])
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -271,9 +275,9 @@ export default function MitraRidePage() {
   useEffect(() => {
     if (!active) return
     const ch = echo.channel(`ride.orders.${active.id}`)
-    ch.listen('.ride.status.updated', () => fetchData())
+    ch.listen('.ride.status.updated', () => silentRefresh())
     return () => echo.leave(`ride.orders.${active.id}`)
-  }, [active?.id, fetchData])
+  }, [active?.id, silentRefresh])
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', color: 'var(--k-text)', fontFamily: 'system-ui,sans-serif' }}>
@@ -300,7 +304,7 @@ export default function MitraRidePage() {
 
       <div style={{ padding: '16px 16px 32px' }}>
         {/* Ride aktif */}
-        {active && <ActiveRideCard order={active} onUpdate={fetchData} />}
+        {active && <ActiveRideCard order={active} onUpdate={silentRefresh} />}
 
         {/* Tab */}
         {!active && (
