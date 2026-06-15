@@ -1104,22 +1104,52 @@ export default function MitraOrdersPage() {
           </div>
         )}
 
-        {/* ZasaRide shortcut — hanya untuk mitra_motor / mitra_mobil */}
-        {vehicleType && features?.zasaride && (
-          <Link to="/mitra/ride" style={{
-            display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
-            padding: '12px 14px', borderRadius: 14, marginBottom: 14,
-            background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.25)',
-          }}>
-            <span style={{ fontSize: 24, flexShrink: 0 }}>{vehicleType === 'mobil' ? '🚗' : '🏍️'}</span>
-            <div style={{ flex: 1 }}>
-              <p style={{ color: 'var(--k-accent)', fontSize: 13, fontWeight: 800, marginBottom: 2 }}>ZasaRide</p>
-              <p style={{ color: 'var(--k-muted)', fontSize: 11 }}>
-                {vehicleType === 'mobil' ? 'Mitra Mobil — lihat order antar jemput' : 'Mitra Motor — lihat order ojek & antar jemput'}
-              </p>
-            </div>
-            <span style={{ color: 'var(--k-accent)', fontSize: 18 }}>→</span>
-          </Link>
+        {/* Shortcut modul tambahan — ZasaRide, ZasaHome, ZasaServ */}
+        {(vehicleType || features?.zasahome || features?.zasaserv) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+            {vehicleType && features?.zasaride && (
+              <Link to="/mitra/ride" style={{
+                display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
+                padding: '12px 14px', borderRadius: 14,
+                background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.25)',
+              }}>
+                <span style={{ fontSize: 22, flexShrink: 0 }}>{vehicleType === 'mobil' ? '🚗' : '🏍️'}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--k-accent)', fontSize: 13, fontWeight: 800, marginBottom: 1 }}>ZasaRide</p>
+                  <p style={{ color: 'var(--k-muted)', fontSize: 11 }}>Ojek & antar jemput</p>
+                </div>
+                <span style={{ color: 'var(--k-accent)', fontSize: 18 }}>→</span>
+              </Link>
+            )}
+            {features?.zasahome && (
+              <Link to="/mitra/home/orders" style={{
+                display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
+                padding: '12px 14px', borderRadius: 14,
+                background: 'rgba(234,179,8,0.07)', border: '1px solid rgba(234,179,8,0.25)',
+              }}>
+                <span style={{ fontSize: 22, flexShrink: 0 }}>🏠</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: '#EAB308', fontSize: 13, fontWeight: 800, marginBottom: 1 }}>ZasaHome</p>
+                  <p style={{ color: 'var(--k-muted)', fontSize: 11 }}>Laundry, cleaning, pijat & tukang</p>
+                </div>
+                <span style={{ color: '#EAB308', fontSize: 18 }}>→</span>
+              </Link>
+            )}
+            {features?.zasaserv && (
+              <Link to="/mitra/serv/orders" style={{
+                display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
+                padding: '12px 14px', borderRadius: 14,
+                background: 'rgba(14,165,233,0.07)', border: '1px solid rgba(14,165,233,0.25)',
+              }}>
+                <span style={{ fontSize: 22, flexShrink: 0 }}>🔧</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: '#0EA5E9', fontSize: 13, fontWeight: 800, marginBottom: 1 }}>ZasaServ</p>
+                  <p style={{ color: 'var(--k-muted)', fontSize: 11 }}>Servis AC, elektronik, listrik & bangunan</p>
+                </div>
+                <span style={{ color: '#0EA5E9', fontSize: 18 }}>→</span>
+              </Link>
+            )}
+          </div>
         )}
 
         {/* Tabs */}

@@ -7,13 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 class HomeOrder extends Model
 {
     protected $fillable = [
-        'order_number', 'customer_id', 'provider_id', 'status',
+        'order_number', 'customer_id', 'provider_id', 'mitra_id', 'status',
         'pickup_address', 'pickup_lat', 'pickup_lng',
         'pickup_type', 'pickup_fee',
         'delivery_address', 'delivery_lat', 'delivery_lng',
         'notes', 'total_price',
         'commission_rate', 'platform_commission', 'provider_income',
-        'scheduled_pickup_at', 'ready_at', 'completed_at', 'cancel_reason',
+        'scheduled_pickup_at', 'ready_at', 'completed_at', 'accepted_at', 'cancel_reason',
     ];
 
     protected $casts = [
@@ -28,6 +28,7 @@ class HomeOrder extends Model
 
     public function customer()  { return $this->belongsTo(User::class, 'customer_id'); }
     public function provider()  { return $this->belongsTo(HomeProvider::class, 'provider_id'); }
+    public function mitra()     { return $this->belongsTo(User::class, 'mitra_id'); }
     public function items()     { return $this->hasMany(HomeOrderItem::class, 'order_id'); }
 
     public static function generateNumber(): string

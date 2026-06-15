@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Home\CustomerController;
 use App\Http\Controllers\Api\Home\ProviderController;
+use App\Http\Controllers\Api\Home\MitraController as HomeMitraController;
 use App\Http\Controllers\Api\Admin\HomeController as AdminHomeController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +40,15 @@ Route::prefix('home/provider')->middleware(['auth:sanctum', 'role:home_provider,
     // Orders
     Route::get('orders',                              [ProviderController::class, 'orders']);
     Route::patch('orders/{order}/status',             [ProviderController::class, 'updateOrderStatus']);
+});
+
+// ── Mitra routes ─────────────────────────────────────────────────────────────
+Route::prefix('home/mitra')->middleware(['auth:sanctum', 'role:mitra_motor,mitra_mobil,admin'])->group(function () {
+    Route::get('available',              [HomeMitraController::class, 'available']);
+    Route::get('active',                 [HomeMitraController::class, 'active']);
+    Route::get('history',                [HomeMitraController::class, 'history']);
+    Route::post('orders/{id}/accept',    [HomeMitraController::class, 'accept']);
+    Route::patch('orders/{id}/status',   [HomeMitraController::class, 'updateStatus']);
 });
 
 // ── Admin Home routes ────────────────────────────────────────────────────────

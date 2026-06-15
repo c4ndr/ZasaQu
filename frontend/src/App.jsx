@@ -117,6 +117,8 @@ import AdminModulesPage from './pages/admin/AdminModulesPage'
 import RidePage from './pages/zasaride/RidePage'
 import RideOrdersPage from './pages/zasaride/RideOrdersPage'
 import MitraRidePage from './pages/mitra/MitraRidePage'
+import MitraHomeOrdersPage from './pages/mitra/MitraHomeOrdersPage'
+import MitraServOrdersPage from './pages/mitra/MitraServOrdersPage'
 import NotFoundPage from './pages/NotFoundPage'
 import LandingPage from './pages/LandingPage'
 import AboutPage from './pages/AboutPage'
@@ -358,6 +360,8 @@ function AppRoutes() {
       <Route path="/ride/orders" element={<ModuleRoute featureKey="zasaride"><RideOrdersPage /></ModuleRoute>} />
       <Route path="/ride/chat/:id" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/mitra/ride" element={<MitraRoute><ModuleRoute featureKey="zasaride"><MitraRidePage /></ModuleRoute></MitraRoute>} />
+      <Route path="/mitra/home/orders" element={<MitraRoute><ModuleRoute featureKey="zasahome"><MitraHomeOrdersPage /></ModuleRoute></MitraRoute>} />
+      <Route path="/mitra/serv/orders" element={<MitraRoute><ModuleRoute featureKey="zasaserv"><MitraServOrdersPage /></ModuleRoute></MitraRoute>} />
       <Route path="/ride/mitra/chat/:id" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/admin/ride" element={<AdminRoute><AdminRideOrdersPage /></AdminRoute>} />
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Serv\CustomerController;
 use App\Http\Controllers\Api\Serv\ProviderController;
+use App\Http\Controllers\Api\Serv\MitraController as ServMitraController;
 use App\Http\Controllers\Api\Admin\ServController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,15 @@ Route::prefix('serv/provider')->middleware(['auth:sanctum', 'role:serv_provider,
 
     Route::get('orders',                           [ProviderController::class, 'orders']);
     Route::patch('orders/{order}/status',          [ProviderController::class, 'updateOrderStatus']);
+});
+
+// ── Mitra routes ─────────────────────────────────────────────────────────────
+Route::prefix('serv/mitra')->middleware(['auth:sanctum', 'role:mitra_motor,mitra_mobil,admin'])->group(function () {
+    Route::get('available',              [ServMitraController::class, 'available']);
+    Route::get('active',                 [ServMitraController::class, 'active']);
+    Route::get('history',                [ServMitraController::class, 'history']);
+    Route::post('orders/{id}/accept',    [ServMitraController::class, 'accept']);
+    Route::patch('orders/{id}/status',   [ServMitraController::class, 'updateStatus']);
 });
 
 // ── Admin routes ─────────────────────────────────────────────────────────────
