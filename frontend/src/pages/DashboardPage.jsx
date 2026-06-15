@@ -133,66 +133,6 @@ function MainCard({ to, emoji, bgDecor, title, desc, gradient, borderColor }) {
   )
 }
 
-function MitraModuleCard({ title, emoji, color, to, activeEndpoint, availableEndpoint }) {
-  const [avail,  setAvail]  = useState(null)
-  const [active, setActive] = useState(null)
-
-  useEffect(() => {
-    Promise.all([
-      api.get(availableEndpoint).then(r => setAvail(Array.isArray(r.data) ? r.data.length : 0)),
-      api.get(activeEndpoint).then(r => setActive(r.data ?? null)),
-    ]).catch(() => {})
-  }, [availableEndpoint, activeEndpoint])
-
-  return (
-    <Link to={to} style={{ textDecoration: 'none', display: 'block', marginBottom: 10 }}>
-      <div style={{
-        background: 'var(--k-card)', borderRadius: 16,
-        border: `1px solid ${color}33`, overflow: 'hidden',
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '12px 14px 10px',
-          borderBottom: `1px solid ${color}22`,
-        }}>
-          <span style={{ fontSize: 20 }}>{emoji}</span>
-          <p style={{ fontWeight: 800, fontSize: 14, color, flex: 1 }}>{title}</p>
-          <span style={{ color, fontSize: 16, opacity: 0.7 }}>→</span>
-        </div>
-        {/* Stats */}
-        <div style={{ display: 'flex', borderTop: 'none' }}>
-          {/* Tersedia */}
-          <div style={{
-            flex: 1, padding: '10px 0', textAlign: 'center',
-            borderRight: `1px solid ${color}18`,
-          }}>
-            <p style={{ fontSize: 22, fontWeight: 900, color: avail > 0 ? color : 'var(--k-muted)', lineHeight: 1, marginBottom: 3 }}>
-              {avail ?? '—'}
-            </p>
-            <p style={{ fontSize: 10, color: 'var(--k-muted)', fontWeight: 600 }}>Tersedia</p>
-          </div>
-          {/* Aktif */}
-          <div style={{
-            flex: 1, padding: '10px 0', textAlign: 'center',
-            borderRight: `1px solid ${color}18`,
-          }}>
-            <p style={{ fontSize: 22, fontWeight: 900, color: active ? '#22C55E' : 'var(--k-muted)', lineHeight: 1, marginBottom: 3 }}>
-              {active === null ? '—' : active ? '1' : '0'}
-            </p>
-            <p style={{ fontSize: 10, color: 'var(--k-muted)', fontWeight: 600 }}>Aktif</p>
-          </div>
-          {/* Riwayat */}
-          <div style={{ flex: 1, padding: '10px 0', textAlign: 'center' }}>
-            <p style={{ fontSize: 18, lineHeight: 1, marginBottom: 3 }}>📋</p>
-            <p style={{ fontSize: 10, color: 'var(--k-muted)', fontWeight: 600 }}>Riwayat</p>
-          </div>
-        </div>
-      </div>
-    </Link>
-  )
-}
-
 export default function DashboardPage() {
   const { user } = useAuth()
   const navigate  = useNavigate()
@@ -525,6 +465,30 @@ export default function DashboardPage() {
                   </div>
                 </Link>
               )}
+              {vehicleType && feat.zasaride !== false && (
+                <Link to="/mitra/ride" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
+                  <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>{vehicleType === 'mobil' ? '🚗' : '🏍️'}</div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#00C896' }}>ZasaRide</p>
+                  </div>
+                </Link>
+              )}
+              {feat.zasahome !== false && (
+                <Link to="/mitra/home/orders" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
+                  <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>🏠</div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>ZasaHome</p>
+                  </div>
+                </Link>
+              )}
+              {feat.zasaserv !== false && (
+                <Link to="/mitra/serv/orders" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
+                  <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>🔧</div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#0EA5E9' }}>ZasaServ</p>
+                  </div>
+                </Link>
+              )}
               <Link to="/mitra/gps" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
                 <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
                   <div style={{ fontSize: 22, marginBottom: 4 }}>📍</div>
@@ -532,38 +496,6 @@ export default function DashboardPage() {
                 </div>
               </Link>
             </div>
-
-            {/* Card ZasaRide / ZasaHome / ZasaServ — dengan stats order */}
-            {vehicleType && feat.zasaride !== false && (
-              <MitraModuleCard
-                title="ZasaRide"
-                emoji={vehicleType === 'mobil' ? '🚗' : '🏍️'}
-                color="#00C896"
-                to="/mitra/ride"
-                activeEndpoint="/ride/mitra/active"
-                availableEndpoint="/ride/mitra/available"
-              />
-            )}
-            {feat.zasahome !== false && (
-              <MitraModuleCard
-                title="ZasaHome"
-                emoji="🏠"
-                color="#EAB308"
-                to="/mitra/home/orders"
-                activeEndpoint="/home/mitra/active"
-                availableEndpoint="/home/mitra/available"
-              />
-            )}
-            {feat.zasaserv !== false && (
-              <MitraModuleCard
-                title="ZasaServ"
-                emoji="🔧"
-                color="#0EA5E9"
-                to="/mitra/serv/orders"
-                activeEndpoint="/serv/mitra/active"
-                availableEndpoint="/serv/mitra/available"
-              />
-            )}
           </>
         )}
 
