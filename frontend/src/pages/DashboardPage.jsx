@@ -136,7 +136,8 @@ function MainCard({ to, emoji, bgDecor, title, desc, gradient, borderColor }) {
 export default function DashboardPage() {
   const { user } = useAuth()
   const navigate  = useNavigate()
-  const isMitra   = user?.role?.startsWith('mitra')
+  const isMitra      = user?.role?.startsWith('mitra')
+  const vehicleType  = user?.role === 'mitra_motor' ? 'motor' : user?.role === 'mitra_mobil' ? 'mobil' : null
 
   const [walletData,       setWalletData]       = useState(null)
   const [locationName,     setLocationName]     = useState(null)
@@ -461,6 +462,30 @@ export default function DashboardPage() {
                   <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
                     <div style={{ fontSize: 22, marginBottom: 4 }}>🛒</div>
                     <p style={{ fontSize: 11, fontWeight: 700, color: '#7C3AED' }}>ZasaShop</p>
+                  </div>
+                </Link>
+              )}
+              {vehicleType && feat.zasaride !== false && (
+                <Link to="/mitra/ride" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
+                  <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>{vehicleType === 'mobil' ? '🚗' : '🏍️'}</div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#00C896' }}>ZasaRide</p>
+                  </div>
+                </Link>
+              )}
+              {feat.zasahome !== false && (
+                <Link to="/mitra/home/orders" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
+                  <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>🏠</div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>ZasaHome</p>
+                  </div>
+                </Link>
+              )}
+              {feat.zasaserv !== false && (
+                <Link to="/mitra/serv/orders" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
+                  <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>🔧</div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#0EA5E9' }}>ZasaServ</p>
                   </div>
                 </Link>
               )}
