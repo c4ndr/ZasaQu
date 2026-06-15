@@ -63,6 +63,18 @@ public class FloatingBubblePlugin extends Plugin {
         call.resolve();
     }
 
+    @PluginMethod
+    public void resetBadge(PluginCall call) {
+        Intent i = new Intent(getContext(), FloatingBubbleService.class);
+        i.setAction("RESET_BADGE");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            getContext().startForegroundService(i);
+        } else {
+            getContext().startService(i);
+        }
+        call.resolve();
+    }
+
     // ── Helper ───────────────────────────────────────────────────────────────
 
     private boolean canOverlay() {

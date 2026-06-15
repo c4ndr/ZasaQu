@@ -40,3 +40,9 @@ export async function dismissBubble() {
   if (!IS_ANDROID) return
   try { await FloatingBubble.dismiss() } catch {}
 }
+
+// Reset badge unread (panggil saat user membuka halaman chat)
+export async function resetBubbleBadge() {
+  if (!IS_ANDROID) return
+  try { await FloatingBubble.resetBadge() } catch {}
+}

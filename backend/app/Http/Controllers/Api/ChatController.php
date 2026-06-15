@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\ChatInboxNotification;
 use App\Events\NewChatMessage;
 use App\Http\Controllers\Controller;
 use App\Models\ChatMessage;
@@ -134,7 +135,8 @@ class ChatController extends Controller
         if (!$isBlocked) {
             $recipient = ($user->id === $order->customer_id) ? $order->mitra : $order->customer;
             if ($recipient) {
-                $this->notifService->newChatMessage($recipient, $user->name, $order->order_number, $order->id);
+                broadcast(new ChatInboxNotification($message, $recipient->id, $room));
+                $this->notifService->newChatMessage($recipient, $user->name, $order->order_number, $order->id, $room->order_type ?? 'zasago');
             }
         }
 

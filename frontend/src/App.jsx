@@ -393,6 +393,10 @@ function resolveNotifUrl(data = {}, userRole = '') {
   if (type === 'incoming_call' && order_id && order_type) {
     return resolveChatPath(userRole, order_type, order_id)
   }
+  // Notif pesan chat — langsung ke halaman chat
+  if (type === 'chat_message' && order_id && order_type) {
+    return resolveChatPath(userRole, order_type, order_id)
+  }
   if (type.startsWith('food_') || module === 'zasafood')   return order_id ? `/food/orders/${order_id}`  : '/food/orders'
   if (type.startsWith('mart_') || module === 'zasamart')   return order_id ? `/mart/orders/${order_id}`  : '/mart/orders'
   if (order_id) return `/orders/${order_id}/tracking`
@@ -400,14 +404,15 @@ function resolveNotifUrl(data = {}, userRole = '') {
 }
 
 // Banner notifikasi foreground (native Android — FCM tidak auto-show saat app buka)
-function ForegroundBanner({ notif, onClose }) {
+function ForegroundBanner({ notif, onClose, onTap }) {
   useEffect(() => {
     const t = setTimeout(onClose, 5000)
     return () => clearTimeout(t)
   }, [onClose])
   if (!notif) return null
+  const handleClick = () => { onTap?.(); onClose() }
   return (
-    <div onClick={onClose} style={{
+    <div onClick={handleClick} style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10000,
       background: 'linear-gradient(135deg, #1A1A2E, #16213E)',
       borderBottom: '2px solid var(--k-accent)',
@@ -528,6 +533,7 @@ function NotifBridge() {
     <ForegroundBanner
       notif={foregroundNotif}
       onClose={() => setForegroundNotif(null)}
+      onTap={foregroundNotif?.data ? () => navigate(resolveNotifUrl(foregroundNotif.data, user?.role)) : undefined}
     />
   )
 }
@@ -535,9 +541,10 @@ function NotifBridge() {
 // Resolve URL chat dari role user + orderType + orderId
 function resolveChatPath(role, orderType, orderId) {
   const isMitra = role?.startsWith('mitra')
-  if (orderType === 'zasafood')  return isMitra ? `/mitra/food/orders/${orderId}/chat` : `/food/orders/${orderId}/chat`
-  if (orderType === 'zasamart')  return isMitra ? `/mitra/mart/orders/${orderId}/chat` : `/mart/orders/${orderId}/chat`
-  if (orderType === 'zasahome')  return role === 'home_provider' ? `/home/provider/orders/${orderId}/chat` : `/home/orders/${orderId}/chat`
+  if (orderType === 'zasaride') return isMitra ? `/ride/mitra/chat/${orderId}` : `/ride/chat/${orderId}`
+  if (orderType === 'zasafood') return isMitra ? `/mitra/food/orders/${orderId}/chat` : `/food/orders/${orderId}/chat`
+  if (orderType === 'zasamart') return isMitra ? `/mitra/mart/orders/${orderId}/chat` : `/mart/orders/${orderId}/chat`
+  if (orderType === 'zasahome') return role === 'home_provider' ? `/home/provider/orders/${orderId}/chat` : `/home/orders/${orderId}/chat`
   return isMitra ? `/mitra/orders/${orderId}/chat` : `/orders/${orderId}/chat`
 }
 
