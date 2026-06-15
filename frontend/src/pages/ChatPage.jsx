@@ -268,7 +268,7 @@ export default function ChatPage() {
   )
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <style>{`
         @keyframes msgIn {
           from { opacity: 0; transform: translateY(6px); }
@@ -475,7 +475,11 @@ export default function ChatPage() {
               transition: 'border-color 0.2s, box-shadow 0.2s',
               maxHeight: 120, overflow: 'auto',
             }}
-            onFocus={e => { e.target.style.borderColor = 'var(--k-accent)'; e.target.style.boxShadow = '0 0 0 3px var(--k-glow)' }}
+            onFocus={e => {
+              e.target.style.borderColor = 'var(--k-accent)'
+              e.target.style.boxShadow = '0 0 0 3px var(--k-glow)'
+              setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 300)
+            }}
             onBlur={e => { e.target.style.borderColor = 'var(--k-border)'; e.target.style.boxShadow = 'none' }}
           />
         </div>
