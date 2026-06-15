@@ -5,13 +5,26 @@ import { isNative } from '../utils/nativePlatform'
 const AUTH_PATHS = ['/login', '/register', '/forgot-password']
 const ADMIN_PREFIX = '/admin'
 
-// Reset setiap refresh halaman (module variable)
 let shownThisLoad = false
+
+function useApkSize() {
+  const [size, setSize] = useState(null)
+  useEffect(() => {
+    fetch('/zasaqu.apk', { method: 'HEAD' })
+      .then(r => {
+        const bytes = parseInt(r.headers.get('content-length') || '0', 10)
+        if (bytes > 0) setSize((bytes / 1024 / 1024).toFixed(1) + ' MB')
+      })
+      .catch(() => {})
+  }, [])
+  return size
+}
 
 export default function ApkPopup() {
   const [visible, setVisible] = useState(false)
   const [animOut, setAnimOut] = useState(false)
   const { pathname } = useLocation()
+  const apkSize = useApkSize()
 
   useEffect(() => {
     if (AUTH_PATHS.includes(pathname)) { setVisible(false); return }
@@ -128,7 +141,7 @@ export default function ApkPopup() {
                 <path d="M4 18h16v2H4v-2z" fill="#0C0C16"/>
               </svg>
               <span style={{ fontSize: 15, fontWeight: 800, color: '#0C0C16' }}>
-                Download APK · 51 MB
+                Download APK{apkSize ? ` · ${apkSize}` : ''}
               </span>
             </div>
           </a>
