@@ -276,7 +276,7 @@ export default function MitraHomeOrdersPage() {
                   <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>Order baru akan muncul di sini</p>
                 </div>
               ) : (
-                available.map(o => <AvailableCard key={o.id} order={o} onAccept={fetchData} />)
+                available.map(o => <AvailableCard key={o.id} order={o} onAccept={silentRefresh} />)
               )
             ) : (
               history.length === 0 ? (

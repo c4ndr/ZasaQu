@@ -335,7 +335,7 @@ export default function MitraRidePage() {
                   <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>Order baru akan muncul otomatis</p>
                 </div>
               ) : (
-                available.map(o => <AvailableCard key={o.id} order={o} onAccept={fetchData} />)
+                available.map(o => <AvailableCard key={o.id} order={o} onAccept={silentRefresh} />)
               )
             ) : (
               history.length === 0 ? (
