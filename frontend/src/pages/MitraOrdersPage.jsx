@@ -13,6 +13,7 @@ import { isNative } from '../utils/nativePlatform'
 import useOrderChatBadges from '../hooks/useOrderChatBadges'
 import ChatButton from '../components/ChatButton'
 import useRoadRoute from '../hooks/useRoadRoute'
+import useAppInfo from '../hooks/useAppInfo'
 
 // Baca window.isSecureContext saat runtime — menghormati Chrome flags
 function getSecureCtx() { return typeof window !== 'undefined' && window.isSecureContext }
@@ -992,6 +993,7 @@ export default function MitraOrdersPage() {
   useEffect(() => { requestNotifPermission() }, [])
 
   const vehicleType = user?.role === 'mitra_motor' ? 'motor' : user?.role === 'mitra_mobil' ? 'mobil' : null
+  const { features } = useAppInfo()
 
   const accept = async (id) => {
     // Cek saldo minimum (pre-check, validasi ulang di server)
@@ -1100,6 +1102,24 @@ export default function MitraOrdersPage() {
               Aktifkan
             </Link>
           </div>
+        )}
+
+        {/* ZasaRide shortcut — hanya untuk mitra_motor / mitra_mobil */}
+        {vehicleType && features?.zasaride && (
+          <Link to="/mitra/ride" style={{
+            display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
+            padding: '12px 14px', borderRadius: 14, marginBottom: 14,
+            background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.25)',
+          }}>
+            <span style={{ fontSize: 24, flexShrink: 0 }}>{vehicleType === 'mobil' ? '🚗' : '🏍️'}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ color: 'var(--k-accent)', fontSize: 13, fontWeight: 800, marginBottom: 2 }}>ZasaRide</p>
+              <p style={{ color: 'var(--k-muted)', fontSize: 11 }}>
+                {vehicleType === 'mobil' ? 'Mitra Mobil — lihat order antar jemput' : 'Mitra Motor — lihat order ojek & antar jemput'}
+              </p>
+            </div>
+            <span style={{ color: 'var(--k-accent)', fontSize: 18 }}>→</span>
+          </Link>
         )}
 
         {/* Tabs */}
