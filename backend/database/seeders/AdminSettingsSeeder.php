@@ -185,6 +185,15 @@ class AdminSettingsSeeder extends Seeder
                 'description' => 'Path relatif logo di storage publik (dikelola via upload logo)',
             ],
 
+            // ── ZasaRide ──────────────────────────────────────────────────────
+            [
+                'key'         => 'ride_pending_timeout_minutes',
+                'value'       => '10',
+                'type'        => 'integer',
+                'label'       => 'Timeout ZasaRide Pending (menit)',
+                'description' => 'Menit sebelum order ride yang tidak diambil mitra dibatalkan otomatis',
+            ],
+
             // ── Operasional ───────────────────────────────────────────────────
             [
                 'key'         => 'maintenance_mode',
@@ -199,6 +208,13 @@ class AdminSettingsSeeder extends Seeder
                 'type'        => 'boolean',
                 'label'       => 'Wallet Aktif',
                 'description' => 'Aktifkan fitur wallet: top up, withdraw, dan pembayaran via saldo. Nonaktifkan jika payment gateway belum siap.',
+            ],
+            [
+                'key'         => 'app_min_version',
+                'value'       => '1.0.0',
+                'type'        => 'string',
+                'label'       => 'Versi Minimum Aplikasi',
+                'description' => 'Versi APK minimum yang diizinkan. Pengguna dengan versi lebih rendah akan diminta update.',
             ],
         ];
 

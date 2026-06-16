@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import ApkPopup from './components/ApkPopup'
-import { useEffect, useState, useRef, useCallback } from 'react'
+import ForceUpdateScreen from './components/ForceUpdateScreen'
+import { lazy, Suspense, useEffect, useState, useRef, useCallback } from 'react'
 import useFcmToken from './hooks/useFcmToken'
 import echo from './services/echo'
 import api from './services/api'
@@ -28,109 +29,138 @@ function ModuleRoute({ featureKey, children }) {
   if (features && features[featureKey] === false) return <Navigate to="/dashboard" replace />
   return children
 }
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import DashboardPage from './pages/DashboardPage'
-import WalletPage from './pages/WalletPage'
-import TopUpPage from './pages/TopUpPage'
-import WithdrawPage from './pages/WithdrawPage'
-import AdminDashboardPage from './pages/admin/AdminDashboardPage'
-import AdminPendingReviewPage from './pages/admin/AdminPendingReviewPage'
-import AdminTopUpPage from './pages/admin/AdminTopUpPage'
-import AdminWithdrawPage from './pages/admin/AdminWithdrawPage'
-import AdminWalletPage from './pages/admin/AdminWalletPage'
-import AdminUsersPage from './pages/admin/AdminUsersPage'
-import AdminSettingsPage from './pages/admin/AdminSettingsPage'
-import AdminAuditLogPage from './pages/admin/AdminAuditLogPage'
-import AdminOrdersPage from './pages/admin/AdminOrdersPage'
-import OrdersPage from './pages/OrdersPage'
-import CreateOrderPage from './pages/CreateOrderPage'
-import MitraOrdersPage from './pages/MitraOrdersPage'
-import TrackingPage from './pages/TrackingPage'
-import MitraGpsPage from './pages/MitraGpsPage'
-import ChatPage from './pages/ChatPage'
-import JastipPage from './pages/JastipPage'
-import MitraJastipPage from './pages/MitraJastipPage'
-import ProfilePage from './pages/ProfilePage'
-import NotificationsPage from './pages/NotificationsPage'
 import MitraOrderAlert from './components/MitraOrderAlert'
-import AdminFoodMerchantsPage from './pages/admin/AdminFoodMerchantsPage'
-import AdminFoodMerchantReviewPage from './pages/admin/AdminFoodMerchantReviewPage'
-import AdminHomeProvidersPage from './pages/admin/AdminHomeProvidersPage'
-import AdminHomeProviderReviewPage from './pages/admin/AdminHomeProviderReviewPage'
-import AdminHomeOrdersPage from './pages/admin/AdminHomeOrdersPage'
-import AdminServProvidersPage from './pages/admin/AdminServProvidersPage'
-import AdminServOrdersPage from './pages/admin/AdminServOrdersPage'
-import AdminServProviderReviewPage from './pages/admin/AdminServProviderReviewPage'
-import ZasaHomePage from './pages/zasahome/ZasaHomePage'
-import HomeProviderPage from './pages/zasahome/HomeProviderPage'
-import HomeCheckoutPage from './pages/zasahome/HomeCheckoutPage'
-import HomeMyOrdersPage from './pages/zasahome/HomeMyOrdersPage'
-import HomeOrderDetailPage from './pages/zasahome/HomeOrderDetailPage'
-import ZasaServPage from './pages/zasaserv/ZasaServPage'
-import ServProviderPage from './pages/zasaserv/ServProviderPage'
-import ServCheckoutPage from './pages/zasaserv/ServCheckoutPage'
-import ServMyOrdersPage from './pages/zasaserv/ServMyOrdersPage'
-import ServOrderDetailPage from './pages/zasaserv/ServOrderDetailPage'
-import HomeProviderDashboardPage from './pages/home_provider/HomeProviderDashboardPage'
-import HomeProviderServicesPage from './pages/home_provider/HomeProviderServicesPage'
-import HomeProviderSettingsPage from './pages/home_provider/HomeProviderSettingsPage'
-import ServProviderDashboardPage from './pages/serv_provider/ServProviderDashboardPage'
-import ServProviderServicesPage from './pages/serv_provider/ServProviderServicesPage'
-import ServProviderSettingsPage from './pages/serv_provider/ServProviderSettingsPage'
-import FoodPage from './pages/zasafood/FoodPage'
-import FoodMerchantPage from './pages/zasafood/FoodMerchantPage'
-import FoodCartPage from './pages/zasafood/FoodCartPage'
-import FoodOrdersPage from './pages/zasafood/FoodOrdersPage'
-import FoodTrackingPage from './pages/zasafood/FoodTrackingPage'
-import MitraFoodOrdersPage from './pages/zasafood/MitraFoodOrdersPage'
-import MitraMartOrdersPage from './pages/zasamart/MitraMartOrdersPage'
-import FoodJastipSessionsPage from './pages/zasafood/FoodJastipSessionsPage'
-import AdminFoodOrdersPage from './pages/admin/AdminFoodOrdersPage'
-import AdminMitraVerificationPage from './pages/admin/AdminMitraVerificationPage'
-import AdminMitraReviewPage from './pages/admin/AdminMitraReviewPage'
-import AdminPromosPage from './pages/admin/AdminPromosPage'
-import MitraOnboardingPage from './pages/MitraOnboardingPage'
-import MerchantDashboardPage from './pages/merchant/MerchantDashboardPage'
-import MerchantMenuPage from './pages/merchant/MerchantMenuPage'
-import MerchantSettingsPage from './pages/merchant/MerchantSettingsPage'
-import MerchantOrdersPage from './pages/merchant/MerchantOrdersPage'
-import ZasaShopPage from './pages/zasamart/ZasaShopPage'
-import MartProductPage from './pages/zasamart/MartProductPage'
-import MartCartPage from './pages/zasamart/MartCartPage'
-import MartCheckoutPage from './pages/zasamart/MartCheckoutPage'
-import MartOrdersPage from './pages/zasamart/MartOrdersPage'
-import MartOrderDetailPage from './pages/zasamart/MartOrderDetailPage'
-import MartSellerPage from './pages/zasamart/MartSellerPage'
-import SellerDashboardPage from './pages/seller/SellerDashboardPage'
-import SellerOrdersPage from './pages/seller/SellerOrdersPage'
-import SellerProductsPage from './pages/seller/SellerProductsPage'
-import SellerSettingsPage from './pages/seller/SellerSettingsPage'
-import SellerWalletPage from './pages/seller/SellerWalletPage'
-import AdminMartSellersPage from './pages/admin/AdminMartSellersPage'
-import AdminMartSellerReviewPage from './pages/admin/AdminMartSellerReviewPage'
-import AdminMartProductsPage from './pages/admin/AdminMartProductsPage'
-import AdminMartOrdersPage from './pages/admin/AdminMartOrdersPage'
-import AdminRideOrdersPage from './pages/admin/AdminRideOrdersPage'
-import AdminModulesPage from './pages/admin/AdminModulesPage'
-import RidePage from './pages/zasaride/RidePage'
-import RideOrdersPage from './pages/zasaride/RideOrdersPage'
-import MitraRidePage from './pages/mitra/MitraRidePage'
-import MitraAktivitasPage from './pages/mitra/MitraAktivitasPage'
-import MitraHomeOrdersPage from './pages/mitra/MitraHomeOrdersPage'
-import MitraServOrdersPage from './pages/mitra/MitraServOrdersPage'
-import NotFoundPage from './pages/NotFoundPage'
-import LandingPage from './pages/LandingPage'
-import AboutPage from './pages/AboutPage'
-import TosPage from './pages/TosPage'
-import PrivacyPage from './pages/PrivacyPage'
-import ContactPage from './pages/ContactPage'
-import LayananPage from './pages/LayananPage'
-import CaraKerjaPage from './pages/CaraKerjaPage'
-import DaftarMitraPage from './pages/DaftarMitraPage'
-import RefundPage from './pages/RefundPage'
-import AddressesPage from './pages/AddressesPage'
+
+// ── Lazy-load semua halaman agar bundle awal lebih kecil ──────────────────────
+const lazy_ = (fn) => lazy(fn)
+
+const LoginPage              = lazy_(() => import('./pages/LoginPage'))
+const RegisterPage           = lazy_(() => import('./pages/RegisterPage'))
+const ForgotPasswordPage     = lazy_(() => import('./pages/ForgotPasswordPage'))
+const DashboardPage          = lazy_(() => import('./pages/DashboardPage'))
+const WalletPage             = lazy_(() => import('./pages/WalletPage'))
+const TopUpPage              = lazy_(() => import('./pages/TopUpPage'))
+const WithdrawPage           = lazy_(() => import('./pages/WithdrawPage'))
+const ProfilePage            = lazy_(() => import('./pages/ProfilePage'))
+const NotificationsPage      = lazy_(() => import('./pages/NotificationsPage'))
+const AddressesPage          = lazy_(() => import('./pages/AddressesPage'))
+const OrdersPage             = lazy_(() => import('./pages/OrdersPage'))
+const CreateOrderPage        = lazy_(() => import('./pages/CreateOrderPage'))
+const MitraOrdersPage        = lazy_(() => import('./pages/MitraOrdersPage'))
+const TrackingPage           = lazy_(() => import('./pages/TrackingPage'))
+const MitraGpsPage           = lazy_(() => import('./pages/MitraGpsPage'))
+const ChatPage               = lazy_(() => import('./pages/ChatPage'))
+const JastipPage             = lazy_(() => import('./pages/JastipPage'))
+const MitraJastipPage        = lazy_(() => import('./pages/MitraJastipPage'))
+const MitraOnboardingPage    = lazy_(() => import('./pages/MitraOnboardingPage'))
+const NotFoundPage           = lazy_(() => import('./pages/NotFoundPage'))
+const LandingPage            = lazy_(() => import('./pages/LandingPage'))
+const AboutPage              = lazy_(() => import('./pages/AboutPage'))
+const TosPage                = lazy_(() => import('./pages/TosPage'))
+const PrivacyPage            = lazy_(() => import('./pages/PrivacyPage'))
+const ContactPage            = lazy_(() => import('./pages/ContactPage'))
+const LayananPage            = lazy_(() => import('./pages/LayananPage'))
+const CaraKerjaPage          = lazy_(() => import('./pages/CaraKerjaPage'))
+const DaftarMitraPage        = lazy_(() => import('./pages/DaftarMitraPage'))
+const RefundPage             = lazy_(() => import('./pages/RefundPage'))
+
+// Admin
+const AdminDashboardPage         = lazy_(() => import('./pages/admin/AdminDashboardPage'))
+const AdminPendingReviewPage     = lazy_(() => import('./pages/admin/AdminPendingReviewPage'))
+const AdminTopUpPage             = lazy_(() => import('./pages/admin/AdminTopUpPage'))
+const AdminWithdrawPage          = lazy_(() => import('./pages/admin/AdminWithdrawPage'))
+const AdminWalletPage            = lazy_(() => import('./pages/admin/AdminWalletPage'))
+const AdminUsersPage             = lazy_(() => import('./pages/admin/AdminUsersPage'))
+const AdminSettingsPage          = lazy_(() => import('./pages/admin/AdminSettingsPage'))
+const AdminAuditLogPage          = lazy_(() => import('./pages/admin/AdminAuditLogPage'))
+const AdminOrdersPage            = lazy_(() => import('./pages/admin/AdminOrdersPage'))
+const AdminFoodOrdersPage        = lazy_(() => import('./pages/admin/AdminFoodOrdersPage'))
+const AdminFoodMerchantsPage     = lazy_(() => import('./pages/admin/AdminFoodMerchantsPage'))
+const AdminFoodMerchantReviewPage = lazy_(() => import('./pages/admin/AdminFoodMerchantReviewPage'))
+const AdminHomeProvidersPage     = lazy_(() => import('./pages/admin/AdminHomeProvidersPage'))
+const AdminHomeProviderReviewPage = lazy_(() => import('./pages/admin/AdminHomeProviderReviewPage'))
+const AdminHomeOrdersPage        = lazy_(() => import('./pages/admin/AdminHomeOrdersPage'))
+const AdminServProvidersPage     = lazy_(() => import('./pages/admin/AdminServProvidersPage'))
+const AdminServOrdersPage        = lazy_(() => import('./pages/admin/AdminServOrdersPage'))
+const AdminServProviderReviewPage = lazy_(() => import('./pages/admin/AdminServProviderReviewPage'))
+const AdminMitraVerificationPage = lazy_(() => import('./pages/admin/AdminMitraVerificationPage'))
+const AdminMitraReviewPage       = lazy_(() => import('./pages/admin/AdminMitraReviewPage'))
+const AdminPromosPage            = lazy_(() => import('./pages/admin/AdminPromosPage'))
+const AdminMartSellersPage       = lazy_(() => import('./pages/admin/AdminMartSellersPage'))
+const AdminMartSellerReviewPage  = lazy_(() => import('./pages/admin/AdminMartSellerReviewPage'))
+const AdminMartProductsPage      = lazy_(() => import('./pages/admin/AdminMartProductsPage'))
+const AdminMartOrdersPage        = lazy_(() => import('./pages/admin/AdminMartOrdersPage'))
+const AdminRideOrdersPage        = lazy_(() => import('./pages/admin/AdminRideOrdersPage'))
+const AdminModulesPage           = lazy_(() => import('./pages/admin/AdminModulesPage'))
+
+// ZasaHome
+const ZasaHomePage           = lazy_(() => import('./pages/zasahome/ZasaHomePage'))
+const HomeProviderPage       = lazy_(() => import('./pages/zasahome/HomeProviderPage'))
+const HomeCheckoutPage       = lazy_(() => import('./pages/zasahome/HomeCheckoutPage'))
+const HomeMyOrdersPage       = lazy_(() => import('./pages/zasahome/HomeMyOrdersPage'))
+const HomeOrderDetailPage    = lazy_(() => import('./pages/zasahome/HomeOrderDetailPage'))
+const HomeProviderDashboardPage  = lazy_(() => import('./pages/home_provider/HomeProviderDashboardPage'))
+const HomeProviderServicesPage   = lazy_(() => import('./pages/home_provider/HomeProviderServicesPage'))
+const HomeProviderSettingsPage   = lazy_(() => import('./pages/home_provider/HomeProviderSettingsPage'))
+
+// ZasaServ
+const ZasaServPage           = lazy_(() => import('./pages/zasaserv/ZasaServPage'))
+const ServProviderPage       = lazy_(() => import('./pages/zasaserv/ServProviderPage'))
+const ServCheckoutPage       = lazy_(() => import('./pages/zasaserv/ServCheckoutPage'))
+const ServMyOrdersPage       = lazy_(() => import('./pages/zasaserv/ServMyOrdersPage'))
+const ServOrderDetailPage    = lazy_(() => import('./pages/zasaserv/ServOrderDetailPage'))
+const ServProviderDashboardPage  = lazy_(() => import('./pages/serv_provider/ServProviderDashboardPage'))
+const ServProviderServicesPage   = lazy_(() => import('./pages/serv_provider/ServProviderServicesPage'))
+const ServProviderSettingsPage   = lazy_(() => import('./pages/serv_provider/ServProviderSettingsPage'))
+
+// ZasaFood
+const FoodPage               = lazy_(() => import('./pages/zasafood/FoodPage'))
+const FoodMerchantPage       = lazy_(() => import('./pages/zasafood/FoodMerchantPage'))
+const FoodCartPage           = lazy_(() => import('./pages/zasafood/FoodCartPage'))
+const FoodOrdersPage         = lazy_(() => import('./pages/zasafood/FoodOrdersPage'))
+const FoodTrackingPage       = lazy_(() => import('./pages/zasafood/FoodTrackingPage'))
+const MitraFoodOrdersPage    = lazy_(() => import('./pages/zasafood/MitraFoodOrdersPage'))
+const FoodJastipSessionsPage = lazy_(() => import('./pages/zasafood/FoodJastipSessionsPage'))
+
+// ZasaMart
+const ZasaShopPage           = lazy_(() => import('./pages/zasamart/ZasaShopPage'))
+const MartProductPage        = lazy_(() => import('./pages/zasamart/MartProductPage'))
+const MartCartPage           = lazy_(() => import('./pages/zasamart/MartCartPage'))
+const MartCheckoutPage       = lazy_(() => import('./pages/zasamart/MartCheckoutPage'))
+const MartOrdersPage         = lazy_(() => import('./pages/zasamart/MartOrdersPage'))
+const MartOrderDetailPage    = lazy_(() => import('./pages/zasamart/MartOrderDetailPage'))
+const MartSellerPage         = lazy_(() => import('./pages/zasamart/MartSellerPage'))
+const MitraMartOrdersPage    = lazy_(() => import('./pages/zasamart/MitraMartOrdersPage'))
+
+// Seller
+const SellerDashboardPage    = lazy_(() => import('./pages/seller/SellerDashboardPage'))
+const SellerOrdersPage       = lazy_(() => import('./pages/seller/SellerOrdersPage'))
+const SellerProductsPage     = lazy_(() => import('./pages/seller/SellerProductsPage'))
+const SellerSettingsPage     = lazy_(() => import('./pages/seller/SellerSettingsPage'))
+const SellerWalletPage       = lazy_(() => import('./pages/seller/SellerWalletPage'))
+
+// Merchant
+const MerchantDashboardPage  = lazy_(() => import('./pages/merchant/MerchantDashboardPage'))
+const MerchantMenuPage       = lazy_(() => import('./pages/merchant/MerchantMenuPage'))
+const MerchantSettingsPage   = lazy_(() => import('./pages/merchant/MerchantSettingsPage'))
+const MerchantOrdersPage     = lazy_(() => import('./pages/merchant/MerchantOrdersPage'))
+
+// ZasaRide & Mitra
+const RidePage               = lazy_(() => import('./pages/zasaride/RidePage'))
+const RideOrdersPage         = lazy_(() => import('./pages/zasaride/RideOrdersPage'))
+const MitraRidePage          = lazy_(() => import('./pages/mitra/MitraRidePage'))
+const MitraAktivitasPage     = lazy_(() => import('./pages/mitra/MitraAktivitasPage'))
+const MitraHomeOrdersPage    = lazy_(() => import('./pages/mitra/MitraHomeOrdersPage'))
+const MitraServOrdersPage    = lazy_(() => import('./pages/mitra/MitraServOrdersPage'))
+
+function PageLoader() {
+  return (
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--k-bg)' }}>
+      <div style={{ width: 28, height: 28, border: '2.5px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
+}
 
 function PrivateRoute({ children }) {
   const { user } = useAuth()
@@ -251,6 +281,7 @@ function AppRoutes() {
     <>
       {/* Notifikasi order untuk mitra — aktif di semua halaman */}
       <MitraOrderAlert />
+      <Suspense fallback={<PageLoader />}>
       <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
@@ -389,6 +420,7 @@ function AppRoutes() {
       {/* 404 — catch-all */}
       <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </Suspense>
     </>
   )
 }
@@ -744,6 +776,7 @@ export default function App() {
           <VoiceCallBridge />
           <AppRoutes />
           <ApkPopup />
+          <ForceUpdateScreen />
         </MitraGpsProvider>
       </AuthProvider>
     </BrowserRouter>

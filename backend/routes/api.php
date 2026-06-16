@@ -92,7 +92,7 @@ Route::get('promos', function () {
 
 // ─── Info aplikasi publik (tanpa auth) ─────────────────────────────────────
 Route::get('app-info', function () {
-    $keys = ['app_name', 'app_tagline', 'app_logo_path', 'maintenance_mode', 'wallet_enabled'];
+    $keys = ['app_name', 'app_tagline', 'app_logo_path', 'maintenance_mode', 'wallet_enabled', 'app_min_version'];
     $rows = \App\Models\AdminSetting::whereIn('key', $keys)->get()->keyBy('key');
     $logoPath = $rows['app_logo_path']->value ?? '';
 
@@ -121,6 +121,7 @@ Route::get('app-info', function () {
         'app_logo_url'     => $logoDataUrl,
         'maintenance_mode' => ($rows['maintenance_mode']->value ?? '0') === '1',
         'wallet_enabled'   => ($rows['wallet_enabled']->value  ?? '0') === '1',
+        'app_min_version'  => $rows['app_min_version']->value  ?? '1.0.0',
         'features'         => $features,
     ]);
 });
@@ -150,23 +151,24 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::prefix('topup')->group(function () {
         Route::get('bank-accounts', [TopUpController::class, 'bankAccounts']);
         Route::get('history', [TopUpController::class, 'history']);
-        Route::post('manual',              [TopUpController::class, 'createManual']);
-        Route::post('virtual-account',     [TopUpController::class, 'createVirtualAccount']);
-        Route::post('midtrans',            [TopUpController::class, 'createMidtrans']);
-        Route::post('ipaymu/va',           [TopUpController::class, 'createIpaymuVA']);
-        Route::post('ipaymu/qris',         [TopUpController::class, 'createIpaymuQRIS']);
-        Route::get('ipaymu/{id}/status',   [TopUpController::class, 'checkIpaymuStatus']);
-        // QRIS simulasi dihapus — QRIS sekarang via iPaymu (/topup/ipaymu/qris)
-        // VA simulasi tetap ada untuk dev mode
+        Route::get('ipaymu/{id}/status', [TopUpController::class, 'checkIpaymuStatus']);
+        // POST top up: maks 5 permintaan/menit per user
+        Route::middleware('throttle:5,1')->group(function () {
+            Route::post('manual',          [TopUpController::class, 'createManual']);
+            Route::post('virtual-account', [TopUpController::class, 'createVirtualAccount']);
+            Route::post('midtrans',        [TopUpController::class, 'createMidtrans']);
+            Route::post('ipaymu/va',       [TopUpController::class, 'createIpaymuVA']);
+            Route::post('ipaymu/qris',     [TopUpController::class, 'createIpaymuQRIS']);
+        });
         if (!app()->isProduction()) {
             Route::post('{id}/simulate-va', [TopUpController::class, 'simulateVaCallback']);
         }
     });
 
-    // Withdraw (mitra only)
+    // Withdraw (mitra only) — maks 5 permintaan/menit
     Route::prefix('withdraw')->group(function () {
         Route::get('history', [WithdrawController::class, 'history']);
-        Route::post('/', [WithdrawController::class, 'create']);
+        Route::post('/', [WithdrawController::class, 'create'])->middleware('throttle:5,1');
     });
 
     // Kategori barang
