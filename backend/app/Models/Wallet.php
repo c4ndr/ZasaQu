@@ -28,6 +28,6 @@ class Wallet extends Model
 
     public function availableBalance(): float
     {
-        return (float) $this->balance - (float) $this->locked_balance;
+        return max(0.0, (float) $this->balance - (float) $this->locked_balance);
     }
 }

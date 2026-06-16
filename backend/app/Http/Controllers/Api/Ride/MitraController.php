@@ -6,13 +6,15 @@ use App\Events\RideStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\RideOrder;
 use App\Models\Wallet;
-use App\Models\WalletTransaction;
+use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class MitraController extends Controller
 {
+    public function __construct(private WalletService $walletService) {}
+
     // Order tersedia (pending, sesuai vehicle_type mitra)
     public function available(Request $request): JsonResponse
     {
@@ -104,30 +106,34 @@ class MitraController extends Controller
         DB::transaction(function () use ($order, $newStatus, $timestamps, $prev) {
             $order->update(array_merge(['status' => $newStatus], $timestamps[$newStatus] ?? []));
 
-            // Transfer income ke wallet mitra saat completed
+            // Selesaikan wallet saat order completed
             if ($newStatus === 'completed' && $order->payment_method === 'wallet') {
-                $wallet = Wallet::firstOrCreate(['user_id' => $order->mitra_id], ['balance' => 0]);
-                $wallet->increment('balance', $order->mitra_income);
-                WalletTransaction::create([
-                    'wallet_id'   => $wallet->id,
-                    'type'        => 'credit',
-                    'amount'      => $order->mitra_income,
-                    'description' => "Pendapatan ZasaRide #{$order->order_number}",
-                    'reference'   => "ride_order_{$order->id}",
-                ]);
+                $mitra    = $order->mitra;
+                $customer = $order->customer;
 
-                // Kurangi saldo customer
-                $custWallet = Wallet::where('user_id', $order->customer_id)->first();
+                // Lepas locked_balance customer & debit pembayaran
+                $custWallet = Wallet::lockForUpdate()->where('user_id', $order->customer_id)->first();
                 if ($custWallet) {
-                    $custWallet->decrement('balance', $order->fare);
-                    WalletTransaction::create([
-                        'wallet_id'   => $custWallet->id,
-                        'type'        => 'debit',
-                        'amount'      => $order->fare,
-                        'description' => "Pembayaran ZasaRide #{$order->order_number}",
-                        'reference'   => "ride_order_{$order->id}",
-                    ]);
+                    $custWallet->decrement('locked_balance', min((float) $order->fare, (float) $custWallet->locked_balance));
                 }
+                $this->walletService->debit(
+                    $customer,
+                    (float) $order->fare,
+                    'order_payment',
+                    "Pembayaran ZasaRide #{$order->order_number}",
+                    $order,
+                    'zasaride'
+                );
+
+                // Credit income ke mitra
+                $this->walletService->credit(
+                    $mitra,
+                    (float) $order->mitra_income,
+                    'order_income',
+                    "Pendapatan ZasaRide #{$order->order_number}",
+                    $order,
+                    'zasaride'
+                );
             }
         });
 

@@ -8,12 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Models\RideFare;
 use App\Models\RideOrder;
 use App\Models\Wallet;
+use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CustomerController extends Controller
 {
+    public function __construct(private WalletService $walletService) {}
     // Estimasi harga sebelum pesan
     public function estimate(Request $request): JsonResponse
     {
@@ -85,15 +87,22 @@ class CustomerController extends Controller
         );
         $calc = $fare->calculateFare($straight);
 
-        // Cek saldo wallet kalau bayar wallet
+        // Cek & kunci saldo wallet kalau bayar wallet
         if ($data['payment_method'] === 'wallet') {
             $wallet = Wallet::where('user_id', $user->id)->first();
-            if (!$wallet || $wallet->balance < $calc['fare']) {
+            if (!$wallet || $wallet->availableBalance() < $calc['fare']) {
                 return response()->json(['message' => 'Saldo wallet tidak cukup.'], 422);
             }
         }
 
         $order = DB::transaction(function () use ($data, $user, $calc) {
+            // Kunci saldo agar tidak bisa dipakai order lain
+            if ($data['payment_method'] === 'wallet') {
+                Wallet::lockForUpdate()->where('user_id', $user->id)
+                    ->first()
+                    ->increment('locked_balance', $calc['fare']);
+            }
+
             return RideOrder::create([
                 'order_number'        => RideOrder::generateNumber(),
                 'customer_id'         => $user->id,
@@ -149,11 +158,21 @@ class CustomerController extends Controller
             ->findOrFail($id);
 
         $prev = $order->status;
-        $order->update([
-            'status'        => 'cancelled',
-            'cancel_reason' => $request->input('reason', 'Dibatalkan oleh pelanggan'),
-            'cancelled_at'  => now(),
-        ]);
+        DB::transaction(function () use ($order, $request) {
+            $order->update([
+                'status'        => 'cancelled',
+                'cancel_reason' => $request->input('reason', 'Dibatalkan oleh pelanggan'),
+                'cancelled_at'  => now(),
+            ]);
+
+            // Lepas locked_balance saat order wallet dibatalkan
+            if ($order->payment_method === 'wallet') {
+                $wallet = Wallet::lockForUpdate()->where('user_id', $order->customer_id)->first();
+                if ($wallet) {
+                    $wallet->decrement('locked_balance', min((float) $order->fare, (float) $wallet->locked_balance));
+                }
+            }
+        });
 
         broadcast(new RideStatusUpdated($order, $prev));
         return response()->json(['message' => 'Order dibatalkan.']);
