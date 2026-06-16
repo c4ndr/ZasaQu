@@ -41,7 +41,7 @@ class TopUpController extends Controller
 
     public function createManual(Request $request): JsonResponse
     {
-        if (!AdminSetting::walletEnabled()) {
+        if (!AdminSetting::walletEnabled() && $request->user()->role === 'pelanggan') {
             return response()->json(['message' => 'Fitur wallet sedang tidak aktif.'], 422);
         }
 
@@ -68,7 +68,7 @@ class TopUpController extends Controller
 
     public function createVirtualAccount(Request $request): JsonResponse
     {
-        if (!AdminSetting::walletEnabled()) {
+        if (!AdminSetting::walletEnabled() && $request->user()->role === 'pelanggan') {
             return response()->json(['message' => 'Fitur wallet sedang tidak aktif.'], 422);
         }
 
@@ -117,7 +117,7 @@ class TopUpController extends Controller
 
     public function createIpaymuVA(Request $request): JsonResponse
     {
-        if (!AdminSetting::walletEnabled()) {
+        if (!AdminSetting::walletEnabled() && $request->user()->role === 'pelanggan') {
             return response()->json(['message' => 'Fitur wallet sedang tidak aktif.'], 422);
         }
 

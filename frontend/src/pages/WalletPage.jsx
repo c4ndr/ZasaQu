@@ -184,7 +184,12 @@ export default function WalletPage() {
             <p style={{ color: 'rgba(12,12,22,0.55)', fontSize: 12 }}>🔒 Terkunci: {fmtRp(summary.locked_balance)}</p>
           )}
 
-          {walletEnabled ? (
+          {(!walletEnabled && !isMitra) ? (
+            <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 12, background: 'rgba(12,12,22,0.25)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>🔒</span>
+              <p style={{ fontSize: 12, color: 'rgba(12,12,22,0.75)', fontWeight: 600 }}>Top up sementara tidak tersedia</p>
+            </div>
+          ) : (
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <Link to="/topup" style={{ flex: 1, display: 'block', textDecoration: 'none', padding: '11px 8px', borderRadius: 14, textAlign: 'center', background: 'rgba(12,12,22,0.2)', color: '#0C0C16', fontSize: 13, fontWeight: 700 }}>
                 ⬇ Top Up
@@ -194,11 +199,6 @@ export default function WalletPage() {
                   ⬆ Withdraw
                 </Link>
               )}
-            </div>
-          ) : (
-            <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 12, background: 'rgba(12,12,22,0.25)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 16 }}>🔒</span>
-              <p style={{ fontSize: 12, color: 'rgba(12,12,22,0.75)', fontWeight: 600 }}>Top up & withdraw sementara tidak tersedia</p>
             </div>
           )}
         </div>

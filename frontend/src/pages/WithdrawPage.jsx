@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import useAppInfo from '../hooks/useAppInfo'
 import api from '../services/api'
 
 function formatRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
@@ -17,7 +16,6 @@ const DESTINATIONS = [
 
 export default function WithdrawPage() {
   const { user }   = useAuth()
-  const { wallet_enabled: walletEnabled } = useAppInfo()
   const navigate   = useNavigate()
 
   const [form, setForm] = useState({
@@ -42,15 +40,6 @@ export default function WithdrawPage() {
     setHistLoading(true)
     api.get('/withdraw/history').then(r => setHistory(r.data.data ?? [])).finally(() => setHistLoading(false))
   }, [tab])
-
-  if (!walletEnabled) return (
-    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 32px', textAlign: 'center', gap: 16 }}>
-      <div style={{ fontSize: 56 }}>🔒</div>
-      <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Withdraw Tidak Tersedia</h2>
-      <p style={{ fontSize: 14, color: 'var(--k-muted)', lineHeight: 1.6 }}>Fitur withdraw wallet sedang tidak aktif. Silakan coba lagi nanti.</p>
-      <Link to="/wallet" style={{ marginTop: 8, padding: '12px 28px', borderRadius: 14, background: 'var(--k-accent)', color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>Kembali ke Wallet</Link>
-    </div>
-  )
 
   if (!user?.role?.startsWith('mitra')) return (
     <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>

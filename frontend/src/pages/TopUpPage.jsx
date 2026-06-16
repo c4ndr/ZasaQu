@@ -294,7 +294,7 @@ export default function TopUpPage() {
     finally { setSimLoading(false) }
   }
 
-  if (!walletEnabled) return (
+  if (!walletEnabled && user?.role === 'pelanggan') return (
     <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 32px', textAlign: 'center', gap: 16 }}>
       <div style={{ fontSize: 56 }}>🔒</div>
       <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Top Up Tidak Tersedia</h2>
