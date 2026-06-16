@@ -17,7 +17,11 @@ class RideOrderPlaced implements ShouldBroadcast
 
     public function broadcastOn(): array
     {
-        return [new Channel('ride.available')];
+        return [
+            new Channel('ride.available'),
+            // Channel terpusat — dipakai sistem notif global (sama seperti ZasaGo/ZasaFood)
+            new Channel("mitra.{$this->order->vehicle_type}"),
+        ];
     }
 
     public function broadcastAs(): string { return 'ride.placed'; }
@@ -34,6 +38,7 @@ class RideOrderPlaced implements ShouldBroadcast
             'destination_address' => $this->order->destination_address,
             'distance_km'      => $this->order->distance_km,
             'fare'             => $this->order->fare,
+            'mitra_income'     => $this->order->mitra_income,
             'payment_method'   => $this->order->payment_method,
             'notes'            => $this->order->notes,
         ];

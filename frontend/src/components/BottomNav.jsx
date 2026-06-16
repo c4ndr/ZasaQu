@@ -87,6 +87,21 @@ const IconServ = ({ filled }) => (
   </svg>
 )
 
+const IconCar = ({ filled }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    {filled ? (
+      <path d="M5 11l1.5-4.5h11L19 11M17 16a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm-10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM3 11h18v7a1 1 0 01-1 1H4a1 1 0 01-1-1v-7z" fill="currentColor"/>
+    ) : (
+      <>
+        <path d="M5 11l1.5-4.5h11L19 11" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="3" y="11" width="18" height="8" rx="1" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="7" cy="17" r="1.5" fill="currentColor"/>
+        <circle cx="17" cy="17" r="1.5" fill="currentColor"/>
+      </>
+    )}
+  </svg>
+)
+
 const IconMart = ({ filled }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     {filled
@@ -118,12 +133,11 @@ const PELANGGAN_ITEMS = (name) => [
 ]
 
 const MITRA_ITEMS = (name) => [
-  { to: '/dashboard',         Icon: IconHome, label: 'Beranda',  exact: true },
-  { to: '/mitra/orders',      Icon: IconBox,  label: 'ZasaGo' },
-  { to: '/mitra/gps',         Icon: IconPin,  label: 'GPS',      isCenter: true, centerColor: 'linear-gradient(145deg, #00C896 0%, #00A87D 100%)', centerShadow: 'rgba(0,200,150,0.50)' },
-  { to: '/mitra/food/orders', Icon: IconFood, label: 'ZasaFood', featureKey: 'zasafood' },
-  { to: '/mitra/mart/orders', Icon: IconMart, label: 'ZasaMart', featureKey: 'zasamart' },
-  { to: '/profile',           Icon: null,     label: 'Akun',     avatar: true },
+  { to: '/dashboard',       Icon: IconHome,   label: 'Beranda',    exact: true },
+  { to: '/mitra/aktivitas', Icon: IconBox,    label: 'Aktivitas' },
+  { to: '/mitra/gps',       Icon: IconPin,    label: 'GPS',        isCenter: true, centerColor: 'linear-gradient(145deg, #00C896 0%, #00A87D 100%)', centerShadow: 'rgba(0,200,150,0.50)' },
+  { to: '/wallet',          Icon: IconWallet, label: 'Penghasilan' },
+  { to: '/profile',         Icon: null,       label: 'Akun',       avatar: true },
 ]
 
 export default function BottomNav() {
@@ -146,11 +160,7 @@ export default function BottomNav() {
   })
 
   const allMitra = MITRA_ITEMS(user.name)
-  const filteredMitra = allMitra.filter(item => {
-    if (item.to === '/mitra/orders')      return feat.zasago   !== false
-    if (item.featureKey)                  return feat[item.featureKey] !== false
-    return true
-  })
+  const filteredMitra = allMitra
 
   const items = isMitra ? filteredMitra : filteredPelanggan
 

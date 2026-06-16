@@ -222,11 +222,11 @@ function AvailableCard({ order, onAccept }) {
 
 export default function MitraRidePage() {
   const { user }       = useAuth()
-  const [active,   setActive]   = useState(null)
+  const [active,    setActive]    = useState(null)
   const [available, setAvailable] = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [tab,      setTab]      = useState('available') // 'available' | 'history'
-  const [history,  setHistory]  = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [tab,       setTab]       = useState('active')
+  const [history,   setHistory]   = useState([])
 
   const vehicleType = user?.role?.includes('mobil') ? 'mobil' : 'motor'
 
@@ -236,8 +236,9 @@ export default function MitraRidePage() {
         api.get('/ride/mitra/active'),
         api.get('/ride/mitra/available'),
       ])
-      setActive(actRes.data || null)
-      setAvailable(avRes.data || [])
+      const act = actRes.data
+      setActive((act?.id && act?.order_number && act?.status) ? act : null)
+      setAvailable(Array.isArray(avRes.data) ? avRes.data : [])
     } catch {}
   }, [])
 
@@ -254,13 +255,14 @@ export default function MitraRidePage() {
     } catch {}
   }, [])
 
+  const handleAccept = useCallback(async () => {
+    await silentRefresh()
+    setTab('active')
+  }, [silentRefresh])
+
   useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { if (tab === 'history') fetchHistory() }, [tab, fetchHistory])
 
-  useEffect(() => {
-    if (tab === 'history') fetchHistory()
-  }, [tab, fetchHistory])
-
-  // Subscribe untuk order baru masuk
   useEffect(() => {
     const ch = echo.channel('ride.available')
     ch.listen('.ride.placed', (data) => {
@@ -271,7 +273,6 @@ export default function MitraRidePage() {
     return () => echo.leave('ride.available')
   }, [vehicleType])
 
-  // Update status realtime untuk ride aktif
   useEffect(() => {
     if (!active) return
     const ch = echo.channel(`ride.orders.${active.id}`)
@@ -279,8 +280,14 @@ export default function MitraRidePage() {
     return () => echo.leave(`ride.orders.${active.id}`)
   }, [active?.id, silentRefresh])
 
+  const tabs = [
+    { key: 'active',    label: 'Aktif',    badge: active ? 1 : 0,    badgeColor: null },
+    { key: 'available', label: 'Tersedia', badge: available.length,   badgeColor: '#EF4444' },
+    { key: 'history',   label: 'Riwayat',  badge: 0,                  badgeColor: null },
+  ]
+
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', color: 'var(--k-text)', fontFamily: 'system-ui,sans-serif' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', color: 'var(--k-text)', fontFamily: 'system-ui,sans-serif', paddingBottom: 32 }}>
       <nav style={{
         background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)',
         padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
@@ -302,69 +309,93 @@ export default function MitraRidePage() {
         }}>↻</button>
       </nav>
 
-      <div style={{ padding: '16px 16px 32px' }}>
-        {/* Ride aktif */}
-        {active && <ActiveRideCard order={active} onUpdate={silentRefresh} />}
+      <div style={{ padding: '16px 16px 0' }}>
+        {/* Tab Bar */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: 'var(--k-card)', borderRadius: 14, padding: 4 }}>
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)} style={{
+              flex: 1, padding: '10px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: tab === t.key ? 'var(--k-accent)' : 'transparent',
+              color: tab === t.key ? '#0C0C16' : 'var(--k-muted)',
+              fontWeight: 700, fontSize: 13, position: 'relative', transition: 'all 0.2s',
+            }}>
+              {t.label}
+              {t.badge > 0 && (
+                <span style={{
+                  position: 'absolute', top: 5, right: 8,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  background: t.badgeColor ?? 'var(--k-accent)',
+                  color: t.badgeColor ? '#fff' : '#0C0C16',
+                  fontSize: 10, fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 4px',
+                  animation: t.badgeColor ? 'pulse 1.5s infinite' : 'none',
+                }}>{t.badge}</span>
+              )}
+            </button>
+          ))}
+        </div>
 
-        {/* Tab */}
-        {!active && (
-          <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, background: 'var(--k-card)', borderRadius: 12, padding: 4 }}>
-              {[
-                { key: 'available', label: `Order Tersedia (${available.length})` },
-                { key: 'history',   label: 'Riwayat' },
-              ].map(t => (
-                <button key={t.key} onClick={() => setTab(t.key)} style={{
-                  flex: 1, padding: '10px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                  background: tab === t.key ? 'var(--k-accent)' : 'transparent',
-                  color: tab === t.key ? '#0C0C16' : 'var(--k-muted)',
-                  fontWeight: 700, fontSize: 13, transition: 'all 0.2s',
-                }}>{t.label}</button>
-              ))}
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+            <div style={{ width: 28, height: 28, border: '2.5px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        ) : tab === 'active' ? (
+          active ? (
+            <ActiveRideCard order={active} onUpdate={silentRefresh} />
+          ) : (
+            <div style={{ textAlign: 'center', padding: '50px 0' }}>
+              <p style={{ fontSize: 40, marginBottom: 10 }}>🏍️</p>
+              <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Belum ada order aktif</p>
+              <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 20 }}>Terima order dari tab Tersedia</p>
+              {available.length > 0 && (
+                <button onClick={() => setTab('available')} style={{
+                  background: 'var(--k-accent)', color: '#0C0C16',
+                  border: 'none', borderRadius: 14, padding: '12px 24px',
+                  fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                }}>
+                  Lihat {available.length} Order Tersedia →
+                </button>
+              )}
             </div>
-
-            {loading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-                <div style={{ width: 28, height: 28, border: '2.5px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          )
+        ) : tab === 'available' ? (
+          available.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px 0' }}>
+              <p style={{ fontSize: 40, marginBottom: 10 }}>🔍</p>
+              <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Tidak ada order saat ini</p>
+              <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>Order baru akan muncul otomatis</p>
+            </div>
+          ) : (
+            available.map(o => <AvailableCard key={o.id} order={o} onAccept={handleAccept} />)
+          )
+        ) : (
+          history.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px 0' }}>
+              <p style={{ fontSize: 40, marginBottom: 10 }}>📋</p>
+              <p style={{ fontSize: 15, fontWeight: 700 }}>Belum ada riwayat perjalanan</p>
+            </div>
+          ) : (
+            history.map(o => (
+              <div key={o.id} style={{
+                background: 'var(--k-card)', border: '1px solid var(--k-border)',
+                borderRadius: 14, padding: '12px 14px', marginBottom: 10,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <p style={{ fontSize: 11, color: 'var(--k-muted)', fontFamily: 'monospace' }}>#{o.order_number}</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--k-accent)' }}>+Rp {fmt(o.mitra_income)}</p>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--k-text)', marginBottom: 3 }}>→ {o.destination_address}</p>
+                <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{o.distance_km} km · {new Date(o.created_at).toLocaleDateString('id-ID')}</p>
               </div>
-            ) : tab === 'available' ? (
-              available.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px 0' }}>
-                  <p style={{ fontSize: 40, marginBottom: 10 }}>🔍</p>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--k-text)', marginBottom: 6 }}>Tidak ada order saat ini</p>
-                  <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>Order baru akan muncul otomatis</p>
-                </div>
-              ) : (
-                available.map(o => <AvailableCard key={o.id} order={o} onAccept={silentRefresh} />)
-              )
-            ) : (
-              history.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px 0' }}>
-                  <p style={{ fontSize: 40, marginBottom: 10 }}>📋</p>
-                  <p style={{ fontSize: 15, fontWeight: 700 }}>Belum ada riwayat perjalanan</p>
-                </div>
-              ) : (
-                history.map(o => (
-                  <div key={o.id} style={{
-                    background: 'var(--k-card)', border: '1px solid var(--k-border)',
-                    borderRadius: 14, padding: '12px 14px', marginBottom: 10,
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <p style={{ fontSize: 11, color: 'var(--k-muted)', fontFamily: 'monospace' }}>#{o.order_number}</p>
-                      <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--k-accent)' }}>+Rp {fmt(o.mitra_income)}</p>
-                    </div>
-                    <p style={{ fontSize: 12, color: 'var(--k-text)', marginBottom: 3 }}>→ {o.destination_address}</p>
-                    <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{o.distance_km} km · {new Date(o.created_at).toLocaleDateString('id-ID')}</p>
-                  </div>
-                ))
-              )
-            )}
-          </>
+            ))
+          )
         )}
       </div>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes slideIn { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: translateY(0) } }
+        @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.5 } }
       `}</style>
     </div>
   )

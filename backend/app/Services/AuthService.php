@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\FoodMerchant;
 use App\Models\HomeProvider;
 use App\Models\MartSeller;
+use App\Models\ServProvider;
 use App\Models\MitraDetail;
 use App\Models\User;
 use App\Models\Wallet;
@@ -17,6 +18,7 @@ class AuthService
     {
         $role    = $data['role'] ?? 'pelanggan';
         $isMitra = in_array($role, ['mitra_motor', 'mitra_mobil']);
+        $isPending = $isMitra || $role === 'serv_provider';
 
         $user = User::create([
             'name'              => $data['name'],
@@ -24,7 +26,7 @@ class AuthService
             'password'          => Hash::make($data['password']),
             'role'              => $role,
             'address'           => $data['address'] ?? null,
-            'status'            => $isMitra ? 'pending_review' : 'active',
+            'status'            => $isPending ? 'pending_review' : 'active',
             'email_verified_at' => now(),
         ]);
 
@@ -46,6 +48,10 @@ class AuthService
             $this->createSeller($user, $data);
         }
 
+        if ($role === 'serv_provider') {
+            $this->createServProvider($user, $data);
+        }
+
         return $user;
     }
 
@@ -53,6 +59,7 @@ class AuthService
     {
         $role    = $data['role'] ?? 'pelanggan';
         $isMitra = in_array($role, ['mitra_motor', 'mitra_mobil']);
+        $isPending = $isMitra || $role === 'serv_provider';
 
         $user = User::create([
             'name'              => $data['name'],
@@ -60,7 +67,7 @@ class AuthService
             'password'          => Hash::make($data['password']),
             'role'              => $role,
             'address'           => $data['address'] ?? null,
-            'status'            => $isMitra ? 'pending_review' : 'active',
+            'status'            => $isPending ? 'pending_review' : 'active',
             'phone_verified_at' => now(),
         ]);
 
@@ -80,6 +87,10 @@ class AuthService
 
         if ($role === 'seller') {
             $this->createSeller($user, $data);
+        }
+
+        if ($role === 'serv_provider') {
+            $this->createServProvider($user, $data);
         }
 
         return $user;
@@ -143,6 +154,22 @@ class AuthService
             'phone'   => $data['seller_phone'] ?? null,
             'status'  => 'pending',
             'is_open' => false,
+        ]);
+    }
+
+    private function createServProvider(User $user, array $data): void
+    {
+        $name = $data['serv_name'];
+        ServProvider::create([
+            'user_id'  => $user->id,
+            'name'     => $name,
+            'slug'     => Str::slug($name) . '-' . Str::random(6),
+            'category' => $data['serv_category'] ?? 'lainnya',
+            'address'  => $data['serv_address'] ?? '',
+            'lat'      => $data['serv_lat'] ?? null,
+            'lng'      => $data['serv_lng'] ?? null,
+            'phone'    => $data['serv_phone'] ?? null,
+            'status'   => 'pending',
         ]);
     }
 

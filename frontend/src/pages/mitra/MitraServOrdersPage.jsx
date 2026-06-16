@@ -183,7 +183,7 @@ export default function MitraServOrdersPage() {
   const [available, setAvailable] = useState([])
   const [history,   setHistory]   = useState([])
   const [loading,   setLoading]   = useState(true)
-  const [tab,       setTab]       = useState('available')
+  const [tab,       setTab]       = useState('active')
 
   const silentRefresh = useCallback(async () => {
     try {
@@ -191,8 +191,9 @@ export default function MitraServOrdersPage() {
         api.get('/serv/mitra/active'),
         api.get('/serv/mitra/available'),
       ])
-      setActive(actRes.data || null)
-      setAvailable(avRes.data || [])
+      const act = actRes.data
+      setActive((act?.id && act?.order_number && act?.status) ? act : null)
+      setAvailable(Array.isArray(avRes.data) ? avRes.data : [])
     } catch {}
   }, [])
 
@@ -209,8 +210,19 @@ export default function MitraServOrdersPage() {
     } catch {}
   }, [])
 
+  const handleAccept = useCallback(async () => {
+    await silentRefresh()
+    setTab('active')
+  }, [silentRefresh])
+
   useEffect(() => { fetchData() }, [fetchData])
   useEffect(() => { if (tab === 'history') fetchHistory() }, [tab, fetchHistory])
+
+  const tabs = [
+    { key: 'active',    label: 'Aktif',    badge: active ? 1 : 0,  badgeColor: null },
+    { key: 'available', label: 'Tersedia', badge: available.length, badgeColor: '#EF4444' },
+    { key: 'history',   label: 'Riwayat',  badge: 0,               badgeColor: null },
+  ]
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', color: 'var(--k-text)', fontFamily: 'system-ui,sans-serif', paddingBottom: 80 }}>
@@ -236,65 +248,93 @@ export default function MitraServOrdersPage() {
       </nav>
 
       <div style={{ padding: '16px 16px 32px' }}>
-        {active && <ActiveCard order={active} onUpdate={silentRefresh} />}
+        {/* Tab Bar */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: 'var(--k-card)', borderRadius: 14, padding: 4 }}>
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)} style={{
+              flex: 1, padding: '10px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: tab === t.key ? '#0EA5E9' : 'transparent',
+              color: tab === t.key ? '#fff' : 'var(--k-muted)',
+              fontWeight: 700, fontSize: 13, position: 'relative', transition: 'all 0.2s',
+            }}>
+              {t.label}
+              {t.badge > 0 && (
+                <span style={{
+                  position: 'absolute', top: 5, right: 8,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  background: t.badgeColor ?? '#0EA5E9',
+                  color: '#fff',
+                  fontSize: 10, fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 4px',
+                  animation: t.badgeColor ? 'pulse 1.5s infinite' : 'none',
+                }}>{t.badge}</span>
+              )}
+            </button>
+          ))}
+        </div>
 
-        {!active && (
-          <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, background: 'var(--k-card)', borderRadius: 12, padding: 4 }}>
-              {[
-                { key: 'available', label: `Tersedia (${available.length})` },
-                { key: 'history',   label: 'Riwayat' },
-              ].map(t => (
-                <button key={t.key} onClick={() => setTab(t.key)} style={{
-                  flex: 1, padding: '10px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                  background: tab === t.key ? '#0EA5E9' : 'transparent',
-                  color: tab === t.key ? '#fff' : 'var(--k-muted)',
-                  fontWeight: 700, fontSize: 13,
-                }}>{t.label}</button>
-              ))}
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+            <div style={{ width: 28, height: 28, border: '2.5px solid #0EA5E9', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        ) : tab === 'active' ? (
+          active ? (
+            <ActiveCard order={active} onUpdate={silentRefresh} />
+          ) : (
+            <div style={{ textAlign: 'center', padding: '50px 0' }}>
+              <p style={{ fontSize: 40, marginBottom: 10 }}>🔧</p>
+              <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Belum ada order aktif</p>
+              <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 20 }}>Terima order dari tab Tersedia</p>
+              {available.length > 0 && (
+                <button onClick={() => setTab('available')} style={{
+                  background: '#0EA5E9', color: '#fff',
+                  border: 'none', borderRadius: 14, padding: '12px 24px',
+                  fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                }}>
+                  Lihat {available.length} Order Tersedia →
+                </button>
+              )}
             </div>
-
-            {loading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-                <div style={{ width: 28, height: 28, border: '2.5px solid #0EA5E9', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          )
+        ) : tab === 'available' ? (
+          available.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px 0' }}>
+              <p style={{ fontSize: 40, marginBottom: 10 }}>🔧</p>
+              <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Tidak ada order saat ini</p>
+              <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>Order baru akan muncul di sini</p>
+            </div>
+          ) : (
+            available.map(o => <AvailableCard key={o.id} order={o} onAccept={handleAccept} />)
+          )
+        ) : (
+          history.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px 0' }}>
+              <p style={{ fontSize: 40, marginBottom: 10 }}>📋</p>
+              <p style={{ fontSize: 15, fontWeight: 700 }}>Belum ada riwayat</p>
+            </div>
+          ) : (
+            history.map(o => (
+              <div key={o.id} style={{
+                background: 'var(--k-card)', border: '1px solid var(--k-border)',
+                borderRadius: 14, padding: '12px 14px', marginBottom: 10,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <p style={{ fontSize: 11, color: 'var(--k-muted)', fontFamily: 'monospace' }}>#{o.order_number}</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: '#0EA5E9' }}>+{fmtRp(o.provider_income)}</p>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--k-text)', marginBottom: 3 }}>{o.provider?.name}</p>
+                <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{fmtTime(o.created_at)}</p>
               </div>
-            ) : tab === 'available' ? (
-              available.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px 0' }}>
-                  <p style={{ fontSize: 40, marginBottom: 10 }}>🔧</p>
-                  <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Tidak ada order saat ini</p>
-                  <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>Order baru akan muncul di sini</p>
-                </div>
-              ) : (
-                available.map(o => <AvailableCard key={o.id} order={o} onAccept={silentRefresh} />)
-              )
-            ) : (
-              history.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px 0' }}>
-                  <p style={{ fontSize: 40, marginBottom: 10 }}>📋</p>
-                  <p style={{ fontSize: 15, fontWeight: 700 }}>Belum ada riwayat</p>
-                </div>
-              ) : (
-                history.map(o => (
-                  <div key={o.id} style={{
-                    background: 'var(--k-card)', border: '1px solid var(--k-border)',
-                    borderRadius: 14, padding: '12px 14px', marginBottom: 10,
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <p style={{ fontSize: 11, color: 'var(--k-muted)', fontFamily: 'monospace' }}>#{o.order_number}</p>
-                      <p style={{ fontSize: 14, fontWeight: 800, color: '#0EA5E9' }}>+{fmtRp(o.provider_income)}</p>
-                    </div>
-                    <p style={{ fontSize: 12, color: 'var(--k-text)', marginBottom: 3 }}>{o.provider?.name}</p>
-                    <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{fmtTime(o.created_at)}</p>
-                  </div>
-                ))
-              )
-            )}
-          </>
+            ))
+          )
         )}
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.5 } }
+      `}</style>
       <BottomNav />
     </div>
   )

@@ -7,6 +7,7 @@ const MODULE_META = {
   zasago:   { label: 'ZasaGo',   emoji: '🛵', color: '#1D4ED8', bg: 'rgba(29,78,216,0.10)',  path: '/mitra/orders' },
   zasafood: { label: 'ZasaFood', emoji: '🍜', color: '#EA580C', bg: 'rgba(234,88,12,0.10)',  path: '/mitra/food/orders' },
   zasamart: { label: 'ZasaMart', emoji: '🛒', color: '#7C3AED', bg: 'rgba(124,58,237,0.10)', path: '/mitra/mart/orders' },
+  zasaride: { label: 'ZasaRide', emoji: '🚗', color: '#059669', bg: 'rgba(5,150,105,0.10)',  path: '/mitra/ride' },
 }
 
 function getOrderLabel(order) {
@@ -14,6 +15,7 @@ function getOrderLabel(order) {
   if (m === 'zasago')   return order.pickup_address || order.item_description || `Order #${order.order_number}`
   if (m === 'zasafood') return order.merchant?.name || `Order #${order.order_number}`
   if (m === 'zasamart') return order.seller?.name   || `Order #${order.order_number}`
+  if (m === 'zasaride') return order.pickup_address || `Order #${order.order_number}`
   return `Order #${order.order_number}`
 }
 
@@ -22,6 +24,7 @@ function getOrderSub(order) {
   if (m === 'zasago')   return order.dropoff_address || order.item_description || null
   if (m === 'zasafood') return order.delivery_address || null
   if (m === 'zasamart') return order.delivery_address || null
+  if (m === 'zasaride') return order.destination_address || null
   return null
 }
 
@@ -30,6 +33,7 @@ function getIncome(order) {
   if (m === 'zasago')   return order.mitra_income || order.shipping_fee
   if (m === 'zasafood') return order.mitra_income
   if (m === 'zasamart') return order.shipping_fee
+  if (m === 'zasaride') return order.mitra_income || order.fare
   return null
 }
 

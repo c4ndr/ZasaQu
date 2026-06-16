@@ -18,9 +18,10 @@ export default function useMitraAvailableOrders(enabled = true, features = {}) {
       fetchAvailable('/mitra/orders/available',      'zasago'),
       features?.zasafood !== false ? fetchAvailable('/food/mitra/orders/available',  'zasafood') : [],
       features?.zasamart !== false ? fetchAvailable('/mart/mitra/orders/available',  'zasamart') : [],
+      features?.zasaride === true  ? fetchAvailable('/ride/mitra/available',         'zasaride') : [],
     ])
     setOrders(results.flat())
-  }, [enabled, features?.zasafood, features?.zasamart]) // eslint-disable-line
+  }, [enabled, features?.zasafood, features?.zasamart, features?.zasaride]) // eslint-disable-line
 
   useEffect(() => {
     load()

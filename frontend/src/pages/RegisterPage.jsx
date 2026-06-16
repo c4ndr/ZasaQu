@@ -4,6 +4,16 @@ import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 import MerchantLocationPicker from '../components/MerchantLocationPicker'
 
+const SERV_CATEGORIES = [
+  { value: 'ac',         label: 'AC & Pendingin' },
+  { value: 'elektronik', label: 'Elektronik' },
+  { value: 'listrik',    label: 'Instalasi Listrik' },
+  { value: 'air',        label: 'Saluran Air & Pipa' },
+  { value: 'bangunan',   label: 'Bangunan & Renovasi' },
+  { value: 'jahit',      label: 'Jahit & Konveksi' },
+  { value: 'lainnya',    label: 'Lainnya' },
+]
+
 const HOME_CATEGORIES = [
   { value: 'laundry',  label: 'Laundry' },
   { value: 'pijat',    label: 'Pijat & Relaksasi' },
@@ -20,11 +30,12 @@ const SHOP_CATEGORIES = [
 ]
 
 const MITRA_TYPES = [
-  { value: 'mitra_motor',   emoji: '🏍️', label: 'Kurir Motor',       desc: 'Antar barang dengan motor',            grad: 'linear-gradient(135deg,#F59E0B,#EF4444)' },
-  { value: 'mitra_mobil',   emoji: '🚗', label: 'Kurir Mobil',        desc: 'Antar barang kapasitas lebih besar',   grad: 'linear-gradient(135deg,#3B82F6,#06B6D4)' },
+  { value: 'mitra_motor',   emoji: '🏍️', label: 'Mitra Motor',        desc: 'ZasaGo, ZasaRide & pengiriman dengan motor',   grad: 'linear-gradient(135deg,#F59E0B,#EF4444)' },
+  { value: 'mitra_mobil',   emoji: '🚗', label: 'Mitra Mobil',        desc: 'ZasaGo, ZasaRide & pengiriman kapasitas besar', grad: 'linear-gradient(135deg,#3B82F6,#06B6D4)' },
   { value: 'merchant',      emoji: '🏪', label: 'Merchant Makanan',   desc: 'Buka warung / restoran online',        grad: 'linear-gradient(135deg,#EF4444,#F97316)' },
   { value: 'home_provider', emoji: '🏠', label: 'Provider Rumahan',   desc: 'Laundry, pijat, cleaning, tukang',     grad: 'linear-gradient(135deg,#8B5CF6,#6366F1)' },
   { value: 'seller',        emoji: '🛒', label: 'Seller ZasaShop',    desc: 'Jual produk lokal di ZasaShop',        grad: 'linear-gradient(135deg,#10B981,#3B82F6)' },
+  { value: 'serv_provider', emoji: '🔧', label: 'Teknisi ZasaServ',   desc: 'Tawarkan jasa servis & perbaikan',     grad: 'linear-gradient(135deg,#0EA5E9,#0284C7)' },
 ]
 
 const EMPTY_FORM = {
@@ -37,6 +48,8 @@ const EMPTY_FORM = {
   provider_lat: '', provider_lng: '',
   seller_name: '', seller_address: '', seller_phone: '',
   seller_lat: '', seller_lng: '',
+  serv_name: '', serv_category: '', serv_address: '', serv_phone: '',
+  serv_lat: '', serv_lng: '',
 }
 
 export default function RegisterPage() {
@@ -62,6 +75,7 @@ export default function RegisterPage() {
   const isMerchant     = effectiveRole === 'merchant'
   const isHomeProvider = effectiveRole === 'home_provider'
   const isSeller       = effectiveRole === 'seller'
+  const isServProvider = effectiveRole === 'serv_provider'
 
   const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -473,6 +487,45 @@ export default function RegisterPage() {
                 </div>
                 <div style={{ padding: '10px 14px', borderRadius: 12, background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.18)', fontSize: 12, color: '#A78BFA', lineHeight: 1.5 }}>
                   🛒 Toko akan aktif setelah diverifikasi admin. Anda sudah bisa menambahkan produk sejak awal.
+                </div>
+              </div>
+            )}
+
+            {/* Serv Provider */}
+            {isServProvider && (
+              <div className="fade-in" style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 20, padding: '18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Informasi Usaha Servis</p>
+                <div>
+                  <label className="label">Nama Usaha *</label>
+                  <input className="input-field" type="text" name="serv_name"
+                    value={form.serv_name} onChange={handleChange} required={isServProvider} placeholder="Contoh: Bengkel Listrik Maju Jaya" />
+                </div>
+                <div>
+                  <label className="label">Kategori Keahlian *</label>
+                  <select className="input-field" name="serv_category"
+                    value={form.serv_category} onChange={handleChange} required={isServProvider}
+                    style={{ background: 'var(--k-input)', color: 'var(--k-text)' }}>
+                    <option value="">-- Pilih kategori --</option>
+                    {SERV_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Alamat *</label>
+                  <input className="input-field" type="text" name="serv_address"
+                    value={form.serv_address} onChange={handleChange} required={isServProvider} placeholder="Jl. Contoh No. 1" />
+                </div>
+                <div>
+                  <label className="label">Nomor HP Usaha</label>
+                  <input className="input-field" type="tel" name="serv_phone"
+                    value={form.serv_phone} onChange={handleChange} placeholder="08xxxxxxxxxx (opsional)" />
+                </div>
+                <div>
+                  <label className="label">Pin Lokasi di Map</label>
+                  <MerchantLocationPicker lat={form.serv_lat} lng={form.serv_lng}
+                    onPick={({ lat, lng, address }) => setForm(f => ({ ...f, serv_lat: lat, serv_lng: lng, serv_address: f.serv_address || address }))} />
+                </div>
+                <div style={{ padding: '10px 14px', borderRadius: 12, background: 'rgba(14,165,233,0.07)', border: '1px solid rgba(14,165,233,0.2)', fontSize: 12, color: '#38BDF8', lineHeight: 1.5 }}>
+                  🔧 Akun teknisi akan aktif setelah diverifikasi admin. Anda sudah bisa menambahkan layanan servis sejak awal.
                 </div>
               </div>
             )}

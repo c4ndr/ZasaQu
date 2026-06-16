@@ -101,6 +101,7 @@ export default function MitraOrderAlert() {
     zasago:   { accept: (id) => api.post(`/mitra/orders/${id}/accept`),      nav: '/mitra/orders' },
     zasafood: { accept: (id) => api.post(`/food/mitra/orders/${id}/accept`), nav: '/mitra/food/orders' },
     zasamart: { accept: (id) => api.post(`/mart/mitra/orders/${id}/accept`), nav: '/mitra/mart/orders' },
+    zasaride: { accept: (id) => api.post(`/ride/mitra/orders/${id}/accept`), nav: '/mitra/ride' },
   }
 
   // ── Terima order dari popup in-app ────────────────────────────────────────

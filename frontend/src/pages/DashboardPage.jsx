@@ -465,27 +465,11 @@ export default function DashboardPage() {
                   </div>
                 </Link>
               )}
-              {vehicleType && feat.zasaride !== false && (
+              {feat.zasaride === true && (
                 <Link to="/mitra/ride" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
                   <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 22, marginBottom: 4 }}>{vehicleType === 'mobil' ? '🚗' : '🏍️'}</div>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: '#00C896' }}>ZasaRide</p>
-                  </div>
-                </Link>
-              )}
-              {feat.zasahome !== false && (
-                <Link to="/mitra/home/orders" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
-                  <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 22, marginBottom: 4 }}>🏠</div>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>ZasaHome</p>
-                  </div>
-                </Link>
-              )}
-              {feat.zasaserv !== false && (
-                <Link to="/mitra/serv/orders" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
-                  <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 22, marginBottom: 4 }}>🔧</div>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: '#0EA5E9' }}>ZasaServ</p>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>🚗</div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#059669' }}>ZasaRide</p>
                   </div>
                 </Link>
               )}

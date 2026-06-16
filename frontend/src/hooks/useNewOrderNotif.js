@@ -57,6 +57,13 @@ const MODULES = [
     label:    'ZasaMart',
     emoji:    '🛒',
   },
+  {
+    key:      'zasaride',
+    endpoint: '/ride/mitra/available',
+    wsEvent:  'ride.placed',
+    label:    'ZasaRide',
+    emoji:    '🚗',
+  },
 ]
 
 // ── Hook utama — handle semua modul sekaligus ─────────────────────────────────

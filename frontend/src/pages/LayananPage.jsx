@@ -95,6 +95,50 @@ const SERVICES = [
       'Penyedia jasa datang ke lokasi Anda',
     ],
   },
+  {
+    key: 'zasaride',
+    emoji: '🚗',
+    name: 'ZasaRide',
+    tagline: 'Transportasi Online Terdekat',
+    color: '#059669',
+    bg: 'rgba(5,150,105,0.08)',
+    description: 'Pesan ojek atau taksi online dengan cepat dan aman. Mitra driver terverifikasi siap mengantar Anda ke tujuan dengan nyaman.',
+    features: [
+      'Pesan motor atau mobil sesuai kebutuhan',
+      'Tarif transparan sebelum pesan',
+      'Driver terverifikasi & berpengalaman',
+      'Tracking perjalanan real-time',
+      'Pembayaran COD atau ZasaWallet',
+    ],
+    howto: [
+      'Masukkan lokasi penjemputan & tujuan',
+      'Pilih jenis kendaraan (motor/mobil)',
+      'Konfirmasi tarif & pesan driver',
+      'Driver menjemput & antar ke tujuan',
+    ],
+  },
+  {
+    key: 'zasaserv',
+    emoji: '🔧',
+    name: 'ZasaServ',
+    tagline: 'Servis & Perbaikan Profesional',
+    color: '#0EA5E9',
+    bg: 'rgba(14,165,233,0.08)',
+    description: 'Temukan teknisi profesional untuk kebutuhan servis dan perbaikan. Dari elektronik hingga kendaraan, semua tersedia di ZasaQu.',
+    features: [
+      'Teknisi berpengalaman & terverifikasi',
+      'Servis elektronik & peralatan rumah',
+      'Perbaikan kendaraan bermotor',
+      'Estimasi biaya sebelum pengerjaan',
+      'Garansi pekerjaan dari teknisi',
+    ],
+    howto: [
+      'Pilih kategori servis yang dibutuhkan',
+      'Deskripsikan masalah & unggah foto',
+      'Pilih teknisi & jadwal kunjungan',
+      'Teknisi datang & selesaikan pekerjaan',
+    ],
+  },
 ]
 
 export default function LayananPage() {
@@ -107,7 +151,7 @@ export default function LayananPage() {
         <button onClick={() => navigate(-1)} style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--k-input)', border: '1px solid var(--k-border)', color: 'var(--k-text)', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>←</button>
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--k-text)', margin: 0 }}>Layanan Kami</p>
-          <p style={{ fontSize: 11, color: 'var(--k-muted)', margin: 0 }}>4 layanan untuk kebutuhan sehari-hari</p>
+          <p style={{ fontSize: 11, color: 'var(--k-muted)', margin: 0 }}>6 layanan untuk kebutuhan sehari-hari</p>
         </div>
         <LOGO />
       </div>
@@ -118,7 +162,7 @@ export default function LayananPage() {
           <div style={{ position: 'absolute', right: -30, bottom: -30, width: 140, height: 140, borderRadius: '50%', background: 'rgba(0,200,150,0.06)' }} />
           <p style={{ fontSize: 11, color: 'rgba(0,200,150,0.8)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 8px' }}>ZasaQu Ecosystem</p>
           <p style={{ fontSize: 20, fontWeight: 900, color: '#fff', margin: '0 0 8px', lineHeight: 1.3 }}>Satu Aplikasi,{'\n'}Semua Kebutuhan</p>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.6 }}>ZasaQu menghadirkan 4 layanan terintegrasi untuk memudahkan kehidupan sehari-hari Anda.</p>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.6 }}>ZasaQu menghadirkan 6 layanan terintegrasi untuk memudahkan kehidupan sehari-hari Anda.</p>
         </div>
 
         {/* Service cards */}
