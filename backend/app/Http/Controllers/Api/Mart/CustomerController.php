@@ -137,6 +137,10 @@ class CustomerController extends Controller
 
         $paymentMethod = $data['payment_method'] ?? 'wallet';
 
+        if ($paymentMethod === 'wallet' && !AdminSetting::walletEnabled()) {
+            return response()->json(['message' => 'Pembayaran via wallet sementara tidak tersedia.'], 422);
+        }
+
         $user   = $request->user();
         $seller = MartSeller::findOrFail($data['seller_id']);
         abort_if(!$seller->isActive(), 422, 'Toko tidak aktif.');

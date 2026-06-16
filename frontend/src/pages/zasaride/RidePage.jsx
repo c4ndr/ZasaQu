@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import useAppInfo from '../../hooks/useAppInfo'
 import api from '../../services/api'
 import echo from '../../services/echo'
 import LocationSearch from '../../components/LocationSearch'
@@ -265,6 +266,7 @@ function ActiveRide({ order, onRefresh }) {
 // ── Halaman utama ─────────────────────────────────────────────────────────────
 export default function RidePage() {
   const { user } = useAuth()
+  const { wallet_enabled: walletEnabled } = useAppInfo()
   const navigate  = useNavigate()
 
   const [step, setStep]           = useState(1)
@@ -613,7 +615,7 @@ export default function RidePage() {
                 {[
                   { method: 'cod',    emoji: '💵', label: 'Tunai (COD)', sub: 'Bayar langsung ke driver' },
                   { method: 'wallet', emoji: '💳', label: 'Wallet',       sub: 'Bayar otomatis saat selesai' },
-                ].map(v => (
+                ].filter(v => v.method !== 'wallet' || walletEnabled).map(v => (
                   <button key={v.method} onClick={() => setPayMethod(v.method)} style={{
                     background: payMethod === v.method ? 'var(--k-glow)' : 'var(--k-card)',
                     border: `1.5px solid ${payMethod === v.method ? 'var(--k-accent)' : 'var(--k-border)'}`,

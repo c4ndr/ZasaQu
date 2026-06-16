@@ -92,7 +92,7 @@ Route::get('promos', function () {
 
 // ─── Info aplikasi publik (tanpa auth) ─────────────────────────────────────
 Route::get('app-info', function () {
-    $keys = ['app_name', 'app_tagline', 'app_logo_path', 'maintenance_mode'];
+    $keys = ['app_name', 'app_tagline', 'app_logo_path', 'maintenance_mode', 'wallet_enabled'];
     $rows = \App\Models\AdminSetting::whereIn('key', $keys)->get()->keyBy('key');
     $logoPath = $rows['app_logo_path']->value ?? '';
 
@@ -120,6 +120,7 @@ Route::get('app-info', function () {
         'app_tagline'      => $rows['app_tagline']->value      ?? '',
         'app_logo_url'     => $logoDataUrl,
         'maintenance_mode' => ($rows['maintenance_mode']->value ?? '0') === '1',
+        'wallet_enabled'   => ($rows['wallet_enabled']->value  ?? '0') === '1',
         'features'         => $features,
     ]);
 });

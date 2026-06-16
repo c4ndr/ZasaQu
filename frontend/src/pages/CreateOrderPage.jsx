@@ -5,6 +5,7 @@ import { getPosition } from '../utils/geo'
 import { reverseGeocodeGoogle } from '../utils/googleMaps'
 import LocationSearch from '../components/LocationSearch'
 import MapSatToggle from '../components/MapSatToggle'
+import useAppInfo from '../hooks/useAppInfo'
 import api from '../services/api'
 import useAddresses from '../hooks/useAddresses'
 
@@ -177,6 +178,7 @@ function LocationPicker({ label, color, lat, lng, address, onchange }) {
 export default function CreateOrderPage() {
   const navigate = useNavigate()
   const { addresses } = useAddresses()
+  const { wallet_enabled: walletEnabled } = useAppInfo()
   const [categories, setCategories] = useState([])
   const [catError,   setCatError]   = useState(false)
   const [form, setForm] = useState({
@@ -184,7 +186,7 @@ export default function CreateOrderPage() {
     dropoff_address: '', dropoff_lat: '', dropoff_lng: '',
     item_category_id: '', item_description: '', item_value: '',
     vehicle_type: 'motor', shipping_fee: '',
-    payment_method: 'wallet', is_jastip_enabled: false,
+    payment_method: 'cod', is_jastip_enabled: false,
     requires_disclaimer: false, require_photo: false, notes: '',
   })
   const [loading,    setLoading]    = useState(false)
@@ -381,7 +383,7 @@ export default function CreateOrderPage() {
               <div>
                 <label className="label">Metode Pembayaran</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {[{ v: 'wallet', emoji: '💳', label: 'Saldo Wallet' }, { v: 'cod', emoji: '💵', label: 'COD / Tunai' }].map(({ v, emoji, label }) => (
+                  {[{ v: 'wallet', emoji: '💳', label: 'Saldo Wallet' }, { v: 'cod', emoji: '💵', label: 'COD / Tunai' }].filter(({ v }) => v !== 'wallet' || walletEnabled).map(({ v, emoji, label }) => (
                     <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, cursor: 'pointer', border: `1.5px solid ${form.payment_method === v ? 'var(--k-accent)' : 'var(--k-border)'}`, background: form.payment_method === v ? 'var(--k-glow)' : 'var(--k-card2)', transition: 'all 0.2s' }}>
                       <input type="radio" name="payment_method" value={v} checked={form.payment_method === v} onChange={handleChange} style={{ display: 'none' }} />
                       <span style={{ fontSize: 18 }}>{emoji}</span>

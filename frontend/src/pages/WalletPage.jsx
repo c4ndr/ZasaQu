@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import BottomNav from '../components/BottomNav'
+import useAppInfo from '../hooks/useAppInfo'
 import api from '../services/api'
 
 const TYPE_LABELS = {
@@ -128,6 +129,7 @@ function PendingCard({ icon, label, amount, status, note, color, type = 'topup',
 
 export default function WalletPage() {
   const { user }  = useAuth()
+  const { wallet_enabled: walletEnabled } = useAppInfo()
   const isMitra   = user?.role?.startsWith('mitra')
   const [summary,      setSummary]      = useState(null)
   const [transactions, setTransactions] = useState([])
@@ -182,16 +184,23 @@ export default function WalletPage() {
             <p style={{ color: 'rgba(12,12,22,0.55)', fontSize: 12 }}>🔒 Terkunci: {fmtRp(summary.locked_balance)}</p>
           )}
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-            <Link to="/topup" style={{ flex: 1, display: 'block', textDecoration: 'none', padding: '11px 8px', borderRadius: 14, textAlign: 'center', background: 'rgba(12,12,22,0.2)', color: '#0C0C16', fontSize: 13, fontWeight: 700 }}>
-              ⬇ Top Up
-            </Link>
-            {isMitra && (
-              <Link to="/withdraw" style={{ flex: 1, display: 'block', textDecoration: 'none', padding: '11px 8px', borderRadius: 14, textAlign: 'center', background: 'rgba(12,12,22,0.2)', color: '#0C0C16', fontSize: 13, fontWeight: 700 }}>
-                ⬆ Withdraw
+          {walletEnabled ? (
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <Link to="/topup" style={{ flex: 1, display: 'block', textDecoration: 'none', padding: '11px 8px', borderRadius: 14, textAlign: 'center', background: 'rgba(12,12,22,0.2)', color: '#0C0C16', fontSize: 13, fontWeight: 700 }}>
+                ⬇ Top Up
               </Link>
-            )}
-          </div>
+              {isMitra && (
+                <Link to="/withdraw" style={{ flex: 1, display: 'block', textDecoration: 'none', padding: '11px 8px', borderRadius: 14, textAlign: 'center', background: 'rgba(12,12,22,0.2)', color: '#0C0C16', fontSize: 13, fontWeight: 700 }}>
+                  ⬆ Withdraw
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 12, background: 'rgba(12,12,22,0.25)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>🔒</span>
+              <p style={{ fontSize: 12, color: 'rgba(12,12,22,0.75)', fontWeight: 600 }}>Top up & withdraw sementara tidak tersedia</p>
+            </div>
+          )}
         </div>
       </div>
 

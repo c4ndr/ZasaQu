@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import useAppInfo from '../hooks/useAppInfo'
 import BottomNav from '../components/BottomNav'
 import LocationSearch from '../components/LocationSearch'
 import SessionRouteMap from '../components/SessionRouteMap'
@@ -14,6 +15,7 @@ const VEHICLE_TYPES = [
 
 export default function JastipPage() {
   const navigate = useNavigate()
+  const { wallet_enabled: walletEnabled } = useAppInfo()
 
   const [step, setStep] = useState('results')
 
@@ -38,7 +40,7 @@ export default function JastipPage() {
   const [destLng,     setDestLng]     = useState('')
   const [itemDesc,    setItemDesc]    = useState('')
   const [itemValue,   setItemValue]   = useState('')
-  const [payMethod,   setPayMethod]   = useState('wallet')
+  const [payMethod,   setPayMethod]   = useState('cod')
   const [shippingFee, setShippingFee] = useState(null)
   const [feeLoading,  setFeeLoading]  = useState(false)
   const [feeError,    setFeeError]    = useState('')
@@ -533,7 +535,7 @@ export default function JastipPage() {
                 Metode Pembayaran
               </p>
               <div style={{ display: 'flex', gap: 10 }}>
-                {[{ value: 'wallet', label: 'Wallet', icon: '💳' }, { value: 'cod', label: 'COD', icon: '💵' }].map(m => (
+                {[{ value: 'wallet', label: 'Wallet', icon: '💳' }, { value: 'cod', label: 'COD', icon: '💵' }].filter(m => m.value !== 'wallet' || walletEnabled).map(m => (
                   <button key={m.value} type="button" onClick={() => setPayMethod(m.value)} style={{
                     flex: 1, padding: '12px 8px', borderRadius: 14,
                     border: payMethod === m.value ? '2px solid var(--k-accent)' : '1.5px solid var(--k-border)',

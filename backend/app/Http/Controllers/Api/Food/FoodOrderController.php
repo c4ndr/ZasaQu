@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Food;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\FoodMerchant;
 use App\Models\FoodOrder;
 use App\Services\FoodOrderService;
@@ -102,6 +103,9 @@ class FoodOrderController extends Controller
             'notes'            => ['nullable', 'string', 'max:500'],
         ]);
 
+        if ($data['payment_method'] === 'wallet' && !AdminSetting::walletEnabled()) {
+            return response()->json(['message' => 'Pembayaran via wallet sementara tidak tersedia.'], 422);
+        }
         try {
             $order = $this->foodOrderService->createOrder($request->user(), $data);
         } catch (\Exception $e) {

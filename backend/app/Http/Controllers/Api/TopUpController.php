@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\BankAccount;
 use App\Models\TopUpRequest;
 use App\Services\IpaymuService;
@@ -40,6 +41,10 @@ class TopUpController extends Controller
 
     public function createManual(Request $request): JsonResponse
     {
+        if (!AdminSetting::walletEnabled()) {
+            return response()->json(['message' => 'Fitur wallet sedang tidak aktif.'], 422);
+        }
+
         $data = $request->validate([
             'amount'          => ['required', 'numeric', 'min:10000', 'max:50000000'],
             'bank_account_id' => ['required', 'exists:bank_accounts,id'],
@@ -63,6 +68,10 @@ class TopUpController extends Controller
 
     public function createVirtualAccount(Request $request): JsonResponse
     {
+        if (!AdminSetting::walletEnabled()) {
+            return response()->json(['message' => 'Fitur wallet sedang tidak aktif.'], 422);
+        }
+
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:10000', 'max:50000000'],
         ]);
@@ -108,6 +117,10 @@ class TopUpController extends Controller
 
     public function createIpaymuVA(Request $request): JsonResponse
     {
+        if (!AdminSetting::walletEnabled()) {
+            return response()->json(['message' => 'Fitur wallet sedang tidak aktif.'], 422);
+        }
+
         if (!$this->ipaymuService->isConfigured()) {
             return response()->json(['message' => 'iPaymu belum dikonfigurasi.'], 422);
         }

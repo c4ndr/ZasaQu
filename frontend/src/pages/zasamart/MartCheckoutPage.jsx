@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import useAppInfo from '../../hooks/useAppInfo'
 import api from '../../services/api'
 import AddressPicker from '../../components/AddressPicker'
 
@@ -20,6 +21,7 @@ const PAYMENT_METHODS = [
 export default function MartCheckoutPage() {
   const navigate     = useNavigate()
   const location     = useLocation()
+  const { wallet_enabled: walletEnabled } = useAppInfo()
   const seller_id    = location.state?.seller_id
   const cartItemIds  = location.state?.cart_item_ids ?? null
 
@@ -29,7 +31,7 @@ export default function MartCheckoutPage() {
   const [notes,        setNotes]        = useState('')
   const [placing,      setPlacing]      = useState(false)
   const [err,          setErr]          = useState('')
-  const [payMethod,    setPayMethod]    = useState('wallet')
+  const [payMethod,    setPayMethod]    = useState('cod')
   const [balance,      setBalance]      = useState(null)
 
   useEffect(() => {
@@ -135,7 +137,7 @@ export default function MartCheckoutPage() {
         <div style={{ ...card, padding: '14px' }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>💳 Metode Pembayaran</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {PAYMENT_METHODS.map(m => (
+            {PAYMENT_METHODS.filter(m => m.key !== 'wallet' || walletEnabled).map(m => (
               <div key={m.key} onClick={() => setPayMethod(m.key)} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
                 border: `2px solid ${payMethod === m.key ? '#6366F1' : 'var(--k-border)'}`,

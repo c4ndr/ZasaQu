@@ -98,6 +98,9 @@ class JastipController extends Controller
             'requires_disclaimer'=>['boolean'],
             'notes'=>['nullable','string'],
         ]);
+        if ($data['payment_method'] === 'wallet' && !AdminSetting::walletEnabled()) {
+            return response()->json(['message' => 'Pembayaran via wallet sementara tidak tersedia.'], 422);
+        }
         try {
             $order = $this->orderService->createJastipOrder($request->user(), $session, $data, $this->corridorService);
         } catch (\Exception $e) {

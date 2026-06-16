@@ -18,4 +18,9 @@ class AdminSetting extends Model
         $setting = static::where('key', $key)->first();
         return $setting ? $setting->value : $default;
     }
+
+    public static function walletEnabled(): bool
+    {
+        return static::where('key', 'wallet_enabled')->value('value') === '1';
+    }
 }

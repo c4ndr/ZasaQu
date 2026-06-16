@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import useAppInfo from '../hooks/useAppInfo'
 import api from '../services/api'
 import QRCode from 'qrcode'
 
@@ -209,6 +210,7 @@ function ResultScreen({ result, method, onBack, onSimulate, simLoading }) {
 // ── Halaman utama ─────────────────────────────────────────────────────────────
 export default function TopUpPage() {
   const { user }   = useAuth()
+  const { wallet_enabled: walletEnabled } = useAppInfo()
   const navigate   = useNavigate()
   const fileRef    = useRef()
 
@@ -291,6 +293,15 @@ export default function TopUpPage() {
     } catch { setError('Simulasi gagal.') }
     finally { setSimLoading(false) }
   }
+
+  if (!walletEnabled) return (
+    <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 32px', textAlign: 'center', gap: 16 }}>
+      <div style={{ fontSize: 56 }}>🔒</div>
+      <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Top Up Tidak Tersedia</h2>
+      <p style={{ fontSize: 14, color: 'var(--k-muted)', lineHeight: 1.6 }}>Fitur top up wallet sedang tidak aktif. Silakan coba lagi nanti.</p>
+      <Link to="/wallet" style={{ marginTop: 8, padding: '12px 28px', borderRadius: 14, background: 'var(--k-accent)', color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>Kembali ke Wallet</Link>
+    </div>
+  )
 
   if (result) return (
     <ResultScreen result={result} method={method}

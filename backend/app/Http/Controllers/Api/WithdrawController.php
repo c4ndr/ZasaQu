@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\WithdrawRequest;
 use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +24,10 @@ class WithdrawController extends Controller
 
     public function create(Request $request): JsonResponse
     {
+        if (!AdminSetting::walletEnabled()) {
+            return response()->json(['message' => 'Fitur wallet sedang tidak aktif.'], 422);
+        }
+
         $data = $request->validate([
             'amount'             => ['required', 'numeric', 'min:10000'],
             'destination_type'   => ['required', 'in:dana,ovo,gopay,bank'],

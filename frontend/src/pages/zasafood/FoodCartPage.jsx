@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import useAppInfo from '../../hooks/useAppInfo'
 import api from '../../services/api'
 import AddressPicker from '../../components/AddressPicker'
 
@@ -9,10 +10,11 @@ function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 export default function FoodCartPage() {
   const { state }  = useLocation()
   const navigate   = useNavigate()
+  const { wallet_enabled: walletEnabled } = useAppInfo()
   const { merchant, cart, preSelectedSession } = state || {}
 
   const [deliveryInfo,    setDeliveryInfo]    = useState(null) // { address, lat, lng, recipient_name, recipient_phone, notes }
-  const [payMethod,       setPayMethod]       = useState('wallet')
+  const [payMethod,       setPayMethod]       = useState('cod')
   const [notes,           setNotes]           = useState('')
   const [estimate,        setEstimate]        = useState(null)
   const [loadingEst,      setLoadingEst]      = useState(false)
@@ -202,7 +204,7 @@ export default function FoodCartPage() {
         <div style={card}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Metode Pembayaran</div>
           <div style={{ display: 'flex', gap: 10 }}>
-            {[['wallet','💳','Saldo ZasaQu'],['cod','💵','Bayar di Tempat']].map(([v,e,l]) => (
+            {[['wallet','💳','Saldo ZasaQu'],['cod','💵','Bayar di Tempat']].filter(([v]) => v !== 'wallet' || walletEnabled).map(([v,e,l]) => (
               <button key={v} onClick={() => setPayMethod(v)} style={{
                 flex: 1, padding: '12px 8px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
                 border: `2px solid ${payMethod === v ? '#F97316' : 'var(--k-border)'}`,

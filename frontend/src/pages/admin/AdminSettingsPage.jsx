@@ -15,7 +15,7 @@ function dataUrlToFile(dataUrl, filename) {
 const STORAGE_URL = (import.meta.env.VITE_API_URL || '') + '/storage'
 
 const GROUPS = [
-  { label: '🏷️ Identitas Aplikasi',  keys: ['app_name', 'app_tagline', 'maintenance_mode', 'app_logo_path'] },
+  { label: '🏷️ Identitas Aplikasi',  keys: ['app_name', 'app_tagline', 'maintenance_mode', 'wallet_enabled', 'app_logo_path'] },
   { label: '🚚 Tarif Ongkos Kirim',   keys: ['shipping_motor_base', 'shipping_motor_per_km', 'shipping_mobil_base', 'shipping_mobil_per_km'] },
   { label: '💰 Komisi & Diskon',      keys: ['commission_master_percent', 'commission_jastip_percent', 'discount_master_percent'] },
   { label: '⚡ JastipQu',             keys: ['corridor_default_meters', 'corridor_max_meters', 'max_jastip_motor', 'max_jastip_mobil'] },

@@ -193,6 +193,13 @@ class AdminSettingsSeeder extends Seeder
                 'label'       => 'Mode Maintenance',
                 'description' => 'Aktifkan untuk menutup akses pelanggan & mitra sementara',
             ],
+            [
+                'key'         => 'wallet_enabled',
+                'value'       => '0',
+                'type'        => 'boolean',
+                'label'       => 'Wallet Aktif',
+                'description' => 'Aktifkan fitur wallet: top up, withdraw, dan pembayaran via saldo. Nonaktifkan jika payment gateway belum siap.',
+            ],
         ];
 
         foreach ($settings as $setting) {

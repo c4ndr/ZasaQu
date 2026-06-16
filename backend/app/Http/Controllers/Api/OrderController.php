@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\ItemCategory;
 use App\Models\Order;
 use App\Services\OrderService;
@@ -65,6 +66,9 @@ class OrderController extends Controller
             'require_photo'=>['boolean'],
             'notes'=>['nullable','string'],
         ]);
+        if ($data['payment_method'] === 'wallet' && !AdminSetting::walletEnabled()) {
+            return response()->json(['message' => 'Pembayaran via wallet sementara tidak tersedia.'], 422);
+        }
         try {
             $order = $this->orderService->createMasterOrder($request->user(), $data);
         } catch (\Exception $e) {

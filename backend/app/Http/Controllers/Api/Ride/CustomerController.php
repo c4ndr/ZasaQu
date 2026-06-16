@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Ride;
 use App\Events\RideOrderPlaced;
 use App\Events\RideStatusUpdated;
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\RideFare;
 use App\Models\RideOrder;
 use App\Models\Wallet;
@@ -89,6 +90,9 @@ class CustomerController extends Controller
 
         // Cek & kunci saldo wallet kalau bayar wallet
         if ($data['payment_method'] === 'wallet') {
+            if (!AdminSetting::walletEnabled()) {
+                return response()->json(['message' => 'Pembayaran via wallet sementara tidak tersedia.'], 422);
+            }
             $wallet = Wallet::where('user_id', $user->id)->first();
             if (!$wallet || $wallet->availableBalance() < $calc['fare']) {
                 return response()->json(['message' => 'Saldo wallet tidak cukup.'], 422);
