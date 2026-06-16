@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Ride;
 
 use App\Events\RideStatusUpdated;
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\RideOrder;
 use App\Models\Wallet;
 use App\Services\WalletService;
@@ -51,6 +52,18 @@ class MitraController extends Controller
             ->whereIn('status', ['accepted', 'on_pickup', 'on_ride'])
             ->exists();
         if ($hasActive) return response()->json(['message' => 'Selesaikan perjalanan aktif terlebih dahulu.'], 422);
+
+        // Cek saldo minimum
+        $minBalance = (float) (AdminSetting::where('key', 'wallet_minimum_mitra')->value('value') ?? 0);
+        if ($minBalance > 0) {
+            $wallet = Wallet::where('user_id', $user->id)->first();
+            if (!$wallet || $wallet->availableBalance() < $minBalance) {
+                return response()->json([
+                    'message' => 'Saldo tidak mencukupi untuk menerima order. Minimum: Rp '
+                        . number_format($minBalance, 0, ',', '.') . '.',
+                ], 422);
+            }
+        }
 
         $order = DB::transaction(function () use ($id, $user) {
             $order = RideOrder::where('status', 'pending')->lockForUpdate()->findOrFail($id);
@@ -107,33 +120,45 @@ class MitraController extends Controller
             $order->update(array_merge(['status' => $newStatus], $timestamps[$newStatus] ?? []));
 
             // Selesaikan wallet saat order completed
-            if ($newStatus === 'completed' && $order->payment_method === 'wallet') {
+            if ($newStatus === 'completed') {
                 $mitra    = $order->mitra;
                 $customer = $order->customer;
 
-                // Lepas locked_balance customer & debit pembayaran
-                $custWallet = Wallet::lockForUpdate()->where('user_id', $order->customer_id)->first();
-                if ($custWallet) {
-                    $custWallet->decrement('locked_balance', min((float) $order->fare, (float) $custWallet->locked_balance));
-                }
-                $this->walletService->debit(
-                    $customer,
-                    (float) $order->fare,
-                    'order_payment',
-                    "Pembayaran ZasaRide #{$order->order_number}",
-                    $order,
-                    'zasaride'
-                );
+                if ($order->payment_method === 'wallet') {
+                    // Lepas locked_balance customer & debit pembayaran
+                    $custWallet = Wallet::lockForUpdate()->where('user_id', $order->customer_id)->first();
+                    if ($custWallet) {
+                        $custWallet->decrement('locked_balance', min((float) $order->fare, (float) $custWallet->locked_balance));
+                    }
+                    $this->walletService->debit(
+                        $customer,
+                        (float) $order->fare,
+                        'order_payment',
+                        "Pembayaran ZasaRide #{$order->order_number}",
+                        $order,
+                        'zasaride'
+                    );
 
-                // Credit income ke mitra
-                $this->walletService->credit(
-                    $mitra,
-                    (float) $order->mitra_income,
-                    'order_income',
-                    "Pendapatan ZasaRide #{$order->order_number}",
-                    $order,
-                    'zasaride'
-                );
+                    // Credit income ke mitra (netto setelah komisi)
+                    $this->walletService->credit(
+                        $mitra,
+                        (float) $order->mitra_income,
+                        'order_income',
+                        "Pendapatan ZasaRide #{$order->order_number}",
+                        $order,
+                        'zasaride'
+                    );
+                } elseif ($order->payment_method === 'cod') {
+                    // COD: mitra terima cash dari customer, potong komisi platform dari wallet mitra
+                    $this->walletService->debitForce(
+                        $mitra,
+                        (float) $order->platform_commission,
+                        'platform_commission',
+                        "Komisi platform ZasaRide #{$order->order_number} (COD)",
+                        $order,
+                        'zasaride'
+                    );
+                }
             }
         });
 
