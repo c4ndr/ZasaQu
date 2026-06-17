@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\HomeOrder;
 use App\Models\HomeProvider;
 use App\Models\HomeService;
-use App\Services\WalletService;
+use App\Services\HomeOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -14,6 +14,8 @@ use Illuminate\Support\Str;
 
 class ProviderController extends Controller
 {
+    public function __construct(private HomeOrderService $homeOrderService) {}
+
     private function provider(Request $request): HomeProvider
     {
         return $request->user()->homeProvider;
@@ -244,24 +246,15 @@ class ProviderController extends Controller
 
             $locked->update($updates);
 
-            // Kredit income ke wallet provider saat order completed — dalam satu transaksi
-            if ($next === 'completed' && $locked->provider_income > 0) {
-                $providerUser = $locked->provider?->user;
-                if ($providerUser) {
-                    app(WalletService::class)->credit(
-                        $providerUser,
-                        $locked->provider_income,
-                        'order_income',
-                        "Pendapatan order ZasaHome #{$locked->order_number}",
-                        $locked,
-                        'zasahome'
-                    );
-                }
-            }
-
             // Sync ke objek $order agar fresh() benar
             $order->setRawAttributes($locked->fresh()->getAttributes());
         });
+
+        // Settle pembayaran di luar transaction status — idempoten, aman bila mitra
+        // sudah klik selesai lebih dulu (settled_at guard mencegah double credit)
+        if ($next === 'completed') {
+            $this->homeOrderService->settle($order->fresh());
+        }
 
         return response()->json([
             'message' => 'Status pesanan diperbarui.',

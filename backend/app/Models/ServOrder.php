@@ -9,16 +9,19 @@ class ServOrder extends Model
     protected $fillable = [
         'order_number', 'customer_id', 'provider_id', 'mitra_id', 'status',
         'address', 'lat', 'lng', 'notes', 'scheduled_at',
-        'total_price', 'commission_rate', 'platform_commission', 'provider_income',
-        'cancel_reason', 'confirmed_at', 'traveling_at', 'in_progress_at', 'completed_at', 'accepted_at',
+        'total_price', 'commission_rate', 'platform_commission', 'provider_income', 'mitra_income',
+        'cancel_reason', 'confirmed_at', 'traveling_at', 'in_progress_at', 'completed_at', 'settled_at', 'accepted_at',
+        'provider_score', 'provider_comment', 'rated_at',
     ];
 
     protected $casts = [
+        'rated_at'       => 'datetime',
         'scheduled_at'   => 'datetime',
         'confirmed_at'   => 'datetime',
         'traveling_at'   => 'datetime',
         'in_progress_at' => 'datetime',
         'completed_at'   => 'datetime',
+        'settled_at'     => 'datetime',
         'lat'            => 'float',
         'lng'            => 'float',
     ];

@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Api\Home;
 
 use App\Http\Controllers\Controller;
 use App\Models\HomeOrder;
-use App\Services\WalletService;
+use App\Services\HomeOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class MitraController extends Controller
 {
+    public function __construct(private HomeOrderService $homeOrderService) {}
     // Order pending yang belum di-claim mitra
     public function available(Request $request): JsonResponse
     {
@@ -122,19 +123,14 @@ class MitraController extends Controller
 
             $locked->update($updates);
 
-            if ($next === 'completed' && $locked->provider_income > 0) {
-                app(WalletService::class)->credit(
-                    $user,
-                    $locked->provider_income,
-                    'order_income',
-                    "Pendapatan ZasaHome #{$locked->order_number}",
-                    $locked,
-                    'zasahome'
-                );
-            }
-
             $order->setRawAttributes($locked->fresh()->getAttributes());
         });
+
+        // Settle pembayaran di luar transaction status — idempoten, aman bila dipanggil
+        // dari provider juga (settled_at guard mencegah double credit)
+        if ($next === 'completed') {
+            $this->homeOrderService->settle($order->fresh());
+        }
 
         return response()->json([
             'message' => 'Status diperbarui.',

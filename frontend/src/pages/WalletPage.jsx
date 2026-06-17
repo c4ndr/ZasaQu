@@ -6,26 +6,34 @@ import useAppInfo from '../hooks/useAppInfo'
 import api from '../services/api'
 
 const TYPE_LABELS = {
-  topup:             'Top Up',
-  withdraw:          'Withdraw',
-  order_payment:     'Bayar Order',
-  order_income:      'Pendapatan',
-  commission:        'Komisi',
-  refund:            'Withdraw Dibatalkan',
-  jastip_discount:   'Diskon JastipQu',
+  topup:               'Top Up',
+  withdraw:            'Withdraw',
+  order_payment:       'Bayar Order',
+  order_income:        'Pendapatan',
+  commission:          'Komisi',
+  platform_commission: 'Komisi Platform',
+  refund:              'Withdraw Dibatalkan',
+  jastip_discount:     'Diskon JastipQu',
+  mart_payment:        'Bayar Mart',
+  mart_refund:         'Refund Mart',
+  admin_credit:        'Kredit Admin',
+  admin_debit:         'Debit Admin',
 }
 const TYPE_EMOJI = {
-  topup:           '⬇️',
-  withdraw:        '⬆️',
-  order_payment:   '💳',
-  order_income:    '💰',
-  commission:      '🏷️',
-  refund:          '↩️',
-  jastip_discount: '⚡',
+  topup:               '⬇️',
+  withdraw:            '⬆️',
+  order_payment:       '💳',
+  order_income:        '💰',
+  commission:          '🏷️',
+  platform_commission: '🏷️',
+  refund:              '↩️',
+  jastip_discount:     '⚡',
+  mart_payment:        '🛒',
+  mart_refund:         '↩️',
+  admin_credit:        '🛡️',
+  admin_debit:         '🛡️',
 }
-// refund di sini berarti pembatalan withdraw — balance_before == balance_after,
-// ditampilkan sebagai informasi bukan kredit nyata
-const isCredit = (t) => ['topup', 'order_income', 'jastip_discount'].includes(t)
+const isCredit = (t) => ['topup', 'order_income', 'jastip_discount', 'mart_refund', 'admin_credit'].includes(t)
 const isInfo   = (t) => t === 'refund'
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 function fmtDate(d) {
@@ -73,7 +81,14 @@ function PendingCard({ icon, label, amount, status, note, color, type = 'topup',
   const [open, setOpen] = useState(false)
   const meta = type === 'topup' ? (TOPUP_STATUS[status] ?? TOPUP_STATUS.pending) : (WD_STATUS[status] ?? WD_STATUS.pending)
 
-  const METHOD_LABEL = { bank_manual: 'Transfer Manual', virtual_account: 'Virtual Account', qris: 'QRIS' }
+  const METHOD_LABEL = {
+    bank_manual:      'Transfer Manual',
+    virtual_account:  'Virtual Account',
+    qris:             'QRIS',
+    ipaymu_va:        'VA iPaymu',
+    ipaymu_qris:      'QRIS iPaymu',
+    midtrans:         'Midtrans',
+  }
 
   return (
     <div style={{ padding: '12px 0', borderBottom: '1px solid var(--k-border)' }}>
@@ -212,13 +227,25 @@ export default function WalletPage() {
             <p style={{ fontSize: 12, fontWeight: 700, color: '#F6AD55', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               📋 Status Transaksi
             </p>
-            {pendingTopup.map(r => (
+            {pendingTopup.map(r => {
+              const METHOD_ICON = {
+                qris: '⚡', ipaymu_qris: '⚡',
+                virtual_account: '🏦', ipaymu_va: '🏦',
+                midtrans: '💳',
+              }
+              const METHOD_NAME = {
+                bank_manual: 'Transfer Manual', virtual_account: 'Virtual Account',
+                qris: 'QRIS', ipaymu_va: 'VA iPaymu', ipaymu_qris: 'QRIS iPaymu',
+                midtrans: 'Midtrans',
+              }
+              return (
               <PendingCard key={r.id}
-                icon={r.method === 'qris' ? '⚡' : r.method === 'virtual_account' ? '🏦' : '📋'}
-                label={`Top Up ${r.method === 'qris' ? 'QRIS' : r.method === 'virtual_account' ? 'Virtual Account' : 'Transfer Manual'}`}
+                icon={METHOD_ICON[r.method] ?? '📋'}
+                label={`Top Up ${METHOD_NAME[r.method] ?? r.method}`}
                 amount={r.amount} status={r.status} color="#00C896"
                 type="topup" method={r.method} confirmedAt={r.confirmed_at} />
-            ))}
+              )
+            })}
             {pendingWithdraw.map(r => (
               <PendingCard key={r.id} icon="⬆️"
                 label={`Withdraw ke ${r.destination_type?.toUpperCase()}`}

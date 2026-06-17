@@ -14,6 +14,7 @@ use App\Models\MartReview;
 use App\Models\MartSeller;
 use App\Models\Wallet;
 use App\Services\NotificationService;
+use App\Services\PromoService;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -131,6 +132,7 @@ class CustomerController extends Controller
             'notes'            => ['nullable', 'string', 'max:500'],
             'shipping_fee'     => ['required', 'integer', 'min:0'],
             'payment_method'   => ['nullable', 'in:wallet,cod'],
+            'promo_code'       => ['nullable', 'string', 'max:50'],
             'cart_item_ids'    => ['nullable', 'array'],
             'cart_item_ids.*'  => ['integer'],
         ]);
@@ -163,9 +165,18 @@ class CustomerController extends Controller
             abort_if($item->product->stock < $item->quantity, 422, "Stok '{$item->product->name}' tidak cukup.");
         }
 
-        $order = DB::transaction(function () use ($user, $seller, $data, $cartItems, $paymentMethod) {
+        // Validasi promo sebelum transaksi
+        $promoDiscount  = 0;
+        $validatedPromo = null;
+        if (!empty($data['promo_code'])) {
+            $subtotalEst = $cartItems->sum(fn($i) => $i->product->price * $i->quantity) + $data['shipping_fee'];
+            ['promo' => $validatedPromo, 'discount' => $promoDiscount] =
+                app(PromoService::class)->validate($data['promo_code'], 'zasamart', (int) $subtotalEst);
+        }
+
+        $order = DB::transaction(function () use ($user, $seller, $data, $cartItems, $paymentMethod, $promoDiscount, $validatedPromo) {
             $subtotal    = $cartItems->sum(fn($i) => $i->product->price * $i->quantity);
-            $total       = $subtotal + $data['shipping_fee'];
+            $total       = max(0, $subtotal + $data['shipping_fee'] - $promoDiscount);
             $commRate    = (float) AdminSetting::valueOf('mart_commission_percent', 5);
             $commission  = (int) round($total * $commRate / 100);
             $sellerIncome= $total - $commission;
@@ -197,6 +208,8 @@ class CustomerController extends Controller
                 'subtotal'               => $subtotal,
                 'shipping_fee'           => $data['shipping_fee'],
                 'total'                  => $total,
+                'promo_code'             => $data['promo_code'] ?? null,
+                'discount_amount'        => $promoDiscount,
                 'commission_rate'        => $commRate,
                 'platform_commission'    => $commission,
                 'seller_income'          => $sellerIncome,
@@ -237,6 +250,10 @@ class CustomerController extends Controller
 
             return $order;
         });
+
+        if ($validatedPromo) {
+            app(PromoService::class)->use($validatedPromo);
+        }
 
         $order->loadMissing(['seller.user', 'items']);
 

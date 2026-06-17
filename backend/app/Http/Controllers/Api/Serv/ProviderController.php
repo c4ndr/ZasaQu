@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ServOrder;
 use App\Models\ServProvider;
 use App\Models\ServService;
-use App\Services\WalletService;
+use App\Services\NotificationService;
+use App\Services\ServOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ProviderController extends Controller
 {
+    public function __construct(private ServOrderService $servOrderService) {}
     private function provider(Request $request): ?ServProvider
     {
         return $request->user()->servProvider;
@@ -204,26 +206,30 @@ class ProviderController extends Controller
 
             $locked->update($updates);
 
-            if ($next === 'completed' && $locked->provider_income > 0) {
-                $providerUser = $locked->provider?->user;
-                if ($providerUser) {
-                    app(WalletService::class)->credit(
-                        $providerUser,
-                        $locked->provider_income,
-                        'order_income',
-                        "Pendapatan order ZasaServ #{$locked->order_number}",
-                        $locked,
-                        'zasaserv'
-                    );
-                }
-            }
-
             $order->setRawAttributes($locked->fresh()->getAttributes());
         });
 
+        // Settle pembayaran — idempoten, aman bila mitra sudah klik selesai lebih dulu
+        if ($next === 'completed') {
+            $this->servOrderService->settle($order->fresh());
+        }
+
+        $fresh    = $order->fresh()->load('customer', 'items');
+        $customer = $fresh->customer;
+        $notif    = app(NotificationService::class);
+
+        match ($next) {
+            'confirmed'   => $notif->servOrderConfirmed($customer, $fresh->order_number, $fresh->id, $provider->name),
+            'traveling'   => $notif->servOrderTraveling($customer, $fresh->order_number, $fresh->id),
+            'in_progress' => $notif->servOrderInProgress($customer, $fresh->order_number, $fresh->id),
+            'completed'   => $notif->servOrderCompleted($customer, $fresh->order_number, $fresh->id),
+            'cancelled'   => $notif->servOrderCancelled($customer, $fresh->order_number, $fresh->id, $data['cancel_reason'] ?? 'Dibatalkan provider'),
+            default       => null,
+        };
+
         return response()->json([
             'message' => 'Status pesanan diperbarui.',
-            'data'    => $order->fresh()->load('customer', 'items'),
+            'data'    => $fresh,
         ]);
     }
 }

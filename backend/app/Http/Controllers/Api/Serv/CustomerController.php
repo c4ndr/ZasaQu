@@ -8,11 +8,15 @@ use App\Models\ServOrder;
 use App\Models\ServOrderItem;
 use App\Models\ServProvider;
 use App\Models\ServService;
+use App\Services\NotificationService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
+    public function __construct(private NotificationService $notifService) {}
+
     public function providers(Request $request): JsonResponse
     {
         $query = ServProvider::where('status', 'active')->with('services');
@@ -110,6 +114,13 @@ class CustomerController extends Controller
             ServOrderItem::create($item);
         }
 
+        // Notifikasi ke provider
+        if ($provider->user) {
+            $this->notifService->servOrderPlaced(
+                $provider->user, $order->order_number, $order->id, $request->user()->name
+            );
+        }
+
         return response()->json([
             'message' => 'Pesanan servis berhasil dibuat.',
             'data'    => $order->load('items', 'provider'),
@@ -158,5 +169,43 @@ class CustomerController extends Controller
             'message' => 'Pesanan dibatalkan.',
             'data'    => $order->fresh()->load('items', 'provider'),
         ]);
+    }
+
+    public function rateOrder(Request $request, ServOrder $order): JsonResponse
+    {
+        if ($order->customer_id !== $request->user()->id) {
+            return response()->json(['message' => 'Tidak ditemukan.'], 404);
+        }
+
+        if ($order->status !== 'completed') {
+            return response()->json(['message' => 'Pesanan belum selesai.'], 422);
+        }
+
+        if ($order->rated_at) {
+            return response()->json(['message' => 'Pesanan sudah dinilai.'], 422);
+        }
+
+        $data = $request->validate([
+            'score'   => ['required', 'integer', 'min:1', 'max:5'],
+            'comment' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $order->update([
+            'provider_score'   => $data['score'],
+            'provider_comment' => $data['comment'] ?? null,
+            'rated_at'         => now(),
+        ]);
+
+        $stats = ServOrder::where('provider_id', $order->provider_id)
+            ->whereNotNull('provider_score')
+            ->selectRaw('AVG(provider_score) as avg, COUNT(*) as total')
+            ->first();
+
+        $order->provider()->update([
+            'average_rating' => round((float) $stats->avg, 2),
+            'total_ratings'  => (int) $stats->total,
+        ]);
+
+        return response()->json(['message' => 'Rating berhasil dikirim.']);
     }
 }

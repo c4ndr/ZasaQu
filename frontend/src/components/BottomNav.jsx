@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import useMartCartCount from '../hooks/useMartCartCount'
 import useAppInfo from '../hooks/useAppInfo'
+import useUnreadNotifCount from '../hooks/useUnreadNotifCount'
 
 function AvatarIcon({ name, isActive }) {
   const initial = (name ?? '?')[0].toUpperCase()
@@ -144,9 +145,10 @@ export default function BottomNav() {
   const { user } = useAuth()
   const { count: cartCount } = useMartCartCount()
   const { features } = useAppInfo()
+  const notifCount = useUnreadNotifCount()
   const feat = features ?? {}
 
-  if (!user || user.role === 'admin' || user.role === 'merchant' || user.role === 'home_provider' || user.role === 'seller') return null
+  if (!user || user.role === 'admin' || user.role === 'merchant' || user.role === 'home_provider' || user.role === 'serv_provider' || user.role === 'seller') return null
 
   const isMitra = user.role?.startsWith('mitra')
 
@@ -184,7 +186,8 @@ export default function BottomNav() {
           const cBg        = centerColor  || 'linear-gradient(145deg, #FB923C 0%, #F97316 100%)'
           const cBgAct     = centerColor  || 'linear-gradient(145deg, #F97316 0%, #C2410C 100%)'
           const cShadow    = centerShadow || 'rgba(249,115,22,0.50)'
-          const badgeNum   = to === '/mart' && cartCount > 0 ? cartCount : 0
+          const badgeNum   = to === '/mart' && cartCount > 0 ? cartCount
+            : to === '/dashboard' && notifCount > 0 ? notifCount : 0
           const badgeLabel = badgeNum > 99 ? '99+' : String(badgeNum)
           return (
             <NavLink

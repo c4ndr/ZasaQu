@@ -12,14 +12,15 @@ class HomeOrder extends Model
         'pickup_type', 'pickup_fee',
         'delivery_address', 'delivery_lat', 'delivery_lng',
         'notes', 'total_price',
-        'commission_rate', 'platform_commission', 'provider_income',
-        'scheduled_pickup_at', 'ready_at', 'completed_at', 'accepted_at', 'cancel_reason',
+        'commission_rate', 'platform_commission', 'provider_income', 'mitra_income',
+        'scheduled_pickup_at', 'ready_at', 'completed_at', 'settled_at', 'accepted_at', 'cancel_reason',
     ];
 
     protected $casts = [
         'scheduled_pickup_at' => 'datetime',
         'ready_at'            => 'datetime',
         'completed_at'        => 'datetime',
+        'settled_at'          => 'datetime',
         'pickup_lat'          => 'float',
         'pickup_lng'          => 'float',
         'delivery_lat'        => 'float',

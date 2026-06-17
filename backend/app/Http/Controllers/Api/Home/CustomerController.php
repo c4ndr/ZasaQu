@@ -107,6 +107,14 @@ class CustomerController extends Controller
             ];
         }
 
+        // Komisi platform hanya dari harga jasa (bukan pickup fee — itu milik mitra)
+        $commRate        = (float) AdminSetting::valueOf('home_commission_percent', 10);
+        $commission      = (int) round($totalPrice * $commRate / 100);
+        $providerIncome  = $totalPrice - $commission;
+        // Mitra kurir mendapat seluruh pickup_fee (ongkos antar-jemput)
+        // On-site: pickup_fee = 0, mitra_income = 0
+        $mitraIncome     = $pickupFee;
+
         $order = HomeOrder::create([
             'order_number'        => HomeOrder::generateNumber(),
             'customer_id'         => $request->user()->id,
@@ -123,9 +131,10 @@ class CustomerController extends Controller
             'pickup_fee'          => $pickupFee,
             'total_price'         => $totalPrice + $pickupFee,
             'scheduled_pickup_at' => $data['scheduled_at'] ?? null,
-            'commission_rate'     => $commRate = (float) AdminSetting::valueOf('home_commission_percent', 10),
-            'platform_commission' => $commission = (int) round(($totalPrice + $pickupFee) * $commRate / 100),
-            'provider_income'     => ($totalPrice + $pickupFee) - $commission,
+            'commission_rate'     => $commRate,
+            'platform_commission' => $commission,
+            'provider_income'     => $providerIncome,
+            'mitra_income'        => $mitraIncome,
         ]);
 
         foreach ($orderItems as $item) {

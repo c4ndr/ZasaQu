@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import useAppInfo from '../../hooks/useAppInfo'
 import api from '../../services/api'
 import AddressPicker from '../../components/AddressPicker'
+import VoucherInput from '../../components/VoucherInput'
 
 const fmtRp = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
@@ -33,6 +34,7 @@ export default function MartCheckoutPage() {
   const [err,          setErr]          = useState('')
   const [payMethod,    setPayMethod]    = useState('cod')
   const [balance,      setBalance]      = useState(null)
+  const [promo,        setPromo]        = useState({ promoCode: null, discountAmount: 0 })
 
   useEffect(() => {
     if (!seller_id) { navigate('/mart/cart'); return }
@@ -42,7 +44,7 @@ export default function MartCheckoutPage() {
       setItems(filtered)
       if (filtered.length > 0) setSeller(filtered[0].seller)
     })
-    api.get('/wallet').then(r => setBalance(r.data.available_balance ?? r.data.balance ?? null)).catch(() => {})
+    api.get('/wallet/summary').then(r => setBalance(r.data.available ?? null)).catch(() => {})
   }, [seller_id]) // eslint-disable-line
 
   const subtotal = items.reduce((s, i) => s + (i.product?.price || 0) * i.quantity, 0)
@@ -52,7 +54,7 @@ export default function MartCheckoutPage() {
   const shippingFee = hasSellerCoords && deliveryInfo?.lat && deliveryInfo?.lng
     ? Math.max(3000, Math.round(haversine(deliveryInfo.lat, deliveryInfo.lng, sellerLat, sellerLng) * 3000 / 1000) * 1000)
     : 5000
-  const total = subtotal + shippingFee
+  const total = Math.max(0, subtotal + shippingFee - promo.discountAmount)
 
   const place = async () => {
     if (!deliveryInfo?.address?.trim()) { setErr('Pilih alamat pengiriman terlebih dahulu.'); return }
@@ -72,6 +74,7 @@ export default function MartCheckoutPage() {
         shipping_fee: shippingFee,
         payment_method: payMethod,
         cart_item_ids: cartItemIds ?? undefined,
+        ...(promo.promoCode ? { promo_code: promo.promoCode } : {}),
       })
       window.dispatchEvent(new CustomEvent('mart-cart-updated'))
       navigate(`/mart/orders/${r.data.id}`, { replace: true })
@@ -174,6 +177,16 @@ export default function MartCheckoutPage() {
             style={{ width: '100%', background: 'var(--k-bg)', border: '1.5px solid var(--k-border)', borderRadius: 10, padding: '10px 12px', fontSize: 13, color: 'var(--k-text)', outline: 'none', boxSizing: 'border-box' }} />
         </div>
 
+        {/* Voucher */}
+        <div style={{ ...card, padding: '14px' }}>
+          <VoucherInput
+            orderAmount={subtotal + shippingFee}
+            module="zasamart"
+            onApply={({ promoCode, discountAmount }) => setPromo({ promoCode, discountAmount })}
+            onClear={() => setPromo({ promoCode: null, discountAmount: 0 })}
+          />
+        </div>
+
         {/* Summary */}
         <div style={{ ...card, padding: '14px' }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Ringkasan Pembayaran</p>
@@ -186,7 +199,13 @@ export default function MartCheckoutPage() {
               <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--k-text)' }}>{row.value}</p>
             </div>
           ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0' }}>
+          {promo.discountAmount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid var(--k-border)' }}>
+              <p style={{ fontSize: 13, color: 'var(--k-accent)' }}>Diskon Promo 🎟</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-accent)' }}>-{fmtRp(promo.discountAmount)}</p>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0', borderTop: promo.discountAmount > 0 ? 'none' : '1px solid var(--k-border)' }}>
             <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--k-text)' }}>Total</p>
             <p style={{ fontSize: 18, fontWeight: 900, color: '#6366F1' }}>{fmtRp(total)}</p>
           </div>
@@ -205,7 +224,7 @@ export default function MartCheckoutPage() {
       <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'var(--k-surface)', borderTop: '1px solid var(--k-border)', padding: '12px 16px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom,0px))' }}>
         <button onClick={place} disabled={placing || items.length === 0}
           style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: placing ? 'var(--k-muted)' : 'linear-gradient(135deg,#6366F1,#7C3AED)', color: '#fff', fontWeight: 800, fontSize: 15, cursor: placing ? 'default' : 'pointer' }}>
-          {placing ? 'Memproses...' : `Buat Pesanan · ${fmtRp(total)}`}
+          {placing ? 'Memproses...' : `Buat Pesanan · ${fmtRp(total)}${promo.discountAmount > 0 ? ' 🎟' : ''}`}
         </button>
       </div>
 

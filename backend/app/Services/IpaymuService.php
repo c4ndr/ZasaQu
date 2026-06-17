@@ -72,12 +72,12 @@ class IpaymuService
         // iPaymu kirim data sebagai POST body
         // Verifikasi dengan cek signature header jika ada, atau cek via status API
         $signature = $request->header('signature', '');
-        if (empty($signature)) return true; // iPaymu kadang tidak kirim signature di callback
+        if (empty($signature)) return false; // tolak callback tanpa signature — bisa dieksploitasi
 
         $bodyStr    = $request->getContent();
         $bodySha256 = strtolower(hash('sha256', $bodyStr));
         $stringSign = 'POST:' . $this->va . ':' . $bodySha256 . ':' . $this->apiKey;
-        $expected   = strtolower(hash('sha256', $stringSign));
+        $expected   = strtolower(hash_hmac('sha256', $stringSign, $this->apiKey));
 
         return hash_equals($expected, strtolower($signature));
     }

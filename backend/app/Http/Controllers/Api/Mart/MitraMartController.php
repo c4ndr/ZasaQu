@@ -143,6 +143,12 @@ class MitraMartController extends Controller
 
         DB::transaction(function () use ($order, $actualStatus, $timestamps, $mitra) {
             $locked = MartOrder::lockForUpdate()->findOrFail($order->id);
+
+            // Re-check status setelah lock — cegah double-settle jika mitra double-tap
+            if ($locked->status !== $order->status) {
+                throw new \Exception("Status pesanan sudah berubah: {$locked->status}.");
+            }
+
             $locked->update(array_merge(['status' => $actualStatus], $timestamps[$actualStatus] ?? []));
 
             if ($actualStatus === 'completed') {

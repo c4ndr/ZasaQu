@@ -222,17 +222,16 @@ class PaymentService
                 );
             } elseif ($status === 'rejected') {
                 // Lepas kunci saldo — uang tidak pernah didebit, hanya dikunci
-                // available = balance - locked_balance (sebelum lepas kunci)
-                $balanceBefore = (float) $wallet->balance - (float) $wallet->locked_balance;
+                // balance tidak berubah, hanya locked_balance dikurangi
+                $actualBalance = (float) $wallet->balance;
                 $wallet->decrement('locked_balance', $locked->amount);
-                $balanceAfter  = $balanceBefore + (float) $locked->amount;
 
                 \App\Models\WalletTransaction::create([
                     'wallet_id'      => $wallet->id,
                     'type'           => 'refund',
                     'amount'         => (float) $locked->amount,
-                    'balance_before' => $balanceBefore,
-                    'balance_after'  => $balanceAfter,
+                    'balance_before' => $actualBalance,
+                    'balance_after'  => $actualBalance,
                     'description'    => 'Withdraw dibatalkan — saldo dikembalikan' . ($notes ? ': ' . $notes : ''),
                     'reference_type' => WithdrawRequest::class,
                     'reference_id'   => $locked->id,

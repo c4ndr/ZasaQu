@@ -86,12 +86,14 @@ const AdminServProviderReviewPage = lazy_(() => import('./pages/admin/AdminServP
 const AdminMitraVerificationPage = lazy_(() => import('./pages/admin/AdminMitraVerificationPage'))
 const AdminMitraReviewPage       = lazy_(() => import('./pages/admin/AdminMitraReviewPage'))
 const AdminPromosPage            = lazy_(() => import('./pages/admin/AdminPromosPage'))
+const AdminVouchersPage          = lazy_(() => import('./pages/admin/AdminVouchersPage'))
 const AdminMartSellersPage       = lazy_(() => import('./pages/admin/AdminMartSellersPage'))
 const AdminMartSellerReviewPage  = lazy_(() => import('./pages/admin/AdminMartSellerReviewPage'))
 const AdminMartProductsPage      = lazy_(() => import('./pages/admin/AdminMartProductsPage'))
 const AdminMartOrdersPage        = lazy_(() => import('./pages/admin/AdminMartOrdersPage'))
 const AdminRideOrdersPage        = lazy_(() => import('./pages/admin/AdminRideOrdersPage'))
 const AdminModulesPage           = lazy_(() => import('./pages/admin/AdminModulesPage'))
+const AdminBroadcastPage         = lazy_(() => import('./pages/admin/AdminBroadcastPage'))
 
 // ZasaHome
 const ZasaHomePage           = lazy_(() => import('./pages/zasahome/ZasaHomePage'))
@@ -212,6 +214,7 @@ function DashboardRedirect() {
   if (user?.role === 'merchant')                          return <Navigate to="/merchant" replace />
   if (user?.role === 'admin')                             return <Navigate to="/admin" replace />
   if (user?.role === 'home_provider')                     return <Navigate to="/home/provider" replace />
+  if (user?.role === 'serv_provider')                     return <Navigate to="/serv/provider" replace />
   if (user?.role === 'seller')                            return <Navigate to="/seller" replace />
   if (user?.role?.startsWith('mitra') && user?.status === 'pending_review') return <Navigate to="/mitra/onboarding" replace />
   return <DashboardPage />
@@ -362,6 +365,7 @@ function AppRoutes() {
       <Route path="/admin/wallet" element={<AdminRoute><AdminWalletPage /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
       <Route path="/admin/promos" element={<AdminRoute><AdminPromosPage /></AdminRoute>} />
+      <Route path="/admin/vouchers" element={<AdminRoute><AdminVouchersPage /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
       <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogPage /></AdminRoute>} />
 
@@ -400,6 +404,7 @@ function AppRoutes() {
 
       {/* Admin Modules */}
       <Route path="/admin/modules" element={<AdminRoute><AdminModulesPage /></AdminRoute>} />
+      <Route path="/admin/broadcast" element={<AdminRoute><AdminBroadcastPage /></AdminRoute>} />
 
       {/* Merchant Panel */}
       <Route path="/merchant" element={<MerchantRoute><MerchantDashboardPage /></MerchantRoute>} />

@@ -14,6 +14,13 @@ class TopUpRequest extends Model
         'ipaymu_channel', 'ipaymu_va_number', 'ipaymu_expired_at',
     ];
 
+    // Sembunyikan field yang bisa dimanfaatkan untuk memalsukan callback iPaymu
+    protected $hidden = [
+        'ipaymu_session_id',
+        'ipaymu_trx_id',
+        'ipaymu_reference_id',
+    ];
+
     protected function casts(): array
     {
         return [

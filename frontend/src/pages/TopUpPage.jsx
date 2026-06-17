@@ -83,8 +83,32 @@ const METHODS = [
 
 // ── Layar hasil pembayaran ────────────────────────────────────────────────────
 function ResultScreen({ result, method, onBack, onSimulate, simLoading }) {
-  const [copied, setCopied] = useState(false)
-  const data = result?.data
+  const navigate               = useNavigate()
+  const [copied, setCopied]    = useState(false)
+  const [payStatus, setPayStatus] = useState(null) // 'confirmed' | 'expired'
+  const pollRef                = useRef(null)
+  const data                   = result?.data
+
+  // Polling status iPaymu setiap 5 detik
+  useEffect(() => {
+    const id = data?.id
+    if (!id || !['qris', 'va'].includes(method)) return
+    const poll = async () => {
+      try {
+        const res = await api.get(`/topup/ipaymu/${id}/status`)
+        if (res.data.status === 'confirmed') {
+          setPayStatus('confirmed')
+          clearInterval(pollRef.current)
+        } else if (res.data.status === 'expired') {
+          setPayStatus('expired')
+          clearInterval(pollRef.current)
+        }
+      } catch {}
+    }
+    poll()
+    pollRef.current = setInterval(poll, 5000)
+    return () => clearInterval(pollRef.current)
+  }, [data?.id, method])
 
   const copy = (text) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -103,6 +127,24 @@ function ResultScreen({ result, method, onBack, onSimulate, simLoading }) {
       </nav>
 
       <div style={{ flex: 1, padding: '24px 20px', maxWidth: 480, margin: '0 auto', width: '100%' }}>
+
+        {/* Banner status polling */}
+        {payStatus === 'confirmed' && (
+          <div style={{ background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.3)', borderRadius: 18, padding: '20px', textAlign: 'center', marginBottom: 20 }}>
+            <p style={{ fontSize: 36, marginBottom: 8 }}>✅</p>
+            <p style={{ color: 'var(--k-accent)', fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Pembayaran Berhasil!</p>
+            <p style={{ color: 'var(--k-muted)', fontSize: 13, marginBottom: 16 }}>Saldo kamu sudah ditambahkan.</p>
+            <button onClick={() => navigate('/wallet')} style={{ padding: '10px 28px', borderRadius: 12, background: 'var(--k-accent)', color: '#0C0C16', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+              Lihat Wallet
+            </button>
+          </div>
+        )}
+        {payStatus === 'expired' && (
+          <div style={{ background: 'rgba(245,101,101,0.08)', border: '1px solid rgba(245,101,101,0.2)', borderRadius: 18, padding: '16px', textAlign: 'center', marginBottom: 20 }}>
+            <p style={{ color: '#F56565', fontWeight: 700, fontSize: 14 }}>⏰ Transaksi Kedaluwarsa</p>
+            <p style={{ color: 'var(--k-muted)', fontSize: 12, marginTop: 4 }}>Silakan buat top up baru.</p>
+          </div>
+        )}
 
         {/* Nominal */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -133,7 +175,49 @@ function ResultScreen({ result, method, onBack, onSimulate, simLoading }) {
           </div>
         )}
 
-        {/* VA */}
+        {/* VA iPaymu */}
+        {method === 'va' && data?.va_number && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+            <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 18, padding: '16px 20px' }}>
+              <p style={{ color: 'var(--k-muted)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Bank Tujuan</p>
+              <p style={{ color: 'var(--k-text)', fontSize: 18, fontWeight: 700 }}>{data.channel}</p>
+            </div>
+            <div style={{ background: 'var(--k-card)', border: '1px solid rgba(99,179,237,0.3)', borderRadius: 18, padding: '16px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <p style={{ color: 'var(--k-muted)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Nomor Virtual Account</p>
+                <button onClick={() => copy(data.va_number)} style={{
+                  padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                  background: copied ? 'rgba(0,200,150,0.15)' : 'var(--k-card2)',
+                  color: copied ? 'var(--k-accent)' : 'var(--k-sub)',
+                  border: `1px solid ${copied ? 'rgba(0,200,150,0.3)' : 'var(--k-border)'}`,
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}>
+                  {copied ? '✓ Tersalin' : 'Salin'}
+                </button>
+              </div>
+              <p style={{ fontFamily: 'monospace', fontSize: 24, fontWeight: 900, color: '#63B3ED', letterSpacing: '0.06em' }}>
+                {data.va_number}
+              </p>
+              {data.how_to_pay && (
+                <p style={{ color: 'var(--k-muted)', fontSize: 12, marginTop: 8 }}>{data.how_to_pay}</p>
+              )}
+            </div>
+            <div style={{ background: 'rgba(246,173,85,0.08)', border: '1px solid rgba(246,173,85,0.2)', borderRadius: 14, padding: '12px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 16 }}>⏱️</span>
+              <p style={{ color: 'var(--k-warn)', fontSize: 13, fontWeight: 600 }}>
+                Berlaku hingga {data.expired_at ? formatDate(data.expired_at) : '24 jam'}
+              </p>
+            </div>
+            {!payStatus && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '8px 0', color: 'var(--k-muted)', fontSize: 13 }}>
+                <div style={{ width: 14, height: 14, border: '2px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                Menunggu konfirmasi pembayaran...
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* VA simulasi (lama) */}
         {method === 'va' && data?.virtual_account && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
             <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 18, padding: '16px 20px' }}>
@@ -196,6 +280,12 @@ function ResultScreen({ result, method, onBack, onSimulate, simLoading }) {
                 Berlaku hingga {data.expired_at ? formatDate(data.expired_at) : '1 jam'}
               </p>
             </div>
+            {!payStatus && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '8px 0', color: 'var(--k-muted)', fontSize: 13 }}>
+                <div style={{ width: 14, height: 14, border: '2px solid var(--k-accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                Menunggu konfirmasi pembayaran...
+              </div>
+            )}
           </div>
         )}
 

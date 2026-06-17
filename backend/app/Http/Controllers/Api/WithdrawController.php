@@ -3,14 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\WithdrawRequest;
+use App\Services\NotificationService;
 use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class WithdrawController extends Controller
 {
-    public function __construct(private PaymentService $paymentService) {}
+    public function __construct(
+        private PaymentService      $paymentService,
+        private NotificationService $notifService,
+    ) {}
 
     public function history(Request $request): JsonResponse
     {
@@ -36,6 +41,11 @@ class WithdrawController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        // Kirim notifikasi ke semua admin
+        User::where('role', 'admin')->each(function (User $admin) use ($request, $withdraw) {
+            $this->notifService->withdrawRequestCreated($admin, $request->user(), (int) $withdraw->amount, $withdraw->id);
+        });
 
         return response()->json([
             'message' => 'Permintaan withdraw berhasil dikirim. Diproses dalam 1x24 jam.',

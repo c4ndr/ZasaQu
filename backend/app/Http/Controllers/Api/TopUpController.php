@@ -255,7 +255,7 @@ class TopUpController extends Controller
                 $this->walletService->credit(
                     $topUp->user,
                     (float) $topUp->amount,
-                    'top_up',
+                    'topup',
                     'Top up via iPaymu (' . strtoupper($topUp->ipaymu_channel) . ')',
                     $topUp
                 );
@@ -298,7 +298,7 @@ class TopUpController extends Controller
                     $this->walletService->credit(
                         $locked->user,
                         (float) $locked->amount,
-                        'top_up',
+                        'topup',
                         'Top up via iPaymu (' . strtoupper($locked->ipaymu_channel) . ')',
                         $locked
                     );

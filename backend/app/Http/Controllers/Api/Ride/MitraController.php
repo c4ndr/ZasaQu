@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
 use App\Models\RideOrder;
 use App\Models\Wallet;
+use App\Services\NotificationService;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,10 @@ use Illuminate\Support\Facades\DB;
 
 class MitraController extends Controller
 {
-    public function __construct(private WalletService $walletService) {}
+    public function __construct(
+        private WalletService       $walletService,
+        private NotificationService $notifService,
+    ) {}
 
     // Order tersedia (pending, sesuai vehicle_type mitra)
     public function available(Request $request): JsonResponse
@@ -75,8 +79,17 @@ class MitraController extends Controller
             return $order;
         });
 
-        broadcast(new RideStatusUpdated($order->fresh(['mitra']), 'pending'));
-        return response()->json($order->load(['customer', 'mitra']));
+        $fresh = $order->fresh(['customer', 'mitra']);
+        broadcast(new RideStatusUpdated($fresh, 'pending'));
+
+        $this->notifService->rideAccepted(
+            $fresh->customer,
+            $fresh->order_number,
+            $fresh->id,
+            $fresh->mitra?->name ?? 'Driver'
+        );
+
+        return response()->json($fresh);
     }
 
     // Update status perjalanan
@@ -117,53 +130,75 @@ class MitraController extends Controller
         ];
 
         DB::transaction(function () use ($order, $newStatus, $timestamps, $prev) {
-            $order->update(array_merge(['status' => $newStatus], $timestamps[$newStatus] ?? []));
+            // Lock baris order — cegah race condition (mis. mitra double-tap)
+            $locked = RideOrder::lockForUpdate()->findOrFail($order->id);
+
+            // Re-check status setelah lock — jika sudah berubah (concurrent request), batalkan
+            if ($locked->status !== $prev) {
+                throw new \Exception("Status perjalanan sudah berubah: {$locked->status}.");
+            }
+
+            $locked->update(array_merge(['status' => $newStatus], $timestamps[$newStatus] ?? []));
 
             // Selesaikan wallet saat order completed
             if ($newStatus === 'completed') {
                 $mitra    = $order->mitra;
                 $customer = $order->customer;
 
-                if ($order->payment_method === 'wallet') {
+                if ($locked->payment_method === 'wallet') {
                     // Lepas locked_balance customer & debit pembayaran
-                    $custWallet = Wallet::lockForUpdate()->where('user_id', $order->customer_id)->first();
+                    $custWallet = Wallet::lockForUpdate()->where('user_id', $locked->customer_id)->first();
                     if ($custWallet) {
-                        $custWallet->decrement('locked_balance', min((float) $order->fare, (float) $custWallet->locked_balance));
+                        $custWallet->decrement('locked_balance', min((float) $locked->fare, (float) $custWallet->locked_balance));
                     }
                     $this->walletService->debit(
                         $customer,
-                        (float) $order->fare,
+                        (float) $locked->fare,
                         'order_payment',
-                        "Pembayaran ZasaRide #{$order->order_number}",
-                        $order,
+                        "Pembayaran ZasaRide #{$locked->order_number}",
+                        $locked,
                         'zasaride'
                     );
 
                     // Credit income ke mitra (netto setelah komisi)
                     $this->walletService->credit(
                         $mitra,
-                        (float) $order->mitra_income,
+                        (float) $locked->mitra_income,
                         'order_income',
-                        "Pendapatan ZasaRide #{$order->order_number}",
-                        $order,
+                        "Pendapatan ZasaRide #{$locked->order_number}",
+                        $locked,
                         'zasaride'
                     );
-                } elseif ($order->payment_method === 'cod') {
+                } elseif ($locked->payment_method === 'cod') {
                     // COD: mitra terima cash dari customer, potong komisi platform dari wallet mitra
                     $this->walletService->debitForce(
                         $mitra,
-                        (float) $order->platform_commission,
+                        (float) $locked->platform_commission,
                         'platform_commission',
-                        "Komisi platform ZasaRide #{$order->order_number} (COD)",
-                        $order,
+                        "Komisi platform ZasaRide #{$locked->order_number} (COD)",
+                        $locked,
                         'zasaride'
                     );
                 }
             }
+
+            $order->setRawAttributes($locked->fresh()->getAttributes());
         });
 
-        broadcast(new RideStatusUpdated($order->fresh(['mitra']), $prev));
-        return response()->json($order->fresh(['customer', 'mitra']));
+        $fresh    = $order->fresh(['customer', 'mitra']);
+        $customer = $fresh->customer;
+
+        broadcast(new RideStatusUpdated($fresh, $prev));
+
+        match ($newStatus) {
+            'on_pickup' => $this->notifService->rideOnPickup($customer, $fresh->order_number, $fresh->id),
+            'on_ride'   => $this->notifService->rideOnRide($customer, $fresh->order_number, $fresh->id),
+            'completed' => $this->notifService->rideCompleted($customer, $fresh->order_number, $fresh->id),
+            'cancelled' => $this->notifService->rideCancelledByMitra($customer, $fresh->order_number, $fresh->id),
+            default     => null,
+        };
+
+        return response()->json($fresh);
     }
 
     // Upload foto bukti tiba di sekolah

@@ -4,13 +4,16 @@ namespace App\Http\Controllers\Api\Serv;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServOrder;
-use App\Services\WalletService;
+use App\Services\NotificationService;
+use App\Services\ServOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class MitraController extends Controller
 {
+    public function __construct(private ServOrderService $servOrderService) {}
+
     public function available(Request $request): JsonResponse
     {
         $orders = ServOrder::where('status', 'pending')
@@ -115,23 +118,29 @@ class MitraController extends Controller
 
             $locked->update($updates);
 
-            if ($next === 'completed' && $locked->provider_income > 0) {
-                app(WalletService::class)->credit(
-                    $user,
-                    $locked->provider_income,
-                    'order_income',
-                    "Pendapatan ZasaServ #{$locked->order_number}",
-                    $locked,
-                    'zasaserv'
-                );
-            }
-
             $order->setRawAttributes($locked->fresh()->getAttributes());
         });
 
+        // Settle pembayaran — idempoten, aman bila provider juga klik selesai
+        if ($next === 'completed') {
+            $this->servOrderService->settle($order->fresh());
+        }
+
+        $fresh    = $order->fresh()->load(['customer', 'provider', 'items']);
+        $customer = $fresh->customer;
+        $notif    = app(NotificationService::class);
+
+        match ($next) {
+            'traveling'   => $notif->servOrderTraveling($customer, $fresh->order_number, $fresh->id),
+            'in_progress' => $notif->servOrderInProgress($customer, $fresh->order_number, $fresh->id),
+            'completed'   => $notif->servOrderCompleted($customer, $fresh->order_number, $fresh->id),
+            'cancelled'   => $notif->servOrderCancelled($customer, $fresh->order_number, $fresh->id, $data['cancel_reason'] ?? 'Dibatalkan mitra'),
+            default       => null,
+        };
+
         return response()->json([
             'message' => 'Status diperbarui.',
-            'data'    => $order->fresh()->load(['customer', 'provider', 'items']),
+            'data'    => $fresh,
         ]);
     }
 }
