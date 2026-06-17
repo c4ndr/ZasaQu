@@ -4,6 +4,8 @@ import api from '../services/api'
 const DONE_GO   = ['completed', 'cancelled', 'rejected']
 const DONE_FOOD = ['completed', 'cancelled', 'rejected']
 const DONE_MART = ['completed', 'cancelled']
+const DONE_HOME = ['completed', 'cancelled']
+const DONE_SERV = ['completed', 'cancelled']
 
 // Cache modul-level: card langsung muncul saat user re-navigate ke dashboard
 let ordersCache = []
@@ -12,6 +14,8 @@ function isActive(order, module) {
   if (module === 'zasago')   return !DONE_GO.includes(order.status)
   if (module === 'zasafood') return !DONE_FOOD.includes(order.status)
   if (module === 'zasamart') return !DONE_MART.includes(order.status)
+  if (module === 'zasahome') return !DONE_HOME.includes(order.status)
+  if (module === 'zasaserv') return !DONE_SERV.includes(order.status)
   return false
 }
 
@@ -40,12 +44,14 @@ export default function useActiveOrders(enabled = true, features = {}) {
       features?.zasago  !== false ? fetchModule('/orders', 'zasago')                              : [],
       features?.zasafood !== false ? fetchModule('/food/orders', 'zasafood', { active_only: 1 }) : [],
       features?.zasamart !== false ? fetchModule('/mart/orders', 'zasamart')                      : [],
+      features?.zasahome !== false ? fetchModule('/home/orders', 'zasahome')                      : [],
+      features?.zasaserv !== false ? fetchModule('/serv/orders', 'zasaserv')                      : [],
     ])
     // Jika ada modul yang gagal (null), pertahankan cache lama dari modul itu
     const failed = results.some(r => r === null)
     if (failed) {
       // Gabungkan: modul yang berhasil replace, modul yang gagal pakai cache lama
-      const modules = ['zasago', 'zasafood', 'zasamart']
+      const modules = ['zasago', 'zasafood', 'zasamart', 'zasahome', 'zasaserv']
       const merged = modules.map((mod, i) => {
         if (results[i] === null) return ordersCache.filter(o => o._module === mod)
         return results[i]
@@ -57,7 +63,7 @@ export default function useActiveOrders(enabled = true, features = {}) {
       ordersCache = fresh
       setOrders(fresh)
     }
-  }, [enabled, features?.zasago, features?.zasafood, features?.zasamart]) // eslint-disable-line
+  }, [enabled, features?.zasago, features?.zasafood, features?.zasamart, features?.zasahome, features?.zasaserv]) // eslint-disable-line
 
   useEffect(() => {
     load()

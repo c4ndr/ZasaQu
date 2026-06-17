@@ -8,6 +8,7 @@ import MapSatToggle from '../components/MapSatToggle'
 import useAppInfo from '../hooks/useAppInfo'
 import api from '../services/api'
 import useAddresses from '../hooks/useAddresses'
+import VoucherInput from '../components/VoucherInput'
 
 // ── SVG Pin marker ───────────────────────────────────────────────────────────
 function PinMarker({ color }) {
@@ -193,6 +194,7 @@ export default function CreateOrderPage() {
   const [error,      setError]      = useState('')
   const [estimate,   setEstimate]   = useState(null)
   const [estimating, setEstimating] = useState(false)
+  const [promo,      setPromo]      = useState({ promoCode: null, discountAmount: 0 })
 
   const fetchCategories = useCallback(() => {
     setCatError(false)
@@ -251,6 +253,7 @@ export default function CreateOrderPage() {
         pickup_lng:   parseFloat(form.pickup_lng),
         dropoff_lat:  parseFloat(form.dropoff_lat),
         dropoff_lng:  parseFloat(form.dropoff_lng),
+        ...(promo.promoCode ? { promo_code: promo.promoCode } : {}),
       }
       await api.post('/orders', payload)
       navigate('/orders')
@@ -392,6 +395,25 @@ export default function CreateOrderPage() {
                   ))}
                 </div>
               </div>
+
+              {estimate && (
+                <VoucherInput
+                  orderAmount={Number(form.shipping_fee)}
+                  module="zasago"
+                  onApply={({ promoCode, discountAmount }) => setPromo({ promoCode, discountAmount })}
+                  onClear={() => setPromo({ promoCode: null, discountAmount: 0 })}
+                />
+              )}
+
+              {promo.discountAmount > 0 && (
+                <div style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: 14, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, color: 'var(--k-muted)' }}>Ongkir setelah diskon</span>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontSize: 12, color: 'var(--k-muted)', textDecoration: 'line-through' }}>Rp {Number(form.shipping_fee).toLocaleString('id-ID')}</p>
+                    <p style={{ fontSize: 16, fontWeight: 900, color: 'var(--k-accent)' }}>Rp {Math.max(0, Number(form.shipping_fee) - promo.discountAmount).toLocaleString('id-ID')}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

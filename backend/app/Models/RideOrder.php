@@ -13,6 +13,7 @@ class RideOrder extends Model
         'destination_address', 'destination_lat', 'destination_lng',
         'distance_km', 'fare', 'platform_commission', 'mitra_income',
         'payment_method', 'payment_status', 'status', 'notes',
+        'promo_code', 'discount_amount',
         'accepted_at', 'on_pickup_at', 'on_ride_at',
         'completed_at', 'cancelled_at', 'cancel_reason', 'proof_photo_path',
     ];
@@ -36,8 +37,10 @@ class RideOrder extends Model
         ];
     }
 
-    public function customer() { return $this->belongsTo(User::class, 'customer_id'); }
-    public function mitra()    { return $this->belongsTo(User::class, 'mitra_id'); }
+    public function customer()   { return $this->belongsTo(User::class, 'customer_id'); }
+    public function mitra()      { return $this->belongsTo(User::class, 'mitra_id'); }
+    public function ratings()    { return $this->hasMany(Rating::class, 'ride_order_id'); }
+    public function customerRating() { return $this->hasOne(Rating::class, 'ride_order_id')->where('rater_role', 'customer'); }
 
     public function isActive(): bool
     {

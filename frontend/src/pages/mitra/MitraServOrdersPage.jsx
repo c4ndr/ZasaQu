@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import BottomNav from '../../components/BottomNav'
 import api from '../../services/api'
 
@@ -19,6 +19,7 @@ function CategoryIcon({ category }) {
 
 function ActiveCard({ order, onUpdate }) {
   const [loading, setLoading] = useState(false)
+  const navigate  = useNavigate()
   const info     = STATUS_LABEL[order.status]
   const category = order.provider?.category ?? 'lainnya'
 
@@ -95,7 +96,12 @@ function ActiveCard({ order, onUpdate }) {
           background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.25)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0EA5E9',
         }}>{order.customer?.name?.[0]?.toUpperCase()}</div>
-        <p style={{ fontSize: 13, fontWeight: 700 }}>{order.customer?.name}</p>
+        <p style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{order.customer?.name}</p>
+        <Link
+          to={`/mitra/serv/orders/${order.id}/chat`}
+          state={{ otherName: order.customer?.name }}
+          style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(0,200,150,0.12)', border: '1px solid rgba(0,200,150,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, textDecoration: 'none', flexShrink: 0 }}
+        >💬</Link>
       </div>
 
       {info?.next && (

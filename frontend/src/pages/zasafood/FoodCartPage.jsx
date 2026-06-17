@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import useAppInfo from '../../hooks/useAppInfo'
 import api from '../../services/api'
 import AddressPicker from '../../components/AddressPicker'
+import VoucherInput from '../../components/VoucherInput'
 
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 
@@ -24,6 +25,7 @@ export default function FoodCartPage() {
   const [sessions,        setSessions]        = useState([])
   const [selectedSession, setSelectedSession] = useState(preSelectedSession ?? null)
   const [loadingSessions, setLoadingSessions] = useState(false)
+  const [promo,           setPromo]           = useState({ promoCode: null, discountAmount: 0 })
   const timerRef = useRef(null)
 
   useEffect(() => { if (!merchant || !cart?.length) navigate('/food') }, []) // eslint-disable-line
@@ -37,7 +39,7 @@ export default function FoodCartPage() {
     timerRef.current = setTimeout(() => {
       api.get('/food/delivery-estimate', { params: { merchant_id: merchant.id, delivery_lat: deliveryInfo.lat, delivery_lng: deliveryInfo.lng } })
         .then(r => setEstimate(r.data))
-        .catch(() => {})
+        .catch(() => { setEstimate({ delivery_fee: 0, error: true }) })
         .finally(() => setLoadingEst(false))
     }, 600)
   }, [deliveryInfo?.lat, deliveryInfo?.lng, merchant?.id])
@@ -59,7 +61,7 @@ export default function FoodCartPage() {
 
   const subtotal    = cart.reduce((s, l) => s + l.item.price * l.quantity, 0)
   const deliveryFee = estimate?.delivery_fee ?? 0
-  const total       = subtotal + deliveryFee
+  const total       = Math.max(0, subtotal + deliveryFee - promo.discountAmount)
 
   async function handleOrder() {
     if (!deliveryInfo?.address?.trim()) { setErr('Pilih alamat pengiriman terlebih dahulu.'); return }
@@ -76,6 +78,7 @@ export default function FoodCartPage() {
         delivery_fee:     deliveryFee,
         payment_method:   payMethod,
         notes,
+        ...(promo.promoCode ? { promo_code: promo.promoCode } : {}),
       })
       const orderId = res.data.data.id
       if (deliveryMode === 'jastip' && selectedSession) {
@@ -217,6 +220,16 @@ export default function FoodCartPage() {
           </div>
         </div>
 
+        {/* ── Kode Promo ── */}
+        <div style={card}>
+          <VoucherInput
+            orderAmount={subtotal + deliveryFee}
+            module="zasafood"
+            onApply={({ promoCode, discountAmount }) => setPromo({ promoCode, discountAmount })}
+            onClear={() => setPromo({ promoCode: null, discountAmount: 0 })}
+          />
+        </div>
+
         {/* ── Catatan global ── */}
         <div style={card}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>Catatan Tambahan</div>
@@ -239,6 +252,12 @@ export default function FoodCartPage() {
               {loadingEst ? <span style={{ color: '#F59E0B' }}>Menghitung...</span> : estimate ? fmtRp(deliveryFee) : <span style={{ color: '#9CA3AF' }}>—</span>}
             </span>
           </div>
+          {promo.discountAmount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+              <span style={{ color: 'var(--k-accent)' }}>Diskon Promo</span>
+              <span style={{ fontWeight: 700, color: 'var(--k-accent)' }}>-{fmtRp(promo.discountAmount)}</span>
+            </div>
+          )}
           {estimate?.estimated_minutes && (
             <div style={{ fontSize: 12, color: '#027A48', fontWeight: 600, marginBottom: 6 }}>
               ⏱ Estimasi tiba ~{estimate.estimated_minutes} menit
@@ -266,6 +285,11 @@ export default function FoodCartPage() {
             ⚠ Tentukan lokasi pengiriman terlebih dahulu
           </div>
         )}
+        {estimate?.error && (
+          <div style={{ fontSize: 12, color: '#F59E0B', textAlign: 'center', marginBottom: 6 }}>
+            ⚠ Biaya antar tidak tersedia — hubungi merchant. Akan dilanjutkan dengan biaya Rp 0.
+          </div>
+        )}
         <button onClick={handleOrder} disabled={!isReady} style={{
           width: '100%', padding: '14px', borderRadius: 14, border: 'none',
           background: isReady ? '#F97316' : 'var(--k-border)',
@@ -276,7 +300,7 @@ export default function FoodCartPage() {
             : !deliveryInfo?.lat || !deliveryInfo?.lng ? 'Tentukan lokasi dulu'
             : !estimate ? 'Menghitung ongkir...'
             : deliveryMode === 'jastip' && !selectedSession ? 'Pilih sesi hemat ongkir'
-            : `Pesan Sekarang · ${fmtRp(total)}`}
+            : `Pesan Sekarang · ${fmtRp(total)}${promo.discountAmount > 0 ? ' 🎟' : ''}`}
         </button>
       </div>
     </div>

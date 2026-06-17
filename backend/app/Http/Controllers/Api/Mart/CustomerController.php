@@ -181,9 +181,11 @@ class CustomerController extends Controller
             $commission  = (int) round($total * $commRate / 100);
             $sellerIncome= $total - $commission;
 
-            // Cek saldo di dalam transaksi dengan lockForUpdate agar atomic — mencegah race condition double-spend
+            // Cek saldo di dalam transaksi tanpa lock manual — WalletService::debit() akan
+            // melakukan lockForUpdate sendiri saat debit, sehingga tidak terjadi nested lock
+            // yang berpotensi deadlock. Pengecekan ini hanya untuk early-abort yang cepat.
             if ($paymentMethod === 'wallet') {
-                $userWallet = Wallet::lockForUpdate()->where('user_id', $user->id)->first();
+                $userWallet = Wallet::where('user_id', $user->id)->first();
                 abort_if(!$userWallet || $userWallet->availableBalance() < $total, 422,
                     'Saldo tidak cukup. Silakan top up atau pilih Bayar di Tempat.');
             }

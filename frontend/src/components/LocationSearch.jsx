@@ -46,16 +46,23 @@ export default function LocationSearch({
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0, above: false })
 
   // Hitung posisi dropdown relatif viewport — supaya tembus iframe Google Maps
+  // Pakai visualViewport agar akurat saat keyboard virtual Android muncul
   const updateDropPos = useCallback(() => {
     if (!containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
-    const spaceBelow = window.innerHeight - rect.bottom
-    const above = spaceBelow < 260
+    const vh = window.visualViewport?.height ?? window.innerHeight
+    const spaceBelow = vh - rect.bottom
+    const spaceAbove = rect.top
+    const above = spaceBelow < 220 && spaceAbove > spaceBelow
     setDropPos({
       left: rect.left,
       width: rect.width,
-      top: above ? rect.top - 4 : rect.bottom + 4,
+      top:    rect.bottom + 4,   // posisi untuk mode bawah
+      bottom: vh - rect.top + 4, // posisi untuk mode atas
       above,
+      maxH: above
+        ? Math.max(80, Math.min(300, spaceAbove - 12))
+        : Math.max(80, Math.min(300, spaceBelow - 12)),
     })
   }, [])
 
@@ -66,9 +73,11 @@ export default function LocationSearch({
   useEffect(() => {
     window.addEventListener('scroll', updateDropPos, true)
     window.addEventListener('resize', updateDropPos)
+    window.visualViewport?.addEventListener('resize', updateDropPos)
     return () => {
       window.removeEventListener('scroll', updateDropPos, true)
       window.removeEventListener('resize', updateDropPos)
+      window.visualViewport?.removeEventListener('resize', updateDropPos)
     }
   }, [updateDropPos])
 
@@ -255,10 +264,10 @@ export default function LocationSearch({
     borderRadius: 12,
     overflow: 'hidden',
     boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-    maxHeight: 320,
+    maxHeight: dropPos.maxH ?? 300,
     overflowY: 'auto',
     ...(dropPos.above
-      ? { bottom: window.innerHeight - dropPos.top, top: 'auto' }
+      ? { bottom: dropPos.bottom, top: 'auto' }
       : { top: dropPos.top, bottom: 'auto' }),
   }
 

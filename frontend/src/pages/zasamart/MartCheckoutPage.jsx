@@ -69,6 +69,7 @@ export default function MartCheckoutPage() {
         delivery_address: deliveryInfo.address,
         delivery_lat: deliveryInfo.lat,
         delivery_lng: deliveryInfo.lng,
+        delivery_name: deliveryInfo.recipient_name || undefined,
         delivery_phone: deliveryInfo.recipient_phone || undefined,
         notes: notes || deliveryInfo.notes || undefined,
         shipping_fee: shippingFee,

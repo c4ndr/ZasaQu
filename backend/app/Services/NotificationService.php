@@ -131,6 +131,120 @@ class NotificationService
         );
     }
 
+    // ─── ZasaServ ──────────────────────────────────────────────────────────────
+
+    public function servOrderPlaced(User $provider, string $orderNumber, int $orderId, string $customerName): void
+    {
+        $this->send($provider, 'serv_order_placed',
+            'Pesanan Servis Baru!',
+            "{$customerName} memesan layanan servis. Order #{$orderNumber}.",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaserv']
+        );
+    }
+
+    public function servOrderConfirmed(User $customer, string $orderNumber, int $orderId, string $providerName): void
+    {
+        $this->send($customer, 'serv_order_confirmed',
+            'Pesanan Dikonfirmasi',
+            "{$providerName} mengkonfirmasi pesanan servis #{$orderNumber}.",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaserv']
+        );
+    }
+
+    public function servOrderTraveling(User $customer, string $orderNumber, int $orderId): void
+    {
+        $this->send($customer, 'serv_order_traveling',
+            'Teknisi Menuju Lokasi',
+            "Teknisi sedang dalam perjalanan menuju lokasi Anda untuk order #{$orderNumber}.",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaserv']
+        );
+    }
+
+    public function servOrderInProgress(User $customer, string $orderNumber, int $orderId): void
+    {
+        $this->send($customer, 'serv_order_in_progress',
+            'Pengerjaan Dimulai',
+            "Teknisi sedang mengerjakan order servis #{$orderNumber} di lokasi Anda.",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaserv']
+        );
+    }
+
+    public function servOrderCompleted(User $customer, string $orderNumber, int $orderId): void
+    {
+        $this->send($customer, 'serv_order_completed',
+            'Servis Selesai',
+            "Order servis #{$orderNumber} telah selesai dikerjakan. Terima kasih!",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaserv']
+        );
+    }
+
+    public function servOrderCancelled(User $customer, string $orderNumber, int $orderId, string $reason): void
+    {
+        $this->send($customer, 'serv_order_cancelled',
+            'Pesanan Dibatalkan',
+            "Order servis #{$orderNumber} dibatalkan. Alasan: {$reason}.",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaserv']
+        );
+    }
+
+    // ─── ZasaRide ──────────────────────────────────────────────────────────────
+
+    public function rideAccepted(User $customer, string $orderNumber, int $orderId, string $driverName): void
+    {
+        $this->send($customer, 'ride_accepted',
+            'Driver Ditemukan!',
+            "Driver {$driverName} menerima perjalanan #{$orderNumber} dan segera menuju lokasi penjemputan.",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaride']
+        );
+    }
+
+    public function rideOnPickup(User $customer, string $orderNumber, int $orderId): void
+    {
+        $this->send($customer, 'ride_on_pickup',
+            'Driver Dalam Perjalanan',
+            "Driver sedang menuju lokasi penjemputanmu untuk order #{$orderNumber}.",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaride']
+        );
+    }
+
+    public function rideOnRide(User $customer, string $orderNumber, int $orderId): void
+    {
+        $this->send($customer, 'ride_on_ride',
+            'Perjalanan Dimulai',
+            "Perjalananmu #{$orderNumber} sudah dimulai. Selamat jalan!",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaride']
+        );
+    }
+
+    public function rideCompleted(User $customer, string $orderNumber, int $orderId): void
+    {
+        $this->send($customer, 'ride_completed',
+            'Perjalanan Selesai',
+            "Perjalanan #{$orderNumber} telah selesai. Terima kasih sudah menggunakan ZasaRide!",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaride']
+        );
+    }
+
+    public function rideCancelledByMitra(User $customer, string $orderNumber, int $orderId): void
+    {
+        $this->send($customer, 'ride_cancelled',
+            'Perjalanan Dibatalkan Driver',
+            "Driver membatalkan perjalanan #{$orderNumber}. Coba pesan kembali.",
+            ['order_number' => $orderNumber, 'order_id' => $orderId, 'module' => 'zasaride']
+        );
+    }
+
+    // ─── Withdraw & Admin ──────────────────────────────────────────────────────
+
+    public function withdrawRequestCreated(User $admin, User $mitra, int $amount, int $withdrawId): void
+    {
+        $this->send($admin, 'withdraw_request',
+            'Permintaan Withdraw Baru',
+            "{$mitra->name} mengajukan withdraw Rp " . number_format($amount, 0, ',', '.') . '. Segera proses.',
+            ['withdraw_id' => $withdrawId, 'mitra_id' => $mitra->id, 'module' => 'admin']
+        );
+    }
+
     public function newChatMessage(User $recipient, string $senderName, string $orderNumber, int $orderId, string $orderType = 'zasago'): void
     {
         // Hanya kirim FCM push, tidak buat DB record agar tidak spam notifikasi in-app

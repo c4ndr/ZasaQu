@@ -80,7 +80,7 @@ export default function HomeOrderDetailPage() {
         <div style={{ background: 'var(--k-card)', border: `1.5px solid ${sm.color}30`, borderRadius: 16, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isCancelled ? 0 : 16 }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: `${sm.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-              {FLOW.find(s => s.key === order.status)?.icon ?? '?'}
+              {flowSteps.find(s => s.key === order.status)?.icon ?? '?'}
             </div>
             <div>
               <p style={{ fontWeight: 700, color: sm.color, fontSize: 15 }}>{sm.label}</p>

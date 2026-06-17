@@ -162,7 +162,10 @@ export default function BottomNav() {
   })
 
   const allMitra = MITRA_ITEMS(user.name)
-  const filteredMitra = allMitra
+  const filteredMitra = allMitra.filter(item => {
+    // Mitra nav items are generic (dashboard, aktivitas, GPS, wallet, profile) — no module filtering needed
+    return true
+  })
 
   const items = isMitra ? filteredMitra : filteredPelanggan
 

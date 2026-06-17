@@ -6,6 +6,7 @@ use App\Events\RideStatusUpdated;
 use App\Models\AdminSetting;
 use App\Models\RideOrder;
 use App\Models\Wallet;
+use App\Services\NotificationService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -13,6 +14,11 @@ class AutoCancelRidePending extends Command
 {
     protected $signature   = 'ride:auto-cancel-pending';
     protected $description = 'Auto-cancel ZasaRide order pending yang tidak diambil mitra melebihi batas waktu';
+
+    public function __construct(private NotificationService $notif)
+    {
+        parent::__construct();
+    }
 
     public function handle(): void
     {
@@ -41,7 +47,20 @@ class AutoCancelRidePending extends Command
                     }
                 });
 
-                broadcast(new RideStatusUpdated($order->fresh(), 'pending'));
+                $fresh = $order->fresh(['customer']);
+                broadcast(new RideStatusUpdated($fresh, 'pending'));
+
+                // Beritahu pelanggan via push + in-app notification
+                if ($fresh->customer) {
+                    $this->notif->send(
+                        $fresh->customer,
+                        'ride_cancelled',
+                        'Ride Dibatalkan',
+                        "Order ZasaRide #{$fresh->order_number} dibatalkan karena tidak ada driver tersedia. Silakan coba lagi.",
+                        ['order_id' => $fresh->id, 'module' => 'zasaride']
+                    );
+                }
+
                 $this->info("Auto-cancel ride order #{$order->order_number}");
             } catch (\Throwable $e) {
                 $this->error("Gagal cancel ride #{$order->order_number}: {$e->getMessage()}");

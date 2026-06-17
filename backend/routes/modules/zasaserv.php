@@ -16,6 +16,7 @@ Route::prefix('serv')->middleware('auth:sanctum')->group(function () {
     Route::get('orders',                 [CustomerController::class, 'myOrders']);
     Route::get('orders/{order}',         [CustomerController::class, 'orderDetail']);
     Route::post('orders/{order}/cancel', [CustomerController::class, 'cancelOrder']);
+    Route::post('orders/{order}/rate',   [CustomerController::class, 'rateOrder']);
 });
 
 // ── Provider routes ──────────────────────────────────────────────────────────

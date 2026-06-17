@@ -174,19 +174,26 @@ class ServController extends Controller
 
     public function forceCancelOrder(Request $request, int $id): JsonResponse
     {
-        $data  = $request->validate(['reason' => ['required', 'string', 'max:255']]);
-        $order = ServOrder::findOrFail($id);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:255']]);
 
-        if (in_array($order->status, ['completed', 'cancelled'])) {
-            return response()->json(['message' => 'Order sudah dalam status final.'], 422);
+        try {
+            DB::transaction(function () use ($id, $data, $request) {
+                $order = ServOrder::lockForUpdate()->findOrFail($id);
+
+                if (in_array($order->status, ['completed', 'cancelled'])) {
+                    throw new \Exception('Order sudah dalam status final.');
+                }
+
+                $old = $order->status;
+                $order->update(['status' => 'cancelled', 'cancel_reason' => $data['reason']]);
+
+                $this->auditLogService->log($request->user(), 'force_cancel_serv_order', $order,
+                    ['status' => $old], ['status' => 'cancelled', 'reason' => $data['reason']]);
+            });
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        $old = $order->status;
-        $order->update(['status' => 'cancelled', 'cancel_reason' => $data['reason']]);
-
-        $this->auditLogService->log($request->user(), 'force_cancel_serv_order', $order,
-            ['status' => $old], ['status' => 'cancelled', 'reason' => $data['reason']]);
-
-        return response()->json(['message' => "Order #{$order->order_number} berhasil dibatalkan."]);
+        return response()->json(['message' => "Order berhasil dibatalkan."]);
     }
 }

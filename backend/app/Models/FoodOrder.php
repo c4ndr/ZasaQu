@@ -15,6 +15,7 @@ class FoodOrder extends Model
         'platform_commission_food', 'platform_commission_delivery',
         'merchant_income', 'mitra_income',
         'delivery_address', 'delivery_lat', 'delivery_lng',
+        'promo_code', 'discount_amount',
         'payment_method', 'payment_status',
         'estimated_prep_minutes', 'estimated_delivery_minutes',
         'notes',

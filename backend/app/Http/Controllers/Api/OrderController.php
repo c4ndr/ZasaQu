@@ -61,6 +61,7 @@ class OrderController extends Controller
             'vehicle_type'=>['required','in:motor,mobil'],
             'shipping_fee'=>['required','numeric','min:1000'],
             'payment_method'=>['required','in:wallet,cod'],
+            'promo_code'=>['nullable','string','max:50'],
             'is_jastip_enabled'=>['boolean'],
             'requires_disclaimer'=>['boolean'],
             'require_photo'=>['boolean'],

@@ -100,6 +100,7 @@ class FoodOrderController extends Controller
             'delivery_lng'     => ['required', 'numeric', 'between:-180,180'],
             'delivery_fee'     => ['required', 'integer', 'min:0'],
             'payment_method'   => ['required', 'in:wallet,cod'],
+            'promo_code'       => ['nullable', 'string', 'max:50'],
             'notes'            => ['nullable', 'string', 'max:500'],
         ]);
 

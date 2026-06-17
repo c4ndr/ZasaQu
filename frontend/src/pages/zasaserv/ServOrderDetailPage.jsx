@@ -2,6 +2,56 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../../services/api'
 
+function Stars({ score, onChange, size = 28 }) {
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      {[1,2,3,4,5].map(s => (
+        <button key={s} type="button" onClick={() => onChange(s)} style={{
+          fontSize: size, background: 'none', border: 'none', cursor: 'pointer',
+          opacity: s <= score ? 1 : 0.25, transition: 'opacity 0.15s', padding: 0,
+        }}>⭐</button>
+      ))}
+    </div>
+  )
+}
+
+function ServRatingModal({ order, onClose, onDone }) {
+  const [score,   setScore]   = useState(5)
+  const [comment, setComment] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState(null)
+
+  const submit = async () => {
+    setLoading(true); setError(null)
+    try {
+      await api.post(`/serv/orders/${order.id}/rate`, { score, comment: comment || undefined })
+      onDone()
+    } catch (e) {
+      setError(e.response?.data?.message || 'Gagal mengirim rating.')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: 'var(--k-card)', borderRadius: '22px 22px 0 0', padding: '22px 18px 36px', width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <p style={{ fontWeight: 800, fontSize: 17, marginBottom: 2 }}>Beri Rating Teknisi</p>
+        <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 20 }}>{order.provider?.name}</p>
+        <Stars score={score} onChange={setScore} />
+        <textarea value={comment} onChange={e => setComment(e.target.value)}
+          placeholder="Komentar (opsional)" rows={3}
+          style={{ width: '100%', marginTop: 14, background: 'var(--k-input)', color: 'var(--k-text)', border: '1.5px solid var(--k-border)', borderRadius: 12, padding: '10px 12px', fontSize: 13, outline: 'none', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+        />
+        {error && <p style={{ fontSize: 13, color: '#EF4444', marginTop: 8 }}>{error}</p>}
+        <button onClick={submit} disabled={loading} style={{
+          marginTop: 18, width: '100%', padding: '14px', borderRadius: 14,
+          background: '#059669', color: '#fff', fontSize: 15, fontWeight: 800,
+          border: 'none', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1,
+        }}>{loading ? 'Mengirim...' : 'Kirim Rating'}</button>
+      </div>
+    </div>
+  )
+}
+
 const STATUS_STEPS = ['pending', 'confirmed', 'traveling', 'in_progress', 'completed']
 const STATUS_LABEL = {
   pending:     '⏳ Menunggu konfirmasi teknisi',
@@ -12,7 +62,7 @@ const STATUS_LABEL = {
   cancelled:   '❌ Dibatalkan',
 }
 const STATUS_COLOR = {
-  pending: '#F59E0B', confirmed: '#3B82F6', travelling: '#8B5CF6',
+  pending: '#F59E0B', confirmed: '#3B82F6', traveling: '#8B5CF6',
   in_progress: '#EC4899', completed: '#22C55E', cancelled: '#EF4444',
 }
 
@@ -25,9 +75,13 @@ export default function ServOrderDetailPage() {
   const navigate = useNavigate()
   const [order,    setOrder]    = useState(null)
   const [loading,  setLoading]  = useState(true)
-  const [canceling,setCanceling]= useState(false)
-  const [showCancel,setShowCancel] = useState(false)
-  const [reason,   setReason]   = useState('')
+  const [canceling,  setCanceling]   = useState(false)
+  const [showCancel, setShowCancel]  = useState(false)
+  const [reason,     setReason]      = useState('')
+  const [showRating, setShowRating]  = useState(false)
+  const [ratedIds,   setRatedIds]    = useState(() => new Set(
+    JSON.parse(sessionStorage.getItem('serv_rated_ids') || '[]')
+  ))
 
   useEffect(() => {
     api.get(`/serv/orders/${id}`)
@@ -50,8 +104,20 @@ export default function ServOrderDetailPage() {
   if (loading) return <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--k-muted)' }}>Memuat...</div>
   if (!order) return null
 
-  const stepIdx = STATUS_STEPS.indexOf(order.status)
-  const isDone  = order.status === 'completed' || order.status === 'cancelled'
+  const stepIdx  = STATUS_STEPS.indexOf(order.status)
+  const isDone   = order.status === 'completed' || order.status === 'cancelled'
+  const isRated  = ratedIds.has(order.id) || !!order.rated_at
+
+  function handleRateDone() {
+    setRatedIds(prev => {
+      const next = new Set(prev)
+      next.add(order.id)
+      sessionStorage.setItem('serv_rated_ids', JSON.stringify([...next]))
+      return next
+    })
+    setShowRating(false)
+    setOrder(o => ({ ...o, rated_at: new Date().toISOString() }))
+  }
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 100 }}>
@@ -99,6 +165,18 @@ export default function ServOrderDetailPage() {
           {order.provider?.phone && (
             <a href={`tel:${order.provider.phone}`} style={{ display: 'inline-block', marginTop: 8, fontSize: 12, color: '#059669', fontWeight: 600 }}>📞 {order.provider.phone}</a>
           )}
+          {order.status !== 'cancelled' && (
+            <button
+              onClick={() => navigate(`/serv/orders/${id}/chat`, { state: { otherName: order.provider?.name } })}
+              style={{
+                display: 'block', width: '100%', marginTop: 12, padding: '10px',
+                borderRadius: 12, border: '1.5px solid rgba(5,150,105,0.4)',
+                background: 'rgba(5,150,105,0.06)', color: '#059669',
+                fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              }}>
+              💬 Hubungi Teknisi via Chat
+            </button>
+          )}
         </div>
 
         {/* Alamat */}
@@ -132,6 +210,18 @@ export default function ServOrderDetailPage() {
         </div>
 
         <div style={{ fontSize: 11, color: 'var(--k-muted)', textAlign: 'center', marginBottom: 14 }}>Dibuat: {fmtDate(order.created_at)}</div>
+
+        {/* Rating — hanya untuk completed */}
+        {order.status === 'completed' && !isRated && (
+          <button onClick={() => setShowRating(true)} style={{
+            width: '100%', padding: 14, borderRadius: 14, border: 'none',
+            background: 'rgba(5,150,105,0.1)', color: '#059669',
+            fontSize: 14, fontWeight: 700, cursor: 'pointer', marginBottom: 14,
+          }}>⭐ Beri Rating Teknisi</button>
+        )}
+        {order.status === 'completed' && isRated && (
+          <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--k-muted)', marginBottom: 14 }}>✓ Sudah memberi rating</p>
+        )}
       </div>
 
       {/* Cancel modal */}
@@ -158,6 +248,10 @@ export default function ServOrderDetailPage() {
             Batalkan Pesanan
           </button>
         </div>
+      )}
+
+      {showRating && (
+        <ServRatingModal order={order} onClose={() => setShowRating(false)} onDone={handleRateDone} />
       )}
     </div>
   )

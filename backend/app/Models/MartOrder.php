@@ -11,6 +11,7 @@ class MartOrder extends Model
         'seller_name_snapshot', 'seller_address_snapshot', 'seller_lat', 'seller_lng',
         'delivery_name', 'delivery_address', 'delivery_lat', 'delivery_lng', 'delivery_phone',
         'notes', 'cancel_reason',
+        'promo_code', 'discount_amount',
         'payment_method', 'paid_at',
         'subtotal', 'shipping_fee', 'total',
         'commission_rate', 'platform_commission', 'seller_income',

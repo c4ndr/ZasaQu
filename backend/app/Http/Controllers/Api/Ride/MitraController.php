@@ -51,13 +51,7 @@ class MitraController extends Controller
     {
         $user = $request->user();
 
-        // Pastikan tidak ada ride aktif
-        $hasActive = RideOrder::where('mitra_id', $user->id)
-            ->whereIn('status', ['accepted', 'on_pickup', 'on_ride'])
-            ->exists();
-        if ($hasActive) return response()->json(['message' => 'Selesaikan perjalanan aktif terlebih dahulu.'], 422);
-
-        // Cek saldo minimum
+        // Cek saldo minimum (boleh di luar transaksi — hanya early-return, bukan guard final)
         $minBalance = (float) (AdminSetting::where('key', 'wallet_minimum_mitra')->value('value') ?? 0);
         if ($minBalance > 0) {
             $wallet = Wallet::where('user_id', $user->id)->first();
@@ -69,15 +63,28 @@ class MitraController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($id, $user) {
-            $order = RideOrder::where('status', 'pending')->lockForUpdate()->findOrFail($id);
-            $order->update([
-                'mitra_id'    => $user->id,
-                'status'      => 'accepted',
-                'accepted_at' => now(),
-            ]);
-            return $order;
-        });
+        try {
+            $order = DB::transaction(function () use ($id, $user) {
+                // Cek active ride di dalam transaksi — cegah race condition dua request concurrent lolos bersamaan
+                $hasActive = RideOrder::where('mitra_id', $user->id)
+                    ->whereIn('status', ['accepted', 'on_pickup', 'on_ride'])
+                    ->lockForUpdate()
+                    ->exists();
+                if ($hasActive) {
+                    throw new \Exception('Selesaikan perjalanan aktif terlebih dahulu.');
+                }
+
+                $order = RideOrder::where('status', 'pending')->lockForUpdate()->findOrFail($id);
+                $order->update([
+                    'mitra_id'    => $user->id,
+                    'status'      => 'accepted',
+                    'accepted_at' => now(),
+                ]);
+                return $order;
+            });
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $fresh = $order->fresh(['customer', 'mitra']);
         broadcast(new RideStatusUpdated($fresh, 'pending'));
@@ -140,10 +147,19 @@ class MitraController extends Controller
 
             $locked->update(array_merge(['status' => $newStatus], $timestamps[$newStatus] ?? []));
 
+            // Lepas locked_balance customer saat mitra cancel order wallet
+            if ($newStatus === 'cancelled' && $locked->payment_method === 'wallet') {
+                $custWallet = Wallet::lockForUpdate()->where('user_id', $locked->customer_id)->first();
+                if ($custWallet) {
+                    $custWallet->decrement('locked_balance', min((float) $locked->fare, (float) $custWallet->locked_balance));
+                }
+            }
+
             // Selesaikan wallet saat order completed
             if ($newStatus === 'completed') {
-                $mitra    = $order->mitra;
-                $customer = $order->customer;
+                $locked->load('mitra', 'customer');
+                $mitra    = $locked->mitra;
+                $customer = $locked->customer;
 
                 if ($locked->payment_method === 'wallet') {
                     // Lepas locked_balance customer & debit pembayaran

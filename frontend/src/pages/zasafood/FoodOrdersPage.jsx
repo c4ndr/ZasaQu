@@ -4,6 +4,84 @@ import BottomNav from '../../components/BottomNav'
 import api from '../../services/api'
 import echo from '../../services/echo'
 
+// ── Rating Modal ──────────────────────────────────────────────────────────────
+function Stars({ score, onChange, size = 28 }) {
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      {[1,2,3,4,5].map(s => (
+        <button key={s} type="button" onClick={() => onChange(s)} style={{
+          fontSize: size, background: 'none', border: 'none', cursor: 'pointer',
+          opacity: s <= score ? 1 : 0.25, transition: 'opacity 0.15s', padding: 0,
+        }}>⭐</button>
+      ))}
+    </div>
+  )
+}
+
+function FoodRatingModal({ order, onClose, onDone }) {
+  const hasMitra = !!order.mitra_id
+  const [merchantScore,   setMerchantScore]   = useState(5)
+  const [merchantComment, setMerchantComment] = useState('')
+  const [mitraScore,      setMitraScore]      = useState(5)
+  const [mitraComment,    setMitraComment]    = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState(null)
+
+  const submit = async () => {
+    setLoading(true); setError(null)
+    try {
+      await api.post(`/food/orders/${order.id}/rate`, {
+        merchant_score:   merchantScore,
+        merchant_comment: merchantComment || undefined,
+        ...(hasMitra ? { mitra_score: mitraScore, mitra_comment: mitraComment || undefined } : {}),
+      })
+      onDone()
+    } catch (e) {
+      setError(e.response?.data?.message || 'Gagal mengirim rating.')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: 'var(--k-surface)', borderRadius: '22px 22px 0 0', padding: '22px 18px 36px', width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <p style={{ fontWeight: 800, fontSize: 17, marginBottom: 2 }}>Beri Ulasan</p>
+        <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 20 }}>{order.merchant?.name}</p>
+
+        {/* Merchant */}
+        <div style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)', marginBottom: 8 }}>🏪 Penilaian Warung</p>
+          <Stars score={merchantScore} onChange={setMerchantScore} />
+          <textarea value={merchantComment} onChange={e => setMerchantComment(e.target.value)}
+            placeholder="Komentar untuk warung (opsional)" rows={2}
+            style={{ width: '100%', marginTop: 10, background: 'var(--k-card)', color: 'var(--k-text)', border: '1.5px solid var(--k-border)', borderRadius: 12, padding: '10px 12px', fontSize: 13, outline: 'none', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+          />
+        </div>
+
+        {/* Mitra (jika ada) */}
+        {hasMitra && (
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)', marginBottom: 8 }}>🛵 Penilaian Pengantar</p>
+            <Stars score={mitraScore} onChange={setMitraScore} />
+            <textarea value={mitraComment} onChange={e => setMitraComment(e.target.value)}
+              placeholder="Komentar untuk mitra (opsional)" rows={2}
+              style={{ width: '100%', marginTop: 10, background: 'var(--k-card)', color: 'var(--k-text)', border: '1.5px solid var(--k-border)', borderRadius: 12, padding: '10px 12px', fontSize: 13, outline: 'none', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
+        )}
+
+        {error && <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 12 }}>{error}</p>}
+
+        <button onClick={submit} disabled={loading} style={{
+          width: '100%', padding: '14px', borderRadius: 14,
+          background: '#F97316', color: '#fff',
+          fontSize: 15, fontWeight: 800, border: 'none', cursor: loading ? 'default' : 'pointer',
+          opacity: loading ? 0.7 : 1,
+        }}>{loading ? 'Mengirim...' : 'Kirim Ulasan'}</button>
+      </div>
+    </div>
+  )
+}
+
 function fmtRp(v)   { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
 function fmtDate(d) { return new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }
 
@@ -53,7 +131,7 @@ function MiniProgress({ status }) {
 }
 
 // ── Order Card (ShopeeFood style) ─────────────────────────────────────────────
-function OrderCard({ order, onTrack, onConfirm, onReorder, onRate, confirming }) {
+function OrderCard({ order, onTrack, onConfirm, onReorder, onRate, confirming, isRated }) {
   const sm     = STATUS_META[order.status] ?? STATUS_META.pending
   const isLive = ACTIVE_STATUSES.includes(order.status)
   const isDone = ['completed','cancelled','rejected'].includes(order.status)
@@ -184,6 +262,23 @@ function OrderCard({ order, onTrack, onConfirm, onReorder, onRate, confirming })
         }}>{isDone ? 'Detail' : '›'}</button>
 
       </div>
+
+      {/* Beri Rating — hanya saat completed & belum dirating */}
+      {order.status === 'completed' && !isRated && (
+        <div style={{ padding: '0 14px 12px' }}>
+          <button onClick={e => { e.stopPropagation(); onRate(order) }} style={{
+            width: '100%', padding: '10px', borderRadius: 10, border: 'none',
+            background: 'rgba(249,115,22,0.08)', color: '#F97316',
+            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          }}>⭐ Beri Ulasan</button>
+        </div>
+      )}
+      {order.status === 'completed' && isRated && (
+        <div style={{ padding: '0 14px 12px' }}>
+          <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center' }}>✓ Sudah diulasi</p>
+        </div>
+      )}
+
     </div>
   )
 }
@@ -199,6 +294,10 @@ export default function FoodOrdersPage() {
   const [loadMore,   setLoadMore]  = useState(false)
   const [confirming, setConfirming] = useState(null)
   const [toast,      setToast]     = useState(null)
+  const [ratingOrder, setRatingOrder] = useState(null)
+  const [ratedIds,    setRatedIds]    = useState(() => new Set(
+    JSON.parse(sessionStorage.getItem('food_rated_ids') || '[]')
+  ))
   const channelsRef = useRef({})
 
   const fetchOrders = useCallback(async (currentPage = 1, append = false) => {
@@ -249,9 +348,22 @@ export default function FoodOrdersPage() {
     } finally { setConfirming(null) }
   }
 
+  function handleRateDone() {
+    const id = ratingOrder.id
+    setRatedIds(prev => {
+      const next = new Set(prev)
+      next.add(id)
+      sessionStorage.setItem('food_rated_ids', JSON.stringify([...next]))
+      return next
+    })
+    setRatingOrder(null)
+    showToast('Ulasan berhasil dikirim!')
+  }
+
   function handleReorder(order) {
-    // Arahkan ke halaman merchant dengan keranjang pre-filled (jika ingin)
-    navigate(`/food/merchants/${order.merchant_id}`)
+    navigate(`/food/merchants/${order.merchant_id}`, {
+      state: { reorderItems: order.items },
+    })
   }
 
   const handleLoadMore = () => { const next = page + 1; setPage(next); fetchOrders(next, true) }
@@ -315,7 +427,9 @@ export default function FoodOrdersPage() {
                   onTrack={id => navigate(`/food/orders/${id}`)}
                   onConfirm={handleConfirm}
                   onReorder={handleReorder}
+                  onRate={setRatingOrder}
                   confirming={confirming}
+                  isRated={ratedIds.has(order.id)}
                 />
               ))}
             </div>
@@ -333,6 +447,14 @@ export default function FoodOrdersPage() {
       </div>
 
       <BottomNav />
+
+      {ratingOrder && (
+        <FoodRatingModal
+          order={ratingOrder}
+          onClose={() => setRatingOrder(null)}
+          onDone={handleRateDone}
+        />
+      )}
     </div>
   )
 }

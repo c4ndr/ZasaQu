@@ -2,6 +2,79 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 
+// ── Rating Modal ──────────────────────────────────────────────────────────────
+function Stars({ score, onChange, size = 26 }) {
+  return (
+    <div style={{ display: 'flex', gap: 3 }}>
+      {[1,2,3,4,5].map(s => (
+        <button key={s} type="button" onClick={() => onChange(s)} style={{
+          fontSize: size, background: 'none', border: 'none', cursor: 'pointer',
+          opacity: s <= score ? 1 : 0.22, transition: 'opacity 0.15s', padding: 0,
+        }}>⭐</button>
+      ))}
+    </div>
+  )
+}
+
+function MartRatingModal({ order, onClose, onDone }) {
+  const items = order.items ?? []
+  const [scores,   setScores]   = useState(() => Object.fromEntries(items.map(i => [i.id, 5])))
+  const [comments, setComments] = useState(() => Object.fromEntries(items.map(i => [i.id, ''])))
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState(null)
+
+  const submit = async () => {
+    setLoading(true); setError(null)
+    try {
+      await api.post('/mart/reviews', {
+        order_id: order.id,
+        reviews: items.map(i => ({
+          order_item_id: i.id,
+          rating:        scores[i.id] ?? 5,
+          comment:       comments[i.id] || undefined,
+        })),
+      })
+      onDone()
+    } catch (e) {
+      setError(e.response?.data?.message || 'Gagal mengirim ulasan.')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: 'var(--k-surface)', borderRadius: '22px 22px 0 0', padding: '22px 18px 36px', width: '100%', maxWidth: 480, maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <p style={{ fontWeight: 800, fontSize: 17, marginBottom: 2 }}>Beri Ulasan</p>
+        <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 18 }}>{order.seller?.name}</p>
+
+        {items.map((item, idx) => (
+          <div key={item.id} style={{ marginBottom: 20, paddingBottom: 18, borderBottom: idx < items.length - 1 ? '1px solid var(--k-border)' : 'none' }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)', marginBottom: 8 }}>
+              🛍️ {item.product_name}
+              <span style={{ fontWeight: 400, color: 'var(--k-muted)' }}> ×{item.quantity}</span>
+            </p>
+            <Stars score={scores[item.id]} onChange={v => setScores(p => ({ ...p, [item.id]: v }))} />
+            <input
+              value={comments[item.id]}
+              onChange={e => setComments(p => ({ ...p, [item.id]: e.target.value }))}
+              placeholder="Komentar (opsional)"
+              style={{ marginTop: 8, width: '100%', background: 'var(--k-card)', color: 'var(--k-text)', border: '1.5px solid var(--k-border)', borderRadius: 10, padding: '9px 12px', fontSize: 12, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
+        ))}
+
+        {error && <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 12 }}>{error}</p>}
+
+        <button onClick={submit} disabled={loading} style={{
+          width: '100%', padding: '14px', borderRadius: 14,
+          background: 'linear-gradient(135deg,#6366F1,#7C3AED)', color: '#fff',
+          fontSize: 15, fontWeight: 800, border: 'none', cursor: loading ? 'default' : 'pointer',
+          opacity: loading ? 0.7 : 1,
+        }}>{loading ? 'Mengirim...' : 'Kirim Ulasan'}</button>
+      </div>
+    </div>
+  )
+}
+
 const fmtRp   = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID')
 const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
 const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
@@ -29,9 +102,14 @@ const STATUS_META = {
 
 export default function MartOrdersPage() {
   const navigate = useNavigate()
-  const [tab, setTab]       = useState('')
-  const [orders, setOrders] = useState([])
+  const [tab,     setTab]     = useState('')
+  const [orders,  setOrders]  = useState([])
   const [loading, setLoading] = useState(true)
+  const [ratingOrder, setRatingOrder] = useState(null)
+  const [toast,       setToast]       = useState(null)
+  const [ratedIds,    setRatedIds]    = useState(() => new Set(
+    JSON.parse(sessionStorage.getItem('mart_rated_ids') || '[]')
+  ))
 
   useEffect(() => {
     setLoading(true)
@@ -40,8 +118,32 @@ export default function MartOrdersPage() {
       .finally(() => setLoading(false))
   }, [tab])
 
+  function showToast(msg) {
+    setToast(msg); setTimeout(() => setToast(null), 2800)
+  }
+
+  function handleRateDone() {
+    const id = ratingOrder.id
+    setRatedIds(prev => {
+      const next = new Set(prev)
+      next.add(id)
+      sessionStorage.setItem('mart_rated_ids', JSON.stringify([...next]))
+      return next
+    })
+    setRatingOrder(null)
+    showToast('Ulasan berhasil dikirim!')
+  }
+
   return (
     <div style={{ background: 'var(--k-bg)', minHeight: '100dvh', paddingBottom: 80 }}>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, padding: '11px 20px', borderRadius: 12, background: '#00C896', color: '#fff', fontWeight: 700, fontSize: 13, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', whiteSpace: 'nowrap' }}>
+          {toast}
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--k-surface)', borderBottom: '1px solid var(--k-border)', position: 'sticky', top: 0, zIndex: 10 }}>
         <button onClick={() => navigate(-1)} style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 18, color: 'var(--k-text)' }}>←</button>
         <p style={{ fontWeight: 800, fontSize: 16, color: 'var(--k-text)' }}>Pesanan Saya</p>
@@ -97,16 +199,34 @@ export default function MartOrdersPage() {
                       </div>
                     </div>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: order.status === 'completed' ? 10 : 0 }}>
                     <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>{order.items?.length ?? 0} produk</p>
                     <p style={{ fontSize: 14, fontWeight: 800, color: '#6366F1' }}>{fmtRp(order.total)}</p>
                   </div>
+                  {order.status === 'completed' && !ratedIds.has(order.id) && (
+                    <button onClick={e => { e.stopPropagation(); setRatingOrder(order) }} style={{
+                      width: '100%', padding: '9px', borderRadius: 10, border: 'none',
+                      background: 'rgba(99,102,241,0.08)', color: '#6366F1',
+                      fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    }}>⭐ Beri Ulasan Produk</button>
+                  )}
+                  {order.status === 'completed' && ratedIds.has(order.id) && (
+                    <p style={{ fontSize: 11, color: 'var(--k-muted)', textAlign: 'center' }}>✓ Sudah diulasi</p>
+                  )}
                 </div>
               )
             })}
           </div>
         )}
       </div>
+
+      {ratingOrder && (
+        <MartRatingModal
+          order={ratingOrder}
+          onClose={() => setRatingOrder(null)}
+          onDone={handleRateDone}
+        />
+      )}
     </div>
   )
 }

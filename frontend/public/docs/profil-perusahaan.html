@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profil Perusahaan — ZasaQu</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Georgia', serif; color: #1a1a2e; background: #fff; font-size: 11pt; line-height: 1.6; }
+
+  .print-btn { position: fixed; bottom: 24px; right: 24px; padding: 12px 24px; background: #00C896; color: #0C0C16; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 20px rgba(0,200,150,0.4); z-index: 999; }
+  @media print { .print-btn { display: none; } }
+
+  .page { max-width: 210mm; margin: 0 auto; padding: 20mm 20mm; }
+
+  /* Cover */
+  .cover { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border-bottom: 3px solid #00C896; padding-bottom: 40px; page-break-after: always; }
+  .logo-box { width: 90px; height: 90px; border-radius: 28px; background: linear-gradient(135deg, #00C896, #00A87D); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 12px 40px rgba(0,200,150,0.3); }
+  .logo-z { font-size: 48px; font-weight: 900; color: #0C0C16; font-family: Arial, sans-serif; }
+  .cover-title { font-size: 36pt; font-weight: 900; color: #0C0C16; font-family: Arial, sans-serif; letter-spacing: -1px; margin-bottom: 8px; }
+  .cover-sub { font-size: 13pt; color: #6B7280; margin-bottom: 40px; }
+  .cover-doc-title { font-size: 16pt; font-weight: 700; color: #fff; background: #0C0C16; padding: 12px 32px; border-radius: 8px; display: inline-block; margin-bottom: 12px; }
+  .cover-date { font-size: 11pt; color: #9CA3AF; }
+
+  /* Sections */
+  .section { margin-bottom: 32px; }
+  .section-title { font-size: 14pt; font-weight: 700; color: #00C896; border-bottom: 2px solid #00C896; padding-bottom: 6px; margin-bottom: 16px; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.05em; }
+  .section p { margin-bottom: 10px; text-align: justify; }
+
+  /* Table info */
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .info-table tr { border-bottom: 1px solid #E5E7EB; }
+  .info-table td { padding: 8px 4px; vertical-align: top; }
+  .info-table td:first-child { width: 38%; color: #6B7280; font-size: 10pt; }
+  .info-table td:last-child { font-weight: 700; font-size: 10pt; }
+
+  /* Services */
+  .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .service-card { border: 1.5px solid #E5E7EB; border-radius: 10px; padding: 14px; }
+  .service-name { font-size: 12pt; font-weight: 700; color: #0C0C16; font-family: Arial, sans-serif; margin-bottom: 4px; }
+  .service-tag { font-size: 9pt; font-weight: 700; color: #00C896; margin-bottom: 6px; }
+  .service-desc { font-size: 9.5pt; color: #6B7280; }
+
+  /* Footer */
+  .doc-footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #E5E7EB; display: flex; justify-content: space-between; font-size: 9pt; color: #9CA3AF; }
+
+  @page { size: A4; margin: 15mm 20mm; }
+  @media print {
+    .page { padding: 0; }
+    .cover { min-height: auto; padding-bottom: 20px; }
+  }
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">⬇ Simpan sebagai PDF</button>
+
+<div class="page">
+
+  <!-- COVER -->
+  <div class="cover">
+    <div class="logo-box"><span class="logo-z">Z</span></div>
+    <div class="cover-title">ZasaQu</div>
+    <div class="cover-sub">Platform Layanan Lokal Terpercaya</div>
+    <div class="cover-doc-title">PROFIL PERUSAHAAN</div>
+    <div class="cover-date">Dokumen diterbitkan: 12 Juni 2026</div>
+  </div>
+
+  <!-- TENTANG -->
+  <div class="section">
+    <div class="section-title">Tentang ZasaQu</div>
+    <p>ZasaQu adalah platform digital layanan lokal yang menghubungkan masyarakat dengan penyedia jasa dan produk di sekitar mereka. Dikembangkan oleh <strong>Pipit Candra Lesmana</strong> di bawah ekosistem <strong>ZashaGo Ecosystem</strong>, ZasaQu hadir sebagai solusi teknologi berbasis komunitas yang mendukung pertumbuhan ekonomi lokal.</p>
+    <p>Platform ini dapat diakses melalui aplikasi Android (APK) maupun browser web, menjangkau pengguna di berbagai segmen masyarakat dengan antarmuka yang mudah digunakan.</p>
+  </div>
+
+  <!-- VISI MISI -->
+  <div class="section">
+    <div class="section-title">Visi & Misi</div>
+    <p><strong>Visi:</strong> Menjadi platform layanan lokal terdepan yang memberdayakan masyarakat dan pelaku usaha kecil di Indonesia melalui teknologi digital yang inklusif dan terpercaya.</p>
+    <p><strong>Misi:</strong></p>
+    <ul style="margin-left: 20px; margin-top: 6px;">
+      <li style="margin-bottom: 4px;">Menghubungkan masyarakat dengan mitra layanan lokal secara cepat dan efisien</li>
+      <li style="margin-bottom: 4px;">Memberdayakan UMKM lokal melalui platform digital yang mudah diakses</li>
+      <li style="margin-bottom: 4px;">Menyediakan ekosistem transaksi yang aman, transparan, dan terpercaya</li>
+      <li style="margin-bottom: 4px;">Menciptakan lapangan kerja fleksibel bagi mitra ojek, kurir, dan penyedia jasa</li>
+    </ul>
+  </div>
+
+  <!-- IDENTITAS USAHA -->
+  <div class="section">
+    <div class="section-title">Identitas Usaha</div>
+    <table class="info-table">
+      <tr><td>Nama Usaha</td><td>ZasaQu</td></tr>
+      <tr><td>Nama Pemilik</td><td>Pipit Candra Lesmana</td></tr>
+      <tr><td>Nomor Induk Berusaha (NIB)</td><td>202606-1114-7428-472</td></tr>
+      <tr><td>NPWP</td><td>76.819.384.9-405.000</td></tr>
+      <tr><td>KBLI</td><td>63122 — Aktivitas Portal Web dan/atau Platform Digital dan Media Sosial</td></tr>
+      <tr><td>Alamat</td><td>Kp. Citiis Hilir RT 16/RW 07, Desa Makasari, Kec. Kalapanunggal, Kab. Sukabumi, Jawa Barat 43354</td></tr>
+      <tr><td>Website</td><td>https://zasaqu.uk</td></tr>
+      <tr><td>Email</td><td>support@zasaqu.uk</td></tr>
+      <tr><td>WhatsApp</td><td>+62 852-8038-1600</td></tr>
+      <tr><td>Platform</td><td>Android (APK) & Web Browser</td></tr>
+      <tr><td>Tahun Berdiri</td><td>2025</td></tr>
+    </table>
+  </div>
+
+  <!-- LAYANAN -->
+  <div class="section">
+    <div class="section-title">Layanan yang Ditawarkan</div>
+    <div class="service-grid">
+      <div class="service-card">
+        <div class="service-name">🛵 ZasaGo</div>
+        <div class="service-tag">Ojek & Pengiriman Ekspres</div>
+        <div class="service-desc">Layanan antar jemput penumpang dan pengiriman dokumen/paket menggunakan mitra ojek motor terverifikasi. Dilengkapi tracking real-time dan fitur jastip (jasa titip).</div>
+      </div>
+      <div class="service-card">
+        <div class="service-name">🍔 ZasaFood</div>
+        <div class="service-tag">Pesan Makanan Lokal</div>
+        <div class="service-desc">Platform pesan antar makanan dari merchant dan warung lokal. Mendukung pembayaran COD dan dompet digital (ZasaWallet) dengan notifikasi pesanan real-time.</div>
+      </div>
+      <div class="service-card">
+        <div class="service-name">🛒 ZasaMart</div>
+        <div class="service-tag">Belanja Produk Lokal</div>
+        <div class="service-desc">Marketplace produk kebutuhan sehari-hari dari pedagang lokal terverifikasi. Pengiriman cepat ke lokasi pelanggan oleh mitra kurir.</div>
+      </div>
+      <div class="service-card">
+        <div class="service-name">🏠 ZasaHome</div>
+        <div class="service-tag">Jasa Layanan Rumah</div>
+        <div class="service-desc">Pemesanan jasa rumah tangga meliputi laundry, pijat/relaksasi, cleaning service, dan tukang/reparasi oleh penyedia jasa terverifikasi.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODEL BISNIS -->
+  <div class="section">
+    <div class="section-title">Model Bisnis</div>
+    <p>ZasaQu menggunakan model bisnis <em>platform marketplace</em> berbasis komisi. Pendapatan diperoleh dari:</p>
+    <ul style="margin-left: 20px; margin-top: 6px;">
+      <li style="margin-bottom: 4px;"><strong>Komisi Layanan:</strong> Persentase dari setiap transaksi yang berhasil diselesaikan</li>
+      <li style="margin-bottom: 4px;"><strong>Biaya Platform:</strong> Biaya layanan yang dibebankan kepada pengguna per transaksi</li>
+      <li style="margin-bottom: 4px;"><strong>ZasaWallet:</strong> Dompet digital terintegrasi untuk memudahkan transaksi dalam platform</li>
+    </ul>
+    <p style="margin-top: 10px;">Metode pembayaran yang diterima: Transfer Bank, Virtual Account, QRIS, dan tunai (COD).</p>
+  </div>
+
+  <!-- TEKNOLOGI -->
+  <div class="section">
+    <div class="section-title">Infrastruktur Teknologi</div>
+    <table class="info-table">
+      <tr><td>Backend</td><td>Laravel (PHP 8.3) + MySQL + Redis</td></tr>
+      <tr><td>Frontend</td><td>React.js + Vite + Tailwind CSS</td></tr>
+      <tr><td>Mobile</td><td>Android (Capacitor) — Package: com.zasaqu.app</td></tr>
+      <tr><td>Real-time</td><td>Laravel Reverb (WebSocket)</td></tr>
+      <tr><td>CDN & Tunnel</td><td>Cloudflare (HTTPS)</td></tr>
+      <tr><td>Notifikasi</td><td>Firebase Cloud Messaging (FCM) + WhatsApp (Fonnte)</td></tr>
+      <tr><td>Payment</td><td>iPaymu (VA Bank + QRIS) — dalam proses integrasi Xendit</td></tr>
+    </table>
+  </div>
+
+  <div class="doc-footer">
+    <span>ZasaQu — Platform Layanan Lokal | zasaqu.uk</span>
+    <span>Dokumen Rahasia — Hanya untuk Keperluan Verifikasi Bisnis</span>
+  </div>
+
+</div>
+</body>
+</html>

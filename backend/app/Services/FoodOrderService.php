@@ -22,13 +22,22 @@ class FoodOrderService
     public function __construct(
         private WalletService       $walletService,
         private NotificationService $notifService,
+        private PromoService        $promoService,
     ) {}
 
     // ── Buat order baru ────────────────────────────────────────────────────────
 
     public function createOrder(User $customer, array $data): FoodOrder
     {
-        return DB::transaction(function () use ($customer, $data) {
+        // Validasi promo sebelum transaksi
+        $promoDiscount  = 0;
+        $validatedPromo = null;
+        if (!empty($data['promo_code'])) {
+            ['promo' => $validatedPromo, 'discount' => $promoDiscount] =
+                $this->promoService->validate($data['promo_code'], 'zasafood', (int) $data['delivery_fee'] + 0);
+        }
+
+        $order = DB::transaction(function () use ($customer, $data, $promoDiscount, $validatedPromo) {
             $merchant = FoodMerchant::lockForUpdate()->findOrFail($data['merchant_id']);
 
             if (!$merchant->isActive()) {
@@ -67,7 +76,7 @@ class FoodOrderService
             $commFood     = (float) AdminSetting::valueOf('food_commission_percent', 15);
             $commDelivery = (float) AdminSetting::valueOf('food_commission_delivery_percent', 10);
             $deliveryFee  = (int) $data['delivery_fee'];
-            $total        = $subtotal + $deliveryFee;
+            $total        = max(0, $subtotal + $deliveryFee - $promoDiscount);
 
             $commFoodAmt     = (int) round($subtotal * $commFood / 100);
             $commDeliveryAmt = (int) round($deliveryFee * $commDelivery / 100);
@@ -103,6 +112,8 @@ class FoodOrderService
                 'delivery_lng'                 => $data['delivery_lng'],
                 'payment_method'               => $data['payment_method'],
                 'payment_status'               => $data['payment_method'] === 'wallet' ? 'paid' : 'pending',
+                'promo_code'                   => $data['promo_code'] ?? null,
+                'discount_amount'              => $promoDiscount,
                 'notes'                        => $data['notes'] ?? null,
             ]);
 
@@ -143,6 +154,12 @@ class FoodOrderService
 
             return $order;
         });
+
+        if ($validatedPromo) {
+            $this->promoService->use($validatedPromo);
+        }
+
+        return $order;
     }
 
     // ── Transisi status ────────────────────────────────────────────────────────
@@ -206,19 +223,29 @@ class FoodOrderService
     {
         $this->assertStatus($order, 'merchant_accepted');
 
-        $prev = $order->status;
-        $order->update(['status' => 'preparing', 'preparing_at' => now()]);
+        return DB::transaction(function () use ($order) {
+            $locked = FoodOrder::lockForUpdate()->findOrFail($order->id);
 
-        broadcast(new FoodOrderStatusUpdated($order->fresh(), $prev))->toOthers();
+            if ($locked->status !== 'merchant_accepted') {
+                throw new \Exception("Status order sudah berubah: {$locked->status}.");
+            }
 
-        $this->notifService->send(
-            $order->customer, 'food_preparing',
-            'Pesanan Sedang Dimasak',
-            "Merchant sedang memasak pesanan #{$order->order_number}.",
-            ['food_order_id' => $order->id, 'order_number' => $order->order_number]
-        );
+            $prev = $locked->status;
+            $locked->update(['status' => 'preparing', 'preparing_at' => now()]);
 
-        return $order;
+            broadcast(new FoodOrderStatusUpdated($locked->fresh(), $prev))->toOthers();
+
+            $this->notifService->send(
+                $locked->customer, 'food_preparing',
+                'Pesanan Sedang Dimasak',
+                "Merchant sedang memasak pesanan #{$locked->order_number}.",
+                ['food_order_id' => $locked->id, 'order_number' => $locked->order_number]
+            );
+
+            $order->setRawAttributes($locked->fresh()->getAttributes());
+
+            return $order;
+        });
     }
 
     public function merchantReady(FoodOrder $order): FoodOrder

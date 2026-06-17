@@ -102,12 +102,26 @@ export default function FoodMerchantPage() {
   useEffect(() => {
     api.get(`/food/merchants/${id}`)
       .then(r => {
-        setMerchant(r.data.data)
-        setActiveTab(r.data.data?.categories?.[0]?.id ?? null)
+        const m = r.data.data
+        setMerchant(m)
+        setActiveTab(m?.categories?.[0]?.id ?? null)
+
+        const reorderItems = location.state?.reorderItems
+        if (reorderItems?.length) {
+          const allItems = m?.categories?.flatMap(c => c.items) ?? []
+          const newCart = {}
+          reorderItems.forEach(ri => {
+            const item = allItems.find(i => i.id === ri.menu_item_id)
+            if (item && item.is_available) {
+              newCart[item.id] = { item, qty: ri.quantity, notes: ri.notes ?? '' }
+            }
+          })
+          if (Object.keys(newCart).length > 0) setCart(newCart)
+        }
       })
       .catch(() => navigate('/food'))
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id]) // eslint-disable-line
 
   // Scroll ke kategori
   function scrollToCategory(catId) {

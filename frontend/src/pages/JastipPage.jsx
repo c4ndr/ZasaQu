@@ -5,6 +5,7 @@ import useAppInfo from '../hooks/useAppInfo'
 import BottomNav from '../components/BottomNav'
 import LocationSearch from '../components/LocationSearch'
 import SessionRouteMap from '../components/SessionRouteMap'
+import VoucherInput from '../components/VoucherInput'
 
 const fmt = (v) => 'Rp ' + Number(v ?? 0).toLocaleString('id-ID')
 
@@ -46,6 +47,7 @@ export default function JastipPage() {
   const [feeError,    setFeeError]    = useState('')
   const [submitting,  setSubmitting]  = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [promo,       setPromo]       = useState({ promoCode: null, discountAmount: 0 })
 
   // ── Load sesi saat pertama buka & saat vehicle type berubah ───────────────
   useEffect(() => { loadSessions(vehicleType) }, [vehicleType]) // eslint-disable-line
@@ -146,6 +148,7 @@ export default function JastipPage() {
         item_value:       itemValue ? parseFloat(itemValue) : undefined,
         shipping_fee:     shippingFee,
         payment_method:   payMethod,
+        ...(promo.promoCode ? { promo_code: promo.promoCode } : {}),
       })
       navigate('/orders')
     } catch (e) {
@@ -550,6 +553,18 @@ export default function JastipPage() {
               </div>
             </div>
 
+            {/* ── Kode Promo ── */}
+            {shippingFee !== null && (
+              <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 18, padding: '16px' }}>
+                <VoucherInput
+                  orderAmount={shippingFee}
+                  module="zasago"
+                  onApply={({ promoCode, discountAmount }) => setPromo({ promoCode, discountAmount })}
+                  onClear={() => setPromo({ promoCode: null, discountAmount: 0 })}
+                />
+              </div>
+            )}
+
             {/* ── Estimasi Ongkir ── */}
             <div style={{
               background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 18, padding: '16px',
@@ -562,7 +577,15 @@ export default function JastipPage() {
                 ) : feeError ? (
                   <p style={{ fontSize: 13, color: 'var(--k-warn)' }}>{feeError}</p>
                 ) : shippingFee !== null ? (
-                  <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--k-accent)' }}>{fmt(shippingFee)}</p>
+                  <div>
+                    {promo.discountAmount > 0 && (
+                      <p style={{ fontSize: 12, color: 'var(--k-muted)', textDecoration: 'line-through' }}>{fmt(shippingFee)}</p>
+                    )}
+                    <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--k-accent)' }}>
+                      {fmt(Math.max(0, shippingFee - promo.discountAmount))}
+                      {promo.discountAmount > 0 && <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 6 }}>🎟 Diskon {fmt(promo.discountAmount)}</span>}
+                    </p>
+                  </div>
                 ) : (
                   <p style={{ fontSize: 13, color: 'var(--k-muted)' }}>Isi koordinat pickup & tujuan untuk estimasi otomatis</p>
                 )}

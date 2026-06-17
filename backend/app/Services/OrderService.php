@@ -9,6 +9,7 @@ use App\Events\OrderStatusUpdated;
 use App\Models\AdminSetting;
 use App\Models\JastipSession;
 use App\Models\Order;
+use App\Models\Promo;
 use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
@@ -20,14 +21,23 @@ class OrderService
         private WalletService        $walletService,
         private CommissionService    $commissionService,
         private NotificationService  $notifService,
+        private PromoService         $promoService,
     ) {}
 
     // ─── Buat order master ──────────────────────────────────────────────────
 
     public function createMasterOrder(User $customer, array $data): Order
     {
-        $order = DB::transaction(function () use ($customer, $data) {
-            $fee     = (float) $data['shipping_fee'];
+        // Validasi promo sebelum transaksi
+        $promoDiscount = 0;
+        $validatedPromo = null;
+        if (!empty($data['promo_code'])) {
+            ['promo' => $validatedPromo, 'discount' => $promoDiscount] =
+                $this->promoService->validate($data['promo_code'], 'zasago', (int) $data['shipping_fee']);
+        }
+
+        $order = DB::transaction(function () use ($customer, $data, $promoDiscount, $validatedPromo) {
+            $fee     = max(0, (float) $data['shipping_fee'] - $promoDiscount);
             $vtype   = $data['vehicle_type'];
 
             // Snapshot tarif saat order dibuat
@@ -75,9 +85,15 @@ class OrderService
                 'commission_rate'   => (float) ($settings[$commSetting]  ?? 10),
                 'payment_method'    => $data['payment_method'] ?? 'wallet',
                 'payment_status'    => 'pending',
+                'promo_code'        => $data['promo_code'] ?? null,
+                'discount_amount'   => $promoDiscount,
                 'notes'             => $data['notes'] ?? null,
             ]);
         });
+
+        if ($validatedPromo) {
+            $this->promoService->use($validatedPromo);
+        }
 
         // Broadcast setelah transaction commit — order sudah ada di DB
         broadcast(new NewOrderAvailable($order));
@@ -117,8 +133,16 @@ class OrderService
             }
         }
 
-        return DB::transaction(function () use ($customer, $session, $data) {
-            $fee = (float) $data['shipping_fee'];
+        // Validasi promo sebelum transaksi
+        $promoDiscount  = 0;
+        $validatedPromo = null;
+        if (!empty($data['promo_code'])) {
+            ['promo' => $validatedPromo, 'discount' => $promoDiscount] =
+                $this->promoService->validate($data['promo_code'], 'zasago', (int) $data['shipping_fee']);
+        }
+
+        return DB::transaction(function () use ($customer, $session, $data, $promoDiscount, $validatedPromo) {
+            $fee = max(0, (float) $data['shipping_fee'] - $promoDiscount);
 
             // Validasi asuransi untuk order jastip
             $insuranceMax = (float) (AdminSetting::where('key', 'insurance_max_value')->value('value') ?? 200000);
@@ -162,7 +186,13 @@ class OrderService
                 'payment_status'    => 'pending',
                 'accepted_at'       => now(),
                 'notes'             => $data['notes'] ?? null,
+                'promo_code'        => $data['promo_code'] ?? null,
+                'discount_amount'   => $promoDiscount,
             ]);
+
+            if ($validatedPromo) {
+                $this->promoService->use($validatedPromo);
+            }
 
             // Update sesi: tambah jumlah jastip & akumulasi ongkir
             $session->increment('jastip_count');
@@ -200,6 +230,8 @@ class OrderService
 
         broadcast(new OrderStatusUpdated($order->fresh(), 'pending'));
         broadcast(new OrderNoLongerAvailable($order->id, $order->vehicle_type));
+
+        $this->notifService->orderAccepted($order->customer, $order->order_number, $order->id);
     }
 
     // ─── Update status order oleh mitra ────────────────────────────────────

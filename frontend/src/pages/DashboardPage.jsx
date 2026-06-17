@@ -15,6 +15,8 @@ import useAppInfo from '../hooks/useAppInfo'
 const ROLE_LABELS = {
   pelanggan: 'Pelanggan', mitra_motor: 'Mitra Motor',
   mitra_mobil: 'Mitra Mobil', admin: 'Admin',
+  home_provider: 'Home Provider', serv_provider: 'Serv Provider',
+  seller: 'Seller', merchant: 'Merchant',
 }
 
 const DEFAULT_BANNERS = [

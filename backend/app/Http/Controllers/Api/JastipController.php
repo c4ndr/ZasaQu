@@ -97,6 +97,7 @@ class JastipController extends Controller
             'payment_method'=>['required','in:wallet,cod'],
             'requires_disclaimer'=>['boolean'],
             'notes'=>['nullable','string'],
+            'promo_code'=>['nullable','string','max:50'],
         ]);
         if ($data['payment_method'] === 'wallet' && !AdminSetting::walletEnabled()) {
             return response()->json(['message' => 'Pembayaran via wallet sementara tidak tersedia.'], 422);

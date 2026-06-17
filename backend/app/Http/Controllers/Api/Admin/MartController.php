@@ -9,6 +9,7 @@ use App\Models\MartSeller;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Services\AuditLogService;
+use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,10 @@ use Illuminate\Support\Str;
 
 class MartController extends Controller
 {
-    public function __construct(private AuditLogService $auditLogService) {}
+    public function __construct(
+        private AuditLogService $auditLogService,
+        private WalletService   $walletService,
+    ) {}
 
     // ── Sellers ───────────────────────────────────────────────────────────────
 
@@ -147,17 +151,43 @@ class MartController extends Controller
 
     public function forceCancelOrder(Request $request, int $id): JsonResponse
     {
-        $data  = $request->validate(['reason' => ['required', 'string', 'max:255']]);
-        $order = MartOrder::whereNotIn('status', ['completed', 'cancelled'])->findOrFail($id);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:255']]);
 
-        $order->items->each(fn($item) => $item->product->increment('stock', $item->quantity));
-        $order->update([
-            'status'       => 'cancelled',
-            'cancel_reason'=> '[Admin] ' . $data['reason'],
-            'cancelled_at' => now(),
-        ]);
+        try {
+            DB::transaction(function () use ($id, $data, $request) {
+                $order = MartOrder::lockForUpdate()->findOrFail($id);
 
-        $this->auditLogService->log($request->user(), 'force_cancel_mart_order', $order, [], $data);
+                if (in_array($order->status, ['completed', 'cancelled'])) {
+                    throw new \Exception('Order sudah dalam status final.');
+                }
+
+                $order->load('items.product');
+                $order->items->each(fn($item) => $item->product->increment('stock', $item->quantity));
+
+                $order->update([
+                    'status'        => 'cancelled',
+                    'cancel_reason' => '[Admin] ' . $data['reason'],
+                    'cancelled_at'  => now(),
+                ]);
+
+                // Refund wallet customer bila order belum completed dan dibayar via wallet
+                if ($order->payment_method === 'wallet' && $order->total > 0) {
+                    $this->walletService->credit(
+                        $order->customer,
+                        $order->total,
+                        'refund',
+                        "Refund pembatalan admin ZasaMart #{$order->order_number}",
+                        $order,
+                        'zasamart'
+                    );
+                }
+
+                $this->auditLogService->log($request->user(), 'force_cancel_mart_order', $order, [], $data);
+            });
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
         return response()->json(['message' => 'Pesanan berhasil dibatalkan.']);
     }
 }

@@ -25,7 +25,9 @@ use App\Http\Controllers\Api\Admin\PromoController as AdminPromoController;
 use App\Http\Controllers\Api\Admin\RideController as AdminRideController;
 use App\Http\Controllers\Api\Ride\CustomerController as RideCustomerController;
 use App\Http\Controllers\Api\Ride\MitraController as MitraRideController;
+use App\Http\Controllers\Api\Ride\RideRatingController;
 use App\Http\Controllers\Api\Ride\SavedPlaceController as RideSavedPlaceController;
+use App\Http\Controllers\Api\PromoValidateController;
 use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\NotificationController;
@@ -76,11 +78,13 @@ Route::post('topup/ipaymu/callback',   [TopUpController::class, 'ipaymuCallback'
 // ─── Promo publik (tanpa auth) ─────────────────────────────────────────────
 Route::get('promos', function () {
     $promos = \App\Models\Promo::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
-    $result = $promos->map(function ($promo) {
+    $basePath = realpath(storage_path('app/public'));
+    $result = $promos->map(function ($promo) use ($basePath) {
         $data = $promo->toArray();
-        if (!empty($promo->image_path)) {
-            $fullPath = storage_path('app/public/' . $promo->image_path);
-            if (file_exists($fullPath)) {
+        if (!empty($promo->image_path) && $basePath) {
+            // Sanitasi path: hanya izinkan file yang berada di dalam direktori storage/app/public
+            $fullPath = realpath(storage_path('app/public/' . $promo->image_path));
+            if ($fullPath && str_starts_with($fullPath, $basePath . DIRECTORY_SEPARATOR) && file_exists($fullPath)) {
                 $mime = mime_content_type($fullPath) ?: 'image/jpeg';
                 $data['image_data_url'] = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($fullPath));
             }
@@ -89,6 +93,8 @@ Route::get('promos', function () {
     });
     return response()->json($result);
 });
+
+Route::middleware('auth:sanctum')->post('promos/validate', [PromoValidateController::class, 'validate']);
 
 // ─── Info aplikasi publik (tanpa auth) ─────────────────────────────────────
 Route::get('app-info', function () {
@@ -255,6 +261,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('orders', [RideCustomerController::class, 'store']);
         Route::get('orders/{id}', [RideCustomerController::class, 'show']);
         Route::post('orders/{id}/cancel', [RideCustomerController::class, 'cancel']);
+        Route::post('orders/{id}/rate', [RideRatingController::class, 'store']);
+        Route::get('orders/{id}/rating', [RideRatingController::class, 'show']);
 
         // Saved places (customer)
         Route::prefix('saved-places')->group(function () {
@@ -304,6 +312,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
             Route::delete('{id}', [AdminPromoController::class, 'destroy']);
         });
 
+        Route::prefix('vouchers')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\Admin\VoucherController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\Admin\VoucherController::class, 'store']);
+            Route::patch('{id}', [\App\Http\Controllers\Api\Admin\VoucherController::class, 'update']);
+            Route::delete('{id}', [\App\Http\Controllers\Api\Admin\VoucherController::class, 'destroy']);
+        });
+
         Route::prefix('users')->group(function () {
             Route::get('/', [AdminUserController::class, 'index']);
             Route::get('{id}', [AdminUserController::class, 'show']);
@@ -350,5 +365,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
             Route::post('{id}/force-complete', [AdminOrderController::class, 'forceComplete']);
             Route::post('{id}/force-cancel', [AdminOrderController::class, 'forceCancel']);
         });
+
+        Route::post('broadcast', [\App\Http\Controllers\Api\Admin\BroadcastController::class, 'send']);
     });
 });

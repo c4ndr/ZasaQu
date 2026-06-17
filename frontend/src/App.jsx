@@ -21,12 +21,16 @@ const AgoraVoice = registerPlugin('AgoraVoice')
 import useAppInfo from './hooks/useAppInfo'
 import useFloatingBubble from './hooks/useFloatingBubble'
 
-// Guard route modul — redirect ke dashboard jika modul dinonaktifkan admin
+// Role yang jelas hanya sebagai penyedia layanan, bukan pelanggan
+const PROVIDER_ONLY_ROLES = ['mitra_motor', 'mitra_mobil', 'home_provider', 'serv_provider', 'seller', 'merchant']
+
+// Guard route modul — redirect ke dashboard jika modul dinonaktifkan admin atau bukan pelanggan
 function ModuleRoute({ featureKey, children }) {
   const { features } = useAppInfo()
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
   if (features && features[featureKey] === false) return <Navigate to="/dashboard" replace />
+  if (PROVIDER_ONLY_ROLES.includes(user.role)) return <Navigate to="/dashboard" replace />
   return children
 }
 import MitraOrderAlert from './components/MitraOrderAlert'
@@ -309,6 +313,8 @@ function AppRoutes() {
       <Route path="/mitra/mart/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/home/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/home/provider/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/serv/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/mitra/serv/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/jastip" element={<PrivateRoute><JastipPage /></PrivateRoute>} />
       <Route path="/mitra/jastip" element={<PrivateRoute><MitraJastipPage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
@@ -588,6 +594,7 @@ function resolveChatPath(role, orderType, orderId) {
   if (orderType === 'zasafood') return isMitra ? `/mitra/food/orders/${orderId}/chat` : `/food/orders/${orderId}/chat`
   if (orderType === 'zasamart') return isMitra ? `/mitra/mart/orders/${orderId}/chat` : `/mart/orders/${orderId}/chat`
   if (orderType === 'zasahome') return role === 'home_provider' ? `/home/provider/orders/${orderId}/chat` : `/home/orders/${orderId}/chat`
+  if (orderType === 'zasaserv') return isMitra ? `/mitra/serv/orders/${orderId}/chat` : `/serv/orders/${orderId}/chat`
   return isMitra ? `/mitra/orders/${orderId}/chat` : `/orders/${orderId}/chat`
 }
 

@@ -53,28 +53,34 @@ class MitraController extends Controller
     {
         $user = $request->user();
 
-        $hasActive = HomeOrder::where('mitra_id', $user->id)
-            ->whereNotIn('status', ['completed', 'cancelled'])
-            ->exists();
+        try {
+            $order = DB::transaction(function () use ($id, $user) {
+                // Cek active order di dalam transaksi — cegah race condition dua request concurrent lolos bersamaan
+                $hasActive = HomeOrder::where('mitra_id', $user->id)
+                    ->whereNotIn('status', ['completed', 'cancelled'])
+                    ->lockForUpdate()
+                    ->exists();
 
-        if ($hasActive) {
-            return response()->json(['message' => 'Selesaikan order aktif terlebih dahulu.'], 422);
+                if ($hasActive) {
+                    throw new \Exception('Selesaikan order aktif terlebih dahulu.');
+                }
+
+                $order = HomeOrder::where('status', 'pending')
+                    ->whereNull('mitra_id')
+                    ->lockForUpdate()
+                    ->findOrFail($id);
+
+                $order->update([
+                    'mitra_id'    => $user->id,
+                    'status'      => 'confirmed',
+                    'accepted_at' => now(),
+                ]);
+
+                return $order;
+            });
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        $order = DB::transaction(function () use ($id, $user) {
-            $order = HomeOrder::where('status', 'pending')
-                ->whereNull('mitra_id')
-                ->lockForUpdate()
-                ->findOrFail($id);
-
-            $order->update([
-                'mitra_id'    => $user->id,
-                'status'      => 'confirmed',
-                'accepted_at' => now(),
-            ]);
-
-            return $order;
-        });
 
         return response()->json($order->load(['customer', 'provider', 'items']));
     }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import BottomNav from '../components/BottomNav'
 import api from '../services/api'
+import useAppInfo from '../hooks/useAppInfo'
 import { useTheme } from '../hooks/useTheme'
 
 // ── Baris notifikasi yang bisa diklik ────────────────────────────────────────
@@ -92,14 +93,20 @@ function Avatar({ name, size = 72 }) {
 export default function ProfilePage() {
   const { user, logout, updateUser } = useAuth()
   const navigate = useNavigate()
+  const { wallet_enabled: walletEnabled } = useAppInfo()
   const timerEditRef = useRef(null)
   const timerPassRef = useRef(null)
+  const [walletBalance, setWalletBalance] = useState(null)
 
   useEffect(() => {
     return () => {
       clearTimeout(timerEditRef.current)
       clearTimeout(timerPassRef.current)
     }
+  }, [])
+
+  useEffect(() => {
+    api.get('/wallet/summary').then(r => setWalletBalance(r.data?.available ?? null)).catch(() => {})
   }, [])
 
   // ── State form edit profil ────────────────────────────────────────────────
@@ -312,7 +319,7 @@ export default function ProfilePage() {
             <div>
               <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)', marginBottom: 2 }}>Saldo Wallet</p>
               <p style={{ fontSize: 18, fontWeight: 900, color: 'var(--k-accent)' }}>
-                Rp {Number(user?.wallet?.balance ?? 0).toLocaleString('id-ID')}
+                Rp {Number(walletBalance ?? user?.wallet?.balance ?? 0).toLocaleString('id-ID')}
               </p>
             </div>
           </div>

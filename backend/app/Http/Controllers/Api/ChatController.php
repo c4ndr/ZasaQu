@@ -17,6 +17,7 @@ use App\Services\PhoneDetectionService;
 use App\Services\ViolationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
@@ -68,7 +69,9 @@ class ChatController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        $room = ChatRoom::firstOrCreate(['order_id' => $orderId, 'order_type' => $type]);
+        $room = DB::transaction(function () use ($orderId, $type) {
+            return ChatRoom::firstOrCreate(['order_id' => $orderId, 'order_type' => $type]);
+        });
 
         return response()->json([
             'room'           => $room,

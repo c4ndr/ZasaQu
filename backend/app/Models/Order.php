@@ -11,6 +11,7 @@ class Order extends Model
         'item_description','item_value','vehicle_type','requires_disclaimer',
         'shipping_fee','rate_base_fee','rate_per_km','commission_rate',
         'platform_commission','mitra_income','jastip_discount_applied',
+        'promo_code','discount_amount',
         'payment_method','payment_status','cod_confirmed_at',
         'accepted_at','on_pickup_at','picked_up_at','on_delivery_at','delivered_at','completed_at',
         'cancelled_at','cancel_reason','notes',

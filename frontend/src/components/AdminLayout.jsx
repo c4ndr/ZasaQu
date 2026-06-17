@@ -44,11 +44,13 @@ const NAV_GROUPS = [
   {
     label: 'Sistem',
     items: [
-      { to: '/admin/users',      emoji: '👥', label: 'Pengguna'      },
-      { to: '/admin/promos',     emoji: '📢', label: 'Promo & Iklan' },
-      { to: '/admin/modules',    emoji: '🧩', label: 'Modul Layanan' },
-      { to: '/admin/settings',   emoji: '⚙️', label: 'Pengaturan'   },
-      { to: '/admin/audit-logs', emoji: '📋', label: 'Log Audit'     },
+      { to: '/admin/users',      emoji: '👥', label: 'Pengguna'        },
+      { to: '/admin/promos',     emoji: '📢', label: 'Promo & Iklan'  },
+      { to: '/admin/vouchers',   emoji: '🎟', label: 'Voucher Diskon' },
+      { to: '/admin/broadcast',  emoji: '🔔', label: 'Broadcast Notif'},
+      { to: '/admin/modules',    emoji: '🧩', label: 'Modul Layanan'  },
+      { to: '/admin/settings',   emoji: '⚙️', label: 'Pengaturan'    },
+      { to: '/admin/audit-logs', emoji: '📋', label: 'Log Audit'      },
     ],
   },
 ]

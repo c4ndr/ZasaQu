@@ -6,6 +6,7 @@ use App\Events\RideOrderPlaced;
 use App\Events\RideStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
+use App\Models\Promo;
 use App\Models\RideFare;
 use App\Models\RideOrder;
 use App\Models\Wallet;
@@ -63,6 +64,7 @@ class CustomerController extends Controller
             'destination_lat'     => ['required', 'numeric', 'between:-90,90'],
             'destination_lng'     => ['required', 'numeric', 'between:-180,180'],
             'payment_method'      => ['required', 'in:wallet,cod'],
+            'promo_code'          => ['nullable', 'string', 'max:50'],
             'notes'               => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -88,47 +90,93 @@ class CustomerController extends Controller
         );
         $calc = $fare->calculateFare($straight);
 
+        // Validasi promo jika ada
+        $promoDiscount = 0;
+        $validatedPromo = null;
+        if (!empty($data['promo_code'])) {
+            $promo = Promo::where('code', strtoupper($data['promo_code']))->where('is_active', true)->first();
+            if (!$promo || !$promo->isVoucher()) {
+                return response()->json(['message' => 'Kode promo tidak ditemukan.'], 422);
+            }
+            if ($promo->expires_at && $promo->expires_at->isPast()) {
+                return response()->json(['message' => 'Kode promo sudah kedaluwarsa.'], 422);
+            }
+            if ($promo->max_uses !== null && $promo->used_count >= $promo->max_uses) {
+                return response()->json(['message' => 'Kode promo sudah habis digunakan.'], 422);
+            }
+            if (!$promo->isValidForModule('zasaride')) {
+                return response()->json(['message' => 'Kode promo tidak berlaku untuk ZasaRide.'], 422);
+            }
+            $promoDiscount = $promo->calculateDiscount((int) $calc['fare']);
+            $validatedPromo = $promo;
+        }
+
+        $finalFare = max(0, (int) $calc['fare'] - $promoDiscount);
+
+        // Hitung ulang commission dan income dari finalFare (setelah promo),
+        // bukan dari $calc yang dihitung dari fare sebelum promo.
+        $commissionRate   = (float) ($fare->commission_rate ?? 10);
+        $finalCommission  = (int) round($finalFare * $commissionRate / 100);
+        $finalMitraIncome = $finalFare - $finalCommission;
+
         // Cek & kunci saldo wallet kalau bayar wallet
         if ($data['payment_method'] === 'wallet') {
             if (!AdminSetting::walletEnabled()) {
                 return response()->json(['message' => 'Pembayaran via wallet sementara tidak tersedia.'], 422);
             }
             $wallet = Wallet::where('user_id', $user->id)->first();
-            if (!$wallet || $wallet->availableBalance() < $calc['fare']) {
+            if (!$wallet || $wallet->availableBalance() < $finalFare) {
                 return response()->json(['message' => 'Saldo wallet tidak cukup.'], 422);
             }
         }
 
-        $order = DB::transaction(function () use ($data, $user, $calc) {
-            // Kunci saldo agar tidak bisa dipakai order lain
-            if ($data['payment_method'] === 'wallet') {
-                Wallet::lockForUpdate()->where('user_id', $user->id)
-                    ->first()
-                    ->increment('locked_balance', $calc['fare']);
-            }
+        try {
+            $order = DB::transaction(function () use ($data, $user, $calc, $promoDiscount, $finalFare, $finalCommission, $finalMitraIncome, $validatedPromo) {
+                // Kunci saldo agar tidak bisa dipakai order lain
+                if ($data['payment_method'] === 'wallet') {
+                    Wallet::lockForUpdate()->where('user_id', $user->id)
+                        ->first()
+                        ->increment('locked_balance', $finalFare);
+                }
 
-            return RideOrder::create([
-                'order_number'        => RideOrder::generateNumber(),
-                'customer_id'         => $user->id,
-                'vehicle_type'        => $data['vehicle_type'],
-                'ride_type'           => $data['ride_type'] ?? 'regular',
-                'passenger_name'      => $data['passenger_name'] ?? null,
-                'school_name'         => $data['school_name'] ?? null,
-                'pickup_address'      => $data['pickup_address'],
-                'pickup_lat'          => $data['pickup_lat'],
-                'pickup_lng'          => $data['pickup_lng'],
-                'destination_address' => $data['destination_address'],
-                'destination_lat'     => $data['destination_lat'],
-                'destination_lng'     => $data['destination_lng'],
-                'distance_km'         => $calc['distance_km'],
-                'fare'                => $calc['fare'],
-                'platform_commission' => $calc['platform_commission'],
-                'mitra_income'        => $calc['mitra_income'],
-                'payment_method'      => $data['payment_method'],
-                'status'              => 'pending',
-                'notes'               => $data['notes'] ?? null,
-            ]);
-        });
+                $order = RideOrder::create([
+                    'order_number'        => RideOrder::generateNumber(),
+                    'customer_id'         => $user->id,
+                    'vehicle_type'        => $data['vehicle_type'],
+                    'ride_type'           => $data['ride_type'] ?? 'regular',
+                    'passenger_name'      => $data['passenger_name'] ?? null,
+                    'school_name'         => $data['school_name'] ?? null,
+                    'pickup_address'      => $data['pickup_address'],
+                    'pickup_lat'          => $data['pickup_lat'],
+                    'pickup_lng'          => $data['pickup_lng'],
+                    'destination_address' => $data['destination_address'],
+                    'destination_lat'     => $data['destination_lat'],
+                    'destination_lng'     => $data['destination_lng'],
+                    'distance_km'         => $calc['distance_km'],
+                    'fare'                => $finalFare,
+                    'platform_commission' => $finalCommission,
+                    'mitra_income'        => $finalMitraIncome,
+                    'payment_method'      => $data['payment_method'],
+                    'status'              => 'pending',
+                    'promo_code'          => $data['promo_code'] ?? null,
+                    'discount_amount'     => $promoDiscount,
+                    'notes'               => $data['notes'] ?? null,
+                ]);
+
+                if ($validatedPromo) {
+                    // Lock promo row dan re-check max_uses sebelum increment — cegah over-redeem concurrent
+                    $lockedPromo = Promo::lockForUpdate()->findOrFail($validatedPromo->id);
+                    if ($lockedPromo->max_uses !== null && $lockedPromo->used_count >= $lockedPromo->max_uses) {
+                        throw new \Exception('Kode promo sudah habis digunakan.');
+                    }
+                    $lockedPromo->increment('used_count');
+                }
+
+                return $order;
+            });
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         broadcast(new RideOrderPlaced($order))->toOthers();
 
@@ -139,9 +187,17 @@ class CustomerController extends Controller
     public function index(Request $request): JsonResponse
     {
         $orders = RideOrder::where('customer_id', $request->user()->id)
-            ->with('mitra')
+            ->with(['mitra', 'customerRating'])
             ->latest()
             ->paginate(20);
+
+        $orders->getCollection()->transform(function ($order) {
+            $arr = $order->toArray();
+            $arr['my_rating'] = $order->customerRating;
+            unset($arr['customer_rating']);
+            return $arr;
+        });
+
         return response()->json($orders);
     }
 

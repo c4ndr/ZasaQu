@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../../services/api'
+import LocationSearch from '../../components/LocationSearch'
 
 export default function ServCheckoutPage() {
   const navigate  = useNavigate()
@@ -8,8 +9,9 @@ export default function ServCheckoutPage() {
   const { provider, items, totalPrice } = location.state ?? {}
 
   const [address,     setAddress]     = useState('')
-  const [lat,         setLat]         = useState('')
-  const [lng,         setLng]         = useState('')
+  const [lat,         setLat]         = useState(null)
+  const [lng,         setLng]         = useState(null)
+  const [locationQuery, setLocationQuery] = useState('')
   const [notes,       setNotes]       = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
   const [loading,     setLoading]     = useState(false)
@@ -77,25 +79,50 @@ export default function ServCheckoutPage() {
         <div style={{ background: 'var(--k-card)', borderRadius: 16, padding: 16, marginBottom: 14 }}>
           <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12 }}>Alamat Lokasi</div>
 
-          <label style={{ fontSize: 12, color: 'var(--k-muted)', fontWeight: 600 }}>Alamat Lengkap *</label>
-          <textarea
-            value={address} onChange={e => setAddress(e.target.value)} rows={3}
-            placeholder="Jl. Contoh No. 1, RT 01/02, Kelurahan..."
-            style={{ width: '100%', marginTop: 6, padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 13, boxSizing: 'border-box', resize: 'none' }}
+          <LocationSearch
+            value={locationQuery}
+            onChange={val => { setLocationQuery(val); if (!val) { setAddress(''); setLat(null); setLng(null) } }}
+            onSelect={({ lat: selLat, lng: selLng, display }) => {
+              setLat(selLat); setLng(selLng); setAddress(display); setLocationQuery(display)
+            }}
+            placeholder="Cari alamat lokasi servis..."
+            confirmed={!!lat && !!lng}
           />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
-            <div>
-              <label style={{ fontSize: 12, color: 'var(--k-muted)', fontWeight: 600 }}>Latitude (opsional)</label>
-              <input type="number" value={lat} onChange={e => setLat(e.target.value)} placeholder="-6.200000"
-                style={{ width: '100%', marginTop: 6, padding: '8px 12px', borderRadius: 10, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 13, boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: 'var(--k-muted)', fontWeight: 600 }}>Longitude (opsional)</label>
-              <input type="number" value={lng} onChange={e => setLng(e.target.value)} placeholder="106.816666"
-                style={{ width: '100%', marginTop: 6, padding: '8px 12px', borderRadius: 10, border: '1.5px solid var(--k-border)', background: 'var(--k-input)', color: 'var(--k-text)', fontSize: 13, boxSizing: 'border-box' }} />
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!navigator.geolocation) return alert('Browser tidak mendukung GPS.')
+              navigator.geolocation.getCurrentPosition(
+                pos => {
+                  const { latitude, longitude } = pos.coords
+                  setLat(latitude); setLng(longitude)
+                  setAddress(`Koordinat: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`)
+                  setLocationQuery('Lokasi saya saat ini')
+                  if (window.google?.maps) {
+                    const geocoder = new window.google.maps.Geocoder()
+                    geocoder.geocode({ location: { lat: latitude, lng: longitude }, language: 'id' }, (results, status) => {
+                      if (status === 'OK' && results?.[0]) {
+                        const addr = results[0].formatted_address
+                        setAddress(addr); setLocationQuery(addr)
+                      }
+                    })
+                  }
+                },
+                () => alert('Gagal mendapatkan lokasi. Pastikan GPS aktif.'),
+                { enableHighAccuracy: true, timeout: 10000 }
+              )
+            }}
+            style={{ marginTop: 10, background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.3)', borderRadius: 10, padding: '8px 14px', cursor: 'pointer', fontSize: 12, color: '#059669', fontWeight: 700 }}
+          >
+            📍 Gunakan lokasi saya sekarang
+          </button>
+
+          {lat && lng && (
+            <p style={{ fontSize: 11, color: 'var(--k-muted)', marginTop: 8 }}>
+              ✓ Koordinat: {Number(lat).toFixed(5)}, {Number(lng).toFixed(5)}
+            </p>
+          )}
         </div>
 
         {/* Schedule & notes */}

@@ -7,6 +7,7 @@ import echo from '../../services/echo'
 import LocationSearch from '../../components/LocationSearch'
 
 const fmt = (n) => new Intl.NumberFormat('id-ID').format(n)
+const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
 
 // ── Status aktif ──────────────────────────────────────────────────────────────
 const STATUS_INFO = {
@@ -227,7 +228,7 @@ function ActiveRide({ order, onRefresh }) {
               ✅ Foto Bukti Tiba di Sekolah
             </p>
             <img
-              src={`/storage/${order.proof_photo_path}`}
+              src={`${STORAGE}/${order.proof_photo_path}`}
               alt="Bukti tiba"
               style={{ width: '100%', borderRadius: 12, maxHeight: 200, objectFit: 'cover' }}
             />
@@ -283,6 +284,10 @@ export default function RidePage() {
   const [estimate, setEstimate]   = useState(null)
   const [payMethod, setPayMethod] = useState('cod')
   const [notes, setNotes]         = useState('')
+  const [promoCode, setPromoCode] = useState('')
+  const [promoInfo, setPromoInfo] = useState(null)
+  const [promoErr, setPromoErr]   = useState(null)
+  const [promoLoading, setPromoLoading] = useState(false)
   const [loading, setLoading]     = useState(false)
   const [error, setError]         = useState(null)
   const [activeOrder, setActiveOrder] = useState(null)
@@ -364,6 +369,21 @@ export default function RidePage() {
     finally { setLoading(false) }
   }
 
+  const handleValidatePromo = async () => {
+    if (!promoCode.trim()) return
+    setPromoLoading(true); setPromoErr(null); setPromoInfo(null)
+    try {
+      const res = await api.post('/promos/validate', {
+        code: promoCode.trim(),
+        order_amount: estimate?.fare ?? 0,
+        module: 'zasaride',
+      })
+      setPromoInfo(res.data)
+    } catch (e) {
+      setPromoErr(e.response?.data?.message || 'Kode promo tidak valid.')
+    } finally { setPromoLoading(false) }
+  }
+
   const handleBook = async () => {
     setLoading(true); setError(null)
     try {
@@ -375,12 +395,13 @@ export default function RidePage() {
         pickup_address: pickup, pickup_lat: pickupCoord.lat, pickup_lng: pickupCoord.lng,
         destination_address: dest, destination_lat: destCoord.lat, destination_lng: destCoord.lng,
         payment_method: payMethod,
+        promo_code: promoInfo ? promoCode.trim() : undefined,
         notes: notes || undefined,
       })
       setActiveOrder(res.data)
       setStep(1); setPickup(''); setDest(''); setPickupC(null); setDestC(null)
       setEstimate(null); setNotes(''); setPassenger(''); setSchool('')
-      setRideType('regular')
+      setRideType('regular'); setPromoCode(''); setPromoInfo(null); setPromoErr(null)
     } catch (e) { setError(e.response?.data?.message || 'Gagal memesan.') }
     finally { setLoading(false) }
   }
@@ -583,7 +604,15 @@ export default function RidePage() {
                 borderRadius: 20, padding: '20px 18px', marginBottom: 18,
               }}>
                 <p style={{ fontSize: 12, color: 'var(--k-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Estimasi Ongkos</p>
-                <p style={{ fontSize: 34, fontWeight: 900, color: 'var(--k-accent)', marginBottom: 16 }}>Rp {fmt(estimate.fare)}</p>
+                {promoInfo ? (
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--k-muted)', textDecoration: 'line-through' }}>Rp {fmt(estimate.fare)}</p>
+                    <p style={{ fontSize: 34, fontWeight: 900, color: 'var(--k-accent)' }}>Rp {fmt(Math.max(0, estimate.fare - promoInfo.discount_amount))}</p>
+                    <p style={{ fontSize: 12, color: 'var(--k-accent)', marginTop: 2 }}>Hemat Rp {fmt(promoInfo.discount_amount)}</p>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 34, fontWeight: 900, color: 'var(--k-accent)', marginBottom: 16 }}>Rp {fmt(estimate.fare)}</p>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
                   {[
@@ -627,6 +656,35 @@ export default function RidePage() {
                   </button>
                 ))}
               </div>
+
+              {/* Kode Promo */}
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Kode Promo (Opsional)</p>
+              <div style={{ display: 'flex', gap: 8, marginBottom: promoInfo || promoErr ? 8 : 16 }}>
+                <input
+                  value={promoCode}
+                  onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoInfo(null); setPromoErr(null) }}
+                  placeholder="Masukkan kode promo"
+                  style={{
+                    flex: 1, background: 'var(--k-card)', color: 'var(--k-text)',
+                    border: `1.5px solid ${promoInfo ? 'var(--k-accent)' : promoErr ? '#EF4444' : 'var(--k-border)'}`,
+                    borderRadius: 14, padding: '12px 14px', fontSize: 13, outline: 'none',
+                    fontFamily: 'inherit',
+                  }}
+                />
+                <button onClick={handleValidatePromo} disabled={promoLoading || !promoCode.trim()} style={{
+                  padding: '12px 16px', borderRadius: 14, fontWeight: 700, fontSize: 13,
+                  background: 'var(--k-accent)', color: '#0C0C16', border: 'none',
+                  cursor: promoCode.trim() ? 'pointer' : 'not-allowed',
+                  opacity: promoLoading || !promoCode.trim() ? 0.6 : 1,
+                }}>{promoLoading ? '...' : 'Pakai'}</button>
+              </div>
+              {promoInfo && (
+                <div style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)', borderRadius: 12, padding: '10px 14px', marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, color: 'var(--k-accent)', fontWeight: 700 }}>✅ {promoInfo.title}</p>
+                  <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 2 }}>Diskon Rp {new Intl.NumberFormat('id-ID').format(promoInfo.discount_amount)}</p>
+                </div>
+              )}
+              {promoErr && <p style={{ fontSize: 12, color: '#EF4444', marginBottom: 12 }}>{promoErr}</p>}
 
               <textarea
                 value={notes}
