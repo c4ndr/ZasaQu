@@ -70,17 +70,44 @@ function ActiveRideCard({ order, onUpdate }) {
       {/* Rute */}
       <div style={{ marginBottom: 14 }}>
         {[
-          { icon: '📍', label: 'Jemput', addr: order.pickup_address },
-          { icon: '🏁', label: 'Tujuan', addr: order.destination_address },
-        ].map(({ icon, label, addr }) => (
-          <div key={label} style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
-            <span style={{ fontSize: 16, marginTop: 1 }}>{icon}</span>
-            <div>
-              <p style={{ fontSize: 10, color: 'var(--k-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{label}</p>
-              <p style={{ fontSize: 13, color: 'var(--k-text)' }}>{addr}</p>
+          { icon: '📍', label: 'Jemput', addr: order.pickup_address,      lat: order.pickup_lat,      lng: order.pickup_lng,      active: order.status === 'accepted' },
+          { icon: '🏁', label: 'Tujuan', addr: order.destination_address, lat: order.destination_lat, lng: order.destination_lng, active: order.status === 'on_ride'   },
+        ].map(({ icon, label, addr, lat, lng, active: isActive }) => {
+          const mapsUrl = (lat && lng)
+            ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`
+          return (
+            <div key={label} style={{
+              display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start',
+              background: isActive ? 'rgba(0,200,150,0.07)' : 'transparent',
+              borderRadius: 10, padding: isActive ? '8px 10px' : '4px 0',
+              border: isActive ? '1px solid rgba(0,200,150,0.2)' : 'none',
+            }}>
+              <span style={{ fontSize: 16, marginTop: 1 }}>{icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 10, color: isActive ? 'var(--k-accent)' : 'var(--k-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{label}</p>
+                <p style={{ fontSize: 13, color: 'var(--k-text)', wordBreak: 'break-word' }}>{addr}</p>
+              </div>
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flexShrink: 0,
+                  background: isActive ? 'var(--k-accent)' : 'var(--k-surface)',
+                  color: isActive ? '#0C0C16' : 'var(--k-muted)',
+                  border: isActive ? 'none' : '1px solid var(--k-border)',
+                  borderRadius: 9, padding: '6px 10px',
+                  fontSize: 11, fontWeight: 700, textDecoration: 'none',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  boxShadow: isActive ? '0 2px 8px rgba(0,200,150,0.3)' : 'none',
+                }}
+              >
+                🗺️ {isActive ? 'Buka Maps' : 'Maps'}
+              </a>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Info */}
@@ -195,12 +222,30 @@ function AvailableCard({ order, onAccept }) {
         <p style={{ fontSize: 18, fontWeight: 900, color: 'var(--k-accent)' }}>Rp {fmt(order.fare)}</p>
       </div>
       <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-          <span>📍</span><p style={{ fontSize: 13 }}>{order.pickup_address}</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <span>🏁</span><p style={{ fontSize: 13 }}>{order.destination_address}</p>
-        </div>
+        {[
+          { icon: '📍', addr: order.pickup_address,      lat: order.pickup_lat,      lng: order.pickup_lng      },
+          { icon: '🏁', addr: order.destination_address, lat: order.destination_lat, lng: order.destination_lng },
+        ].map(({ icon, addr, lat, lng }) => {
+          const mapsUrl = (lat && lng)
+            ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`
+          return (
+            <div key={icon} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+              <span>{icon}</span>
+              <p style={{ fontSize: 13, flex: 1, minWidth: 0 }}>{addr}</p>
+              <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                style={{
+                  flexShrink: 0, fontSize: 11, color: 'var(--k-accent)',
+                  textDecoration: 'none', padding: '3px 7px',
+                  background: 'var(--k-glow)', borderRadius: 7,
+                  border: '1px solid rgba(0,200,150,0.2)',
+                }}>
+                🗺️
+              </a>
+            </div>
+          )
+        })}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: 10 }}>
