@@ -26,7 +26,7 @@ function ActiveCard({ order, onUpdate }) {
   const navigate  = useNavigate()
   const info     = STATUS_LABEL[order.status]
   const category = order.provider?.category ?? 'lainnya'
-  const isOnSite = ['pijat', 'cleaning', 'tukang', 'lainnya'].includes(category)
+  const isOnSite = category !== 'laundry'
 
   const updateStatus = async () => {
     if (!info?.next) return

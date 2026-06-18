@@ -316,9 +316,11 @@ export default function TopUpPage() {
   const [error,        setError]        = useState('')
   const [history,      setHistory]      = useState([])
   const [histLoading,  setHistLoading]  = useState(false)
+  const [freshBalance, setFreshBalance] = useState(null)
 
   useEffect(() => {
     api.get('/topup/bank-accounts').then(r => setBankAccounts(r.data))
+    api.get('/wallet/summary').then(r => setFreshBalance(r.data.available ?? r.data.balance ?? null)).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -429,7 +431,7 @@ export default function TopUpPage() {
         <div style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.15)', borderRadius: 18, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <p style={{ color: 'var(--k-muted)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Saldo Saat Ini</p>
-            <p style={{ color: 'var(--k-accent)', fontSize: 22, fontWeight: 900 }}>{formatRp(user?.wallet?.balance)}</p>
+            <p style={{ color: 'var(--k-accent)', fontSize: 22, fontWeight: 900 }}>{formatRp(freshBalance ?? user?.wallet?.balance)}</p>
           </div>
           <span style={{ fontSize: 32 }}>💳</span>
         </div>
