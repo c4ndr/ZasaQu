@@ -73,7 +73,7 @@ export default function MartSellerPage() {
       </div>
 
       {/* Seller info card */}
-      <div style={{ background: 'var(--k-surface)', padding: '0 16px 16px', borderBottom: '1px solid var(--k-border)' }}>
+      <div style={{ background: 'var(--k-surface)', padding: '0 16px 16px', borderBottom: '1px solid var(--k-border)', position: 'relative', zIndex: 2 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, marginTop: -28, marginBottom: 12 }}>
           <div style={{ width: 64, height: 64, borderRadius: 16, overflow: 'hidden', border: '3px solid var(--k-surface)', background: '#6366F1', flexShrink: 0 }}>
             {seller.logo_path

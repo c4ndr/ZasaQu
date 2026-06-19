@@ -232,6 +232,7 @@ export default function FoodMerchantPage() {
             background: 'var(--k-input)', fontSize: 22,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             marginTop: -24, border: '2.5px solid var(--k-card)',
+            position: 'relative', zIndex: 1,
           }}>
             {merchant?.logo_path ? <img src={storageUrl(merchant.logo_path, merchant.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
           </div>

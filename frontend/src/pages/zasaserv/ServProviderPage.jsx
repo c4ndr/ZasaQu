@@ -67,7 +67,7 @@ export default function ServProviderPage() {
 
       <div style={{ padding: '0 16px' }}>
         {/* Header card */}
-        <div style={{ background: 'var(--k-card)', borderRadius: 18, padding: 16, marginTop: -30, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', display: 'flex', gap: 14, alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ background: 'var(--k-card)', borderRadius: 18, padding: 16, marginTop: -30, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', display: 'flex', gap: 14, alignItems: 'center', marginBottom: 16, position: 'relative', zIndex: 2 }}>
           <div style={{ width: 60, height: 60, borderRadius: 14, background: 'linear-gradient(135deg,#064e3b,#059669)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {provider.logo_path
               ? <img src={storageUrl(provider.logo_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

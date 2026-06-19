@@ -227,6 +227,7 @@ export default function FoodPage() {
                     width: 48, height: 48, borderRadius: 10, flexShrink: 0, overflow: 'hidden',
                     background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 24, marginTop: -28, border: '3px solid var(--k-card)',
+                    position: 'relative', zIndex: 1,
                   }}>
                     {m.logo_path
                       ? <img src={storageUrl(m.logo_path, m.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

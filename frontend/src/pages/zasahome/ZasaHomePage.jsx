@@ -160,7 +160,7 @@ function ProviderCard({ provider: p, onClick }) {
       {/* Info */}
       <div style={{ padding: '10px 14px 14px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
         {/* Logo */}
-        <div style={{ width: 48, height: 48, borderRadius: 14, overflow: 'hidden', flexShrink: 0, marginTop: -24, border: '3px solid var(--k-card)', background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+        <div style={{ width: 48, height: 48, borderRadius: 14, overflow: 'hidden', flexShrink: 0, marginTop: -24, border: '3px solid var(--k-card)', background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', position: 'relative', zIndex: 1 }}>
           {p.logo_path ? <img src={storageUrl(p.logo_path, p.updated_at)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (catEmoji[p.category] ?? '🏠')}
         </div>
 
