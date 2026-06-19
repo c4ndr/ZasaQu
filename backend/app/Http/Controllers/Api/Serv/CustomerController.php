@@ -66,8 +66,8 @@ class CustomerController extends Controller
         $services   = ServService::whereIn('id', $serviceIds)
             ->where('provider_id', $provider->id)
             ->where('is_active', true)
-            ->keyBy('id')
-            ->get();
+            ->get()
+            ->keyBy('id');
 
         $totalPrice = 0;
         $orderItems = [];
