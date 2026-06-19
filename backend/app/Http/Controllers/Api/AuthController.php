@@ -42,7 +42,7 @@ class AuthController extends Controller
             'provider_lng'      => ['nullable', 'numeric', 'between:-180,180'],
             // Serv provider fields
             'serv_name'     => ['required_if:role,serv_provider', 'nullable', 'string', 'max:100'],
-            'serv_category' => ['required_if:role,serv_provider', 'nullable', 'in:ac,elektronik,listrik,air,bangunan,jahit,lainnya'],
+            'serv_category' => ['required_if:role,serv_provider', 'nullable', 'in:ac,elektronik,listrik,air,bangunan,jahit,cctv,lainnya'],
             'serv_address'  => ['required_if:role,serv_provider', 'nullable', 'string', 'max:255'],
             'serv_phone'    => ['nullable', 'string', 'max:20'],
             'serv_lat'      => ['nullable', 'numeric', 'between:-90,90'],

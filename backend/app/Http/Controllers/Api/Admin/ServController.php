@@ -71,7 +71,7 @@ class ServController extends Controller
     {
         $data = $request->validate([
             'name'           => ['required', 'string', 'max:100'],
-            'category'       => ['required', 'in:ac,elektronik,listrik,air,bangunan,jahit,lainnya'],
+            'category'       => ['required', 'in:ac,elektronik,listrik,air,bangunan,jahit,cctv,lainnya'],
             'address'        => ['required', 'string', 'max:255'],
             'phone'          => ['nullable', 'string', 'max:20'],
             'open_time'      => ['nullable', 'date_format:H:i'],
@@ -128,6 +128,11 @@ class ServController extends Controller
 
         $old = $provider->status;
         $provider->update(['status' => 'active']);
+
+        // Aktifkan user account agar bisa akses endpoint (EnsureUserActive middleware)
+        if ($provider->user && $provider->user->status === 'pending_review') {
+            $provider->user->update(['status' => 'active']);
+        }
 
         $this->auditLogService->log($request->user(), 'approve_serv_provider', $provider,
             ['status' => $old], ['status' => 'active']);
