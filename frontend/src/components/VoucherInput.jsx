@@ -55,7 +55,7 @@ export default function VoucherInput({ orderAmount, module, onApply, onClear }) 
               Diskon Rp {fmt(info.discount_amount)} · Kode: {code.toUpperCase()}
             </p>
           </div>
-          <button onClick={handleClear} style={{
+          <button type="button" onClick={handleClear} style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: '#EF4444', fontSize: 13, fontWeight: 700, padding: '4px 8px',
           }}>✕</button>
@@ -76,6 +76,7 @@ export default function VoucherInput({ orderAmount, module, onApply, onClear }) 
               }}
             />
             <button
+              type="button"
               onClick={handleValidate}
               disabled={loading || !code.trim()}
               style={{
