@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { GoogleMap, OverlayView } from '@react-google-maps/api'
 import { useAuth } from '../../context/AuthContext'
 import useAppInfo from '../../hooks/useAppInfo'
 import api from '../../services/api'
@@ -8,6 +9,30 @@ import LocationSearch from '../../components/LocationSearch'
 
 const fmt = (n) => new Intl.NumberFormat('id-ID').format(n)
 const STORAGE = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_URL || '') + '/storage')
+
+function useRideTracking(orderId, hasMitra) {
+  const [mitraLocation, setMitraLocation] = useState(null)
+  const [gpsActive,     setGpsActive]     = useState(false)
+
+  useEffect(() => {
+    if (!orderId || !hasMitra) return
+    api.get(`/ride/orders/${orderId}/location`).then(r => {
+      if (r.data.gps_active) { setMitraLocation(r.data.location); setGpsActive(true) }
+    }).catch(() => {})
+  }, [orderId, hasMitra])
+
+  useEffect(() => {
+    if (!orderId || !hasMitra) return
+    const ch = echo.channel(`ride.orders.${orderId}`)
+    ch.listen('.mitra.location', (data) => {
+      setMitraLocation({ lat: data.lat, lng: data.lng, ts: data.timestamp })
+      setGpsActive(true)
+    })
+    return () => echo.leave(`ride.orders.${orderId}`)
+  }, [orderId, hasMitra])
+
+  return { mitraLocation, gpsActive }
+}
 
 // ── Status aktif ──────────────────────────────────────────────────────────────
 const STATUS_INFO = {
@@ -141,6 +166,8 @@ function SavedPlaces({ onSelect, onSave, currentDest }) {
 function ActiveRide({ order, onRefresh }) {
   const navigate = useNavigate()
   const info     = STATUS_INFO[order.status] || STATUS_INFO.pending
+  const showMap  = ['accepted', 'on_pickup', 'on_ride'].includes(order.status)
+  const { mitraLocation, gpsActive } = useRideTracking(order.id, !!order.mitra && showMap)
 
   return (
     <div style={{ padding: '0 16px 32px' }}>
@@ -197,6 +224,36 @@ function ActiveRide({ order, onRefresh }) {
             </div>
           ))}
         </div>
+
+        {/* Mini-map live tracking */}
+        {showMap && (
+          <div style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 14, height: 180, position: 'relative' }}>
+            {mitraLocation ? (
+              <GoogleMap
+                mapContainerStyle={{ width: '100%', height: '100%' }}
+                center={{ lat: mitraLocation.lat, lng: mitraLocation.lng }}
+                zoom={16}
+                options={{ disableDefaultUI: true, gestureHandling: 'none', styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }] }}
+              >
+                <OverlayView position={{ lat: mitraLocation.lat, lng: mitraLocation.lng }} mapPaneName="overlayMouseTarget">
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#00C896', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, transform: 'translate(-50%,-50%)', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                    {order.vehicle_type === 'mobil' ? '🚗' : '🏍️'}
+                  </div>
+                </OverlayView>
+              </GoogleMap>
+            ) : (
+              <div style={{ width: '100%', height: '100%', background: 'var(--k-card)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <span style={{ fontSize: 28 }}>📡</span>
+                <p style={{ fontSize: 12, color: 'var(--k-muted)' }}>Menunggu GPS driver...</p>
+              </div>
+            )}
+            {gpsActive && (
+              <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,200,150,0.9)', borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: '#fff' }}>
+                📡 Live
+              </div>
+            )}
+          </div>
+        )}
 
         {order.mitra && (
           <div style={{

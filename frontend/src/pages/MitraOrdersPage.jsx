@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { GoogleMap, OverlayView, Polyline, Circle } from '@react-google-maps/api'
-import { fitGoogleMap, distanceMeter } from '../utils/geo'
+import { fitGoogleMap, distanceMeter, circleGeoJson, fitPoints } from '../utils/geo'
 import RoadPolyline from '../components/RoadPolyline'
 import MapSatToggle from '../components/MapSatToggle'
 import BottomNav from '../components/BottomNav'

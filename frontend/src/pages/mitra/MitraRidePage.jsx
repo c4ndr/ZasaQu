@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { useAuth } from '../../context/AuthContext'
+import useGps from '../../hooks/useGps'
 import api from '../../services/api'
 import echo from '../../services/echo'
 
@@ -17,7 +19,6 @@ function ActiveRideCard({ order, onUpdate }) {
   const [loading,   setLoading]   = useState(false)
   const [uploading, setUploading] = useState(false)
   const [photoURL,  setPhotoURL]  = useState(order.proof_photo_path ? `/storage/${order.proof_photo_path}` : null)
-  const fileRef     = useRef(null)
   const info        = STATUS_LABEL[order.status]
   const needPhoto   = order.ride_type === 'school' && info?.next === 'completed' && !photoURL
 
@@ -33,6 +34,24 @@ function ActiveRideCard({ order, onUpdate }) {
     } catch (e) {
       alert(e.response?.data?.message || 'Gagal upload foto.')
     } finally { setUploading(false) }
+  }
+
+  const takePhoto = async () => {
+    try {
+      const photo = await Camera.getPhoto({
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        quality: 80,
+        allowEditing: false,
+      })
+      const res  = await fetch(photo.dataUrl)
+      const blob = await res.blob()
+      await uploadPhoto(new File([blob], 'bukti.jpg', { type: 'image/jpeg' }))
+    } catch (e) {
+      if (e?.message !== 'User cancelled photos app') {
+        alert('Gagal buka kamera: ' + (e?.message || e))
+      }
+    }
   }
 
   const updateStatus = async () => {
@@ -163,12 +182,7 @@ function ActiveRideCard({ order, onUpdate }) {
             </div>
           ) : (
             <>
-              <input
-                ref={fileRef} type="file" accept="image/*" capture="environment"
-                style={{ display: 'none' }}
-                onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }}
-              />
-              <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{
+              <button onClick={takePhoto} disabled={uploading} style={{
                 width: '100%', padding: '11px', borderRadius: 12,
                 background: '#3B82F6', color: '#fff',
                 border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
@@ -273,7 +287,9 @@ export default function MitraRidePage() {
   const [tab,       setTab]       = useState('active')
   const [history,   setHistory]   = useState([])
 
-  const vehicleType = user?.role?.includes('mobil') ? 'mobil' : 'motor'
+  const vehicleType  = user?.role?.includes('mobil') ? 'mobil' : 'motor'
+  const gpsEnabled   = !!active && ['accepted', 'on_pickup', 'on_ride'].includes(active?.status)
+  const { active: gpsActive } = useGps({ enabled: gpsEnabled })
 
   const silentRefresh = useCallback(async () => {
     try {
@@ -347,6 +363,15 @@ export default function MitraRidePage() {
           <p style={{ fontWeight: 800, fontSize: 16 }}>ZasaRide</p>
           <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>{vehicleType === 'mobil' ? '🚗 Mobil' : '🏍️ Motor'}</p>
         </div>
+        {gpsEnabled && (
+          <span style={{
+            marginLeft: 4, fontSize: 10, fontWeight: 700, padding: '3px 8px',
+            borderRadius: 20, background: gpsActive ? 'rgba(0,200,150,0.15)' : 'rgba(255,180,0,0.15)',
+            color: gpsActive ? 'var(--k-accent)' : 'var(--k-warn)',
+          }}>
+            {gpsActive ? '📡 GPS Aktif' : '⏳ GPS...'}
+          </span>
+        )}
         <button onClick={fetchData} style={{
           marginLeft: 'auto', background: 'var(--k-card)', border: '1px solid var(--k-border)',
           borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16,

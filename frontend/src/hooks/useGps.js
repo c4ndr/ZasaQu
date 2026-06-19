@@ -49,6 +49,7 @@ export default function useGps({ enabled = false, onLost, onUpdate } = {}) {
   const intervalRef     = useRef(null)
   const watchIdRef      = useRef(null)
   const reportedLostRef = useRef(false)
+  const wasEverEnabled  = useRef(false)  // jangan fire gps/lost kalau GPS belum pernah aktif
   const onLostRef       = useRef(onLost)
   const onUpdateRef     = useRef(onUpdate)
 
@@ -83,10 +84,14 @@ export default function useGps({ enabled = false, onLost, onUpdate } = {}) {
       stopTracking()
       setLocation(null)
       setActive(false)
-      // Beri tahu server bahwa GPS dimatikan secara manual agar is_online segera di-set false
-      api.post('/mitra/gps/lost').catch(() => {})
+      // Beri tahu server hanya jika GPS sebelumnya pernah aktif (bukan saat pertama mount)
+      if (wasEverEnabled.current) {
+        api.post('/mitra/gps/lost').catch(() => {})
+      }
       return
     }
+
+    wasEverEnabled.current = true
 
     reportedLostRef.current = false
     setError(null)

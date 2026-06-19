@@ -10,14 +10,20 @@ use App\Models\Promo;
 use App\Models\RideFare;
 use App\Models\RideOrder;
 use App\Models\Wallet;
+use App\Models\User;
+use App\Services\NotificationService;
 use App\Services\WalletService;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CustomerController extends Controller
 {
-    public function __construct(private WalletService $walletService) {}
+    public function __construct(
+        private WalletService $walletService,
+        private NotificationService $notifService,
+    ) {}
     // Estimasi harga sebelum pesan
     public function estimate(Request $request): JsonResponse
     {
@@ -180,6 +186,11 @@ class CustomerController extends Controller
 
         broadcast(new RideOrderPlaced($order))->toOthers();
 
+        // FCM push ke semua mitra yang sesuai vehicle_type dan punya token
+        $mitraRole = $order->vehicle_type === 'mobil' ? 'mitra_mobil' : 'mitra_motor';
+        User::where('role', $mitraRole)->whereNotNull('fcm_token')
+            ->each(fn($m) => $this->notifService->newOrderAvailable($m, $order->order_number, $order->id));
+
         return response()->json($order->load('customer'), 201);
     }
 
@@ -236,5 +247,21 @@ class CustomerController extends Controller
 
         broadcast(new RideStatusUpdated($order, $prev));
         return response()->json(['message' => 'Order dibatalkan.']);
+    }
+
+    public function mitraLocation(Request $request, int $id): JsonResponse
+    {
+        $order = RideOrder::where('customer_id', $request->user()->id)->findOrFail($id);
+
+        if (!$order->mitra_id) {
+            return response()->json(['location' => null, 'gps_active' => false]);
+        }
+
+        $data = Redis::get("gps:mitra:{$order->mitra_id}");
+        if (!$data) {
+            return response()->json(['location' => null, 'gps_active' => false]);
+        }
+
+        return response()->json(['location' => json_decode($data, true), 'gps_active' => true]);
     }
 }

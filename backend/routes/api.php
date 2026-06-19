@@ -260,6 +260,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('orders', [RideCustomerController::class, 'index']);
         Route::post('orders', [RideCustomerController::class, 'store']);
         Route::get('orders/{id}', [RideCustomerController::class, 'show']);
+        Route::get('orders/{id}/location', [RideCustomerController::class, 'mitraLocation']);
         Route::post('orders/{id}/cancel', [RideCustomerController::class, 'cancel']);
         Route::post('orders/{id}/rate', [RideRatingController::class, 'store']);
         Route::get('orders/{id}/rating', [RideRatingController::class, 'show']);

@@ -30,6 +30,9 @@ const config: CapacitorConfig = {
     Camera: {
       permissions: ['camera', 'photos'],
     },
+    Keyboard: {
+      resize: 'none',
+    },
     SplashScreen: {
       launchAutoHide:     true,
       backgroundColor:    '#0C0C16',

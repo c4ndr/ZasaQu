@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Mitra;
 use App\Events\FoodMitraLocationUpdated;
 use App\Events\GpsSessionClosed;
 use App\Events\MitraLocationUpdated;
+use App\Events\RideMitraLocationUpdated;
+use App\Models\RideOrder;
 use App\Models\FoodJastipSession;
 use App\Models\FoodOrder;
 use App\Models\JastipSession;
@@ -88,6 +90,15 @@ class GpsController extends Controller
 
         foreach ($activeFoodOrders as $foodOrderId) {
             broadcast(new FoodMitraLocationUpdated($foodOrderId, $mitra->id, $lat, $lng, $ts))->toOthers();
+        }
+
+        // Broadcast ke semua order ZasaRide aktif mitra ini
+        $activeRideOrders = RideOrder::where('mitra_id', $mitra->id)
+            ->whereIn('status', ['accepted', 'on_pickup', 'on_ride'])
+            ->pluck('id');
+
+        foreach ($activeRideOrders as $rideOrderId) {
+            broadcast(new RideMitraLocationUpdated($rideOrderId, $mitra->id, $lat, $lng, $ts))->toOthers();
         }
 
         return response()->json(['ok' => true]);
