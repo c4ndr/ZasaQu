@@ -169,7 +169,7 @@ export default function AdminServOrdersPage() {
   const sm = s => STATUS_META[s] ?? { label: s, color: '#94A3B8', bg: 'var(--k-input)' }
 
   return (
-    <AdminLayout title="ZasaServ — Pesanan">
+    <AdminLayout title="ZasaServis — Pesanan">
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, padding: '12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: toast.type === 'success' ? '#059669' : '#EF4444', color: '#fff' }}>
           {toast.msg}
@@ -179,7 +179,7 @@ export default function AdminServOrdersPage() {
 
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Pesanan ZasaServ</h2>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Pesanan ZasaServis</h2>
         <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>
           Monitor pesanan servis panggilan · {total} total
         </p>

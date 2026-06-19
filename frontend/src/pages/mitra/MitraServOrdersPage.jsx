@@ -143,7 +143,7 @@ function AvailableCard({ order, onAccept }) {
           <CategoryIcon category={category} />
           <div>
             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--k-text)' }}>
-              {order.provider?.name ?? 'ZasaServ'}
+              {order.provider?.name ?? 'ZasaServis'}
             </p>
             <p style={{ fontSize: 11, color: 'var(--k-muted)', fontFamily: 'monospace' }}>#{order.order_number}</p>
           </div>
@@ -243,7 +243,7 @@ export default function MitraServOrdersPage() {
           justifyContent: 'center', color: 'var(--k-muted)', textDecoration: 'none', fontSize: 18,
         }}>←</Link>
         <div>
-          <p style={{ fontWeight: 800, fontSize: 16 }}>ZasaServ</p>
+          <p style={{ fontWeight: 800, fontSize: 16 }}>ZasaServis</p>
           <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>🔧 Layanan Servis</p>
         </div>
         <button onClick={fetchData} style={{

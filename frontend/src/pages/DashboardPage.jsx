@@ -596,7 +596,7 @@ export default function DashboardPage() {
               <ServiceCard
                 to={feat.zasaserv ? '/serv' : null}
                 emoji="🔧" bgDecor="⚙️"
-                title="ZasaServ" desc="Servis & perbaikan"
+                title="ZasaServis" desc="Servis & perbaikan"
                 badge={feat.zasaserv ? 'AKTIF' : 'SEGERA'}
                 badgeColor={feat.zasaserv ? '#059669' : 'var(--k-muted)'}
                 badgeBg={feat.zasaserv ? 'rgba(0,200,150,0.12)' : 'var(--k-input)'}

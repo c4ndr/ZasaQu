@@ -120,7 +120,7 @@ const SERVICES = [
   {
     key: 'zasaserv',
     emoji: '🔧',
-    name: 'ZasaServ',
+    name: 'ZasaServis',
     tagline: 'Servis & Perbaikan Profesional',
     color: '#0EA5E9',
     bg: 'rgba(14,165,233,0.08)',

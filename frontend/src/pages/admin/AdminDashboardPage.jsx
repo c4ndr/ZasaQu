@@ -117,7 +117,7 @@ function CommissionTrendChart({ data }) {
         ))}
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-        {[['zasago','ZasaGo'],['food','ZasaFood'],['mart','ZasaShop'],['home','ZasaHome'],['serv','ZasaServ']].map(([k,l]) => (
+        {[['zasago','ZasaGo'],['food','ZasaFood'],['mart','ZasaShop'],['home','ZasaHome'],['serv','ZasaServis']].map(([k,l]) => (
           <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: MODULE_COLORS[k] }} />
             <span style={{ fontSize: 10, color: 'var(--k-muted)' }}>{l}</span>
@@ -156,7 +156,7 @@ function TrendChart({ data }) {
         })}
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-        {[['zasago','ZasaGo'],['food','ZasaFood'],['mart','ZasaShop'],['home','ZasaHome'],['serv','ZasaServ']].map(([k,l]) => (
+        {[['zasago','ZasaGo'],['food','ZasaFood'],['mart','ZasaShop'],['home','ZasaHome'],['serv','ZasaServis']].map(([k,l]) => (
           <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: MODULE_COLORS[k] }} />
             <span style={{ fontSize: 10, color: 'var(--k-muted)' }}>{l}</span>
@@ -350,7 +350,7 @@ export default function AdminDashboardPage() {
               { key: 'food',   emoji: '🍜', label: 'ZasaFood', color: '#F97316', link: '/admin/food/orders' },
               { key: 'mart',   emoji: '🛒', label: 'ZasaShop', color: '#3B82F6', link: '/admin/mart/orders' },
               { key: 'home',   emoji: '🏠', label: 'ZasaHome', color: '#8B5CF6', link: '/admin/home/orders' },
-              { key: 'serv',   emoji: '🔧', label: 'ZasaServ', color: '#059669', link: '/admin/serv/orders' },
+              { key: 'serv',   emoji: '🔧', label: 'ZasaServis', color: '#059669', link: '/admin/serv/orders' },
             ].map(m => {
               const mod = moduleMap[m.key]
               return (

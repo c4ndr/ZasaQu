@@ -51,7 +51,7 @@ const MODULES = [
   },
   {
     key: 'zasaserv',
-    label: 'ZasaServ',
+    label: 'ZasaServis',
     emoji: '🔧',
     desc: 'Servis elektronik, kendaraan, dan peralatan rumah',
     color: '#D97706',

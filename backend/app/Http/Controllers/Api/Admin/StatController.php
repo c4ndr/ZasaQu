@@ -188,7 +188,7 @@ class StatController extends Controller
              'total'=>$martTotal, 'count'=>$martCount, 'avg'=>$martCount>0 ? round($martTotal/$martCount) : 0],
             ['key'=>'home',   'label'=>'ZasaHome',  'emoji'=>'🏠', 'color'=>'#8B5CF6',
              'total'=>$homeTotal, 'count'=>$homeCount, 'avg'=>$homeCount>0 ? round($homeTotal/$homeCount) : 0],
-            ['key'=>'serv',   'label'=>'ZasaServ',  'emoji'=>'🔧', 'color'=>'#059669',
+            ['key'=>'serv',   'label'=>'ZasaServis', 'emoji'=>'🔧', 'color'=>'#059669',
              'total'=>$servTotal, 'count'=>$servCount, 'avg'=>$servCount>0 ? round($servTotal/$servCount) : 0],
         ];
 

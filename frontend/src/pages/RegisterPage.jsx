@@ -35,7 +35,7 @@ const MITRA_TYPES = [
   { value: 'merchant',      emoji: '🏪', label: 'Merchant Makanan',   desc: 'Buka warung / restoran online',        grad: 'linear-gradient(135deg,#EF4444,#F97316)' },
   { value: 'home_provider', emoji: '🏠', label: 'Provider Rumahan',   desc: 'Laundry, pijat, cleaning, tukang',     grad: 'linear-gradient(135deg,#8B5CF6,#6366F1)' },
   { value: 'seller',        emoji: '🛒', label: 'Seller ZasaShop',    desc: 'Jual produk lokal di ZasaShop',        grad: 'linear-gradient(135deg,#10B981,#3B82F6)' },
-  { value: 'serv_provider', emoji: '🔧', label: 'Teknisi ZasaServ',   desc: 'Tawarkan jasa servis & perbaikan',     grad: 'linear-gradient(135deg,#0EA5E9,#0284C7)' },
+  { value: 'serv_provider', emoji: '🔧', label: 'Teknisi ZasaServis', desc: 'Tawarkan jasa servis & perbaikan',     grad: 'linear-gradient(135deg,#0EA5E9,#0284C7)' },
 ]
 
 const EMPTY_FORM = {

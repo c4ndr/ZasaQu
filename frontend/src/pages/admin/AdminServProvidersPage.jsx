@@ -18,6 +18,7 @@ const CATEGORIES = {
   air:        { label: 'Pipa & Air',  emoji: '💧' },
   bangunan:   { label: 'Bangunan',    emoji: '🏗️' },
   jahit:      { label: 'Jahit/Permak', emoji: '🧵' },
+  cctv:       { label: 'Pasang CCTV', emoji: '📹' },
   lainnya:    { label: 'Lainnya',     emoji: '🛠️' },
 }
 
@@ -68,7 +69,7 @@ function CreateModal({ onClose, onCreated }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: 'var(--k-card)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h2 style={{ fontWeight: 800, fontSize: 17, margin: 0 }}>Tambah Provider ZasaServ</h2>
+          <h2 style={{ fontWeight: 800, fontSize: 17, margin: 0 }}>Tambah Provider ZasaServisis</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--k-muted)', lineHeight: 1 }}>×</button>
         </div>
         {error && (
@@ -338,7 +339,7 @@ export default function AdminServProvidersPage() {
   const sm = s => STATUS_META[s] ?? { label: s, color: '#94A3B8', bg: 'var(--k-input)' }
 
   return (
-    <AdminLayout title="ZasaServ — Provider">
+    <AdminLayout title="ZasaServis — Provider">
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, padding: '12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: toast.type === 'success' ? '#059669' : '#EF4444', color: '#fff' }}>
           {toast.msg}
@@ -354,7 +355,7 @@ export default function AdminServProvidersPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Provider ZasaServ</h2>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Provider ZasaServis</h2>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--k-muted)' }}>
             Kelola teknisi: AC, elektronik, listrik, pipa, bangunan, jahit, dll · {total} total
           </p>

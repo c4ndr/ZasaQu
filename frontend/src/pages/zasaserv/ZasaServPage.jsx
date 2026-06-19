@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import api, { storageUrl } from '../../services/api'
 
 const CATEGORIES = [
-  { value: '',          label: 'Semua',      emoji: '🔧', grad: 'linear-gradient(135deg,#059669,#10B981)' },
-  { value: 'ac',        label: 'Servis AC',  emoji: '❄️', grad: 'linear-gradient(135deg,#3B82F6,#06B6D4)' },
-  { value: 'elektronik',label: 'Elektronik', emoji: '📺', grad: 'linear-gradient(135deg,#8B5CF6,#6366F1)' },
-  { value: 'listrik',   label: 'Listrik',    emoji: '⚡', grad: 'linear-gradient(135deg,#F59E0B,#EF4444)' },
-  { value: 'air',       label: 'Pipa & Air', emoji: '💧', grad: 'linear-gradient(135deg,#0EA5E9,#6366F1)' },
-  { value: 'bangunan',  label: 'Bangunan',   emoji: '🏗️', grad: 'linear-gradient(135deg,#78716C,#44403C)' },
+  { value: '',          label: 'Semua',        emoji: '🔧', grad: 'linear-gradient(135deg,#059669,#10B981)' },
+  { value: 'ac',        label: 'Servis AC',    emoji: '❄️', grad: 'linear-gradient(135deg,#3B82F6,#06B6D4)' },
+  { value: 'elektronik',label: 'Elektronik',   emoji: '📺', grad: 'linear-gradient(135deg,#8B5CF6,#6366F1)' },
+  { value: 'listrik',   label: 'Listrik',      emoji: '⚡', grad: 'linear-gradient(135deg,#F59E0B,#EF4444)' },
+  { value: 'air',       label: 'Pipa & Air',   emoji: '💧', grad: 'linear-gradient(135deg,#0EA5E9,#6366F1)' },
+  { value: 'bangunan',  label: 'Bangunan',     emoji: '🏗️', grad: 'linear-gradient(135deg,#78716C,#44403C)' },
   { value: 'jahit',     label: 'Jahit/Permak', emoji: '🧵', grad: 'linear-gradient(135deg,#EC4899,#F43F5E)' },
-  { value: 'lainnya',   label: 'Lainnya',    emoji: '🛠️', grad: 'linear-gradient(135deg,#6366F1,#EC4899)' },
+  { value: 'cctv',      label: 'Pasang CCTV',  emoji: '📹', grad: 'linear-gradient(135deg,#374151,#6B7280)' },
+  { value: 'lainnya',   label: 'Lainnya',      emoji: '🛠️', grad: 'linear-gradient(135deg,#6366F1,#EC4899)' },
 ]
 
 const SKILL_LV = {
@@ -56,7 +57,7 @@ export default function ZasaServPage() {
         <button onClick={() => navigate(-1)} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', fontSize: 13, cursor: 'pointer', marginBottom: 20, padding: '6px 14px', borderRadius: 20 }}>
           ← Kembali
         </button>
-        <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', marginBottom: 4 }}>🔧 ZasaServ</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', marginBottom: 4 }}>🔧 ZasaServis</div>
         <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>Teknisi & servis panggil ke lokasi Anda</div>
 
         {/* Search */}

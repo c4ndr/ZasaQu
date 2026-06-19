@@ -9,7 +9,7 @@ const TARGET_OPTIONS = [
   { value: 'merchant',      label: 'Merchant Makanan',   icon: '🍽️' },
   { value: 'seller',        label: 'Seller Mart',        icon: '🛍️' },
   { value: 'home_provider', label: 'Provider ZasaHome',  icon: '🏠' },
-  { value: 'serv_provider', label: 'Provider ZasaServ',  icon: '🔧' },
+  { value: 'serv_provider', label: 'Provider ZasaServis', icon: '🔧' },
 ]
 
 export default function AdminBroadcastPage() {

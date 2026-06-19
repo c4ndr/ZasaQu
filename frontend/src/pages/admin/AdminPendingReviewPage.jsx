@@ -46,7 +46,7 @@ const MODULES = {
     }),
   },
   serv: {
-    key: 'serv', label: 'ZasaServ', emoji: '🔧', color: '#059669',
+    key: 'serv', label: 'ZasaServis', emoji: '🔧', color: '#059669',
     reviewPath: '/admin/serv/review',
     fetch: (page) => api.get(`/admin/serv/providers?status=pending&page=${page}`),
     approve: (id) => api.post(`/admin/serv/providers/${id}/approve`),

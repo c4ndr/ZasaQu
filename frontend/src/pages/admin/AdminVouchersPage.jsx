@@ -9,7 +9,7 @@ const MODULES = [
   { key: 'zasafood',  label: 'ZasaFood' },
   { key: 'zasamart',  label: 'ZasaMart' },
   { key: 'zasaride',  label: 'ZasaRide' },
-  { key: 'zasaserv',  label: 'ZasaServ' },
+  { key: 'zasaserv',  label: 'ZasaServis' },
 ]
 
 const DEFAULT_FORM = {

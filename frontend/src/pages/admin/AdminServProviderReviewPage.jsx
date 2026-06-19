@@ -293,7 +293,7 @@ export default function AdminServProviderReviewPage() {
   const toastColor = { success: '#059669', error: '#EF4444', info: '#F59E0B' }
 
   return (
-    <AdminLayout title="Review Provider ZasaServ">
+    <AdminLayout title="Review Provider ZasaServis">
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, padding: '12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: toastColor[toast.type] ?? '#059669', color: '#fff', maxWidth: 320, boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
           {toast.msg}
@@ -303,7 +303,7 @@ export default function AdminServProviderReviewPage() {
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6 }}>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Review Provider ZasaServ</h2>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--k-text)' }}>Review Provider ZasaServis</h2>
           {total > 0 && (
             <span style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(245,158,11,0.15)', color: '#F59E0B', fontWeight: 800, fontSize: 13, border: '1px solid rgba(245,158,11,0.35)' }}>
               {total} menunggu

@@ -12,7 +12,7 @@ class ServOrderService
     public function __construct(private WalletService $walletService) {}
 
     /**
-     * Settle pembayaran order ZasaServ secara atomik.
+     * Settle pembayaran order ZasaServis secara atomik.
      *
      * Dipanggil dari MitraController DAN ProviderController saat status → completed.
      * Guard `settled_at` memastikan pembayaran hanya terjadi sekali (idempoten).
@@ -39,12 +39,12 @@ class ServOrderService
                         $providerUser,
                         (float) $locked->provider_income,
                         'order_income',
-                        "Pendapatan ZasaServ #{$locked->order_number}",
+                        "Pendapatan ZasaServis #{$locked->order_number}",
                         $locked,
                         'zasaserv'
                     );
                 } else {
-                    Log::warning("ZasaServ settle: provider user tidak ditemukan untuk order #{$locked->order_number}");
+                    Log::warning("ZasaServis settle: provider user tidak ditemukan untuk order #{$locked->order_number}");
                 }
             }
 
@@ -56,12 +56,12 @@ class ServOrderService
                         $mitraUser,
                         (float) $locked->mitra_income,
                         'order_income',
-                        "Komisi mitra ZasaServ #{$locked->order_number}",
+                        "Komisi mitra ZasaServis #{$locked->order_number}",
                         $locked,
                         'zasaserv'
                     );
                 } else {
-                    Log::warning("ZasaServ settle: mitra user tidak ditemukan untuk order #{$locked->order_number}");
+                    Log::warning("ZasaServis settle: mitra user tidak ditemukan untuk order #{$locked->order_number}");
                 }
             }
         });
