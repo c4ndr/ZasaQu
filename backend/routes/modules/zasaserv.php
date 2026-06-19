@@ -25,8 +25,8 @@ Route::prefix('serv/provider')->middleware(['auth:sanctum', 'role:serv_provider,
     Route::get('profile',                          [ProviderController::class, 'profile']);
     Route::patch('profile',                        [ProviderController::class, 'updateProfile']);
     Route::post('toggle-open',                     [ProviderController::class, 'toggleOpen']);
-    Route::post('upload-logo-base64',  fn($r) => app(ProviderController::class)->uploadImageBase64($r, 'logo'));
-    Route::post('upload-banner-base64',fn($r) => app(ProviderController::class)->uploadImageBase64($r, 'banner'));
+    Route::post('upload-logo-base64',   fn(\Illuminate\Http\Request $r) => app(ProviderController::class)->uploadImageBase64($r, 'logo'));
+    Route::post('upload-banner-base64', fn(\Illuminate\Http\Request $r) => app(ProviderController::class)->uploadImageBase64($r, 'banner'));
 
     Route::post('services',              [ProviderController::class, 'storeService']);
     Route::patch('services/{service}',   [ProviderController::class, 'updateService']);

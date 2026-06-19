@@ -26,10 +26,10 @@ Route::prefix('home/provider')->middleware(['auth:sanctum', 'role:home_provider,
     Route::get('profile',                            [ProviderController::class, 'profile']);
     Route::patch('profile',                          [ProviderController::class, 'updateProfile']);
     Route::post('toggle-open',                       [ProviderController::class, 'toggleOpen']);
-    Route::post('upload-logo',          fn($r) => app(ProviderController::class)->uploadImage($r, 'logo'));
-    Route::post('upload-banner',        fn($r) => app(ProviderController::class)->uploadImage($r, 'banner'));
-    Route::post('upload-logo-base64',   fn($r) => app(ProviderController::class)->uploadImageBase64($r, 'logo'));
-    Route::post('upload-banner-base64', fn($r) => app(ProviderController::class)->uploadImageBase64($r, 'banner'));
+    Route::post('upload-logo',          fn(\Illuminate\Http\Request $r) => app(ProviderController::class)->uploadImage($r, 'logo'));
+    Route::post('upload-banner',        fn(\Illuminate\Http\Request $r) => app(ProviderController::class)->uploadImage($r, 'banner'));
+    Route::post('upload-logo-base64',   fn(\Illuminate\Http\Request $r) => app(ProviderController::class)->uploadImageBase64($r, 'logo'));
+    Route::post('upload-banner-base64', fn(\Illuminate\Http\Request $r) => app(ProviderController::class)->uploadImageBase64($r, 'banner'));
 
     // Services
     Route::get('services',               [ProviderController::class, 'profile']); // included in profile

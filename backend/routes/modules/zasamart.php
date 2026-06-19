@@ -35,10 +35,10 @@ Route::prefix('mart/seller')->middleware(['auth:sanctum', 'role:seller,admin'])-
     Route::get('profile',                      [SellerController::class, 'profile']);
     Route::patch('profile',                    [SellerController::class, 'updateProfile']);
     Route::post('toggle-open',                 [SellerController::class, 'toggleOpen']);
-    Route::post('upload-logo',          fn($r) => app(SellerController::class)->uploadImage($r, 'logo'));
-    Route::post('upload-banner',        fn($r) => app(SellerController::class)->uploadImage($r, 'banner'));
-    Route::post('upload-logo-base64',   fn($r) => app(SellerController::class)->uploadImageBase64($r, 'logo'));
-    Route::post('upload-banner-base64', fn($r) => app(SellerController::class)->uploadImageBase64($r, 'banner'));
+    Route::post('upload-logo',          fn(\Illuminate\Http\Request $r) => app(SellerController::class)->uploadImage($r, 'logo'));
+    Route::post('upload-banner',        fn(\Illuminate\Http\Request $r) => app(SellerController::class)->uploadImage($r, 'banner'));
+    Route::post('upload-logo-base64',   fn(\Illuminate\Http\Request $r) => app(SellerController::class)->uploadImageBase64($r, 'logo'));
+    Route::post('upload-banner-base64', fn(\Illuminate\Http\Request $r) => app(SellerController::class)->uploadImageBase64($r, 'banner'));
 
     Route::get('products',                          [SellerController::class, 'products']);
     Route::post('products',                         [SellerController::class, 'storeProduct']);
