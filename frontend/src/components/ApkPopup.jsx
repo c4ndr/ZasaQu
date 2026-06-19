@@ -42,7 +42,7 @@ export default function ApkPopup() {
     setTimeout(() => setVisible(false), 280)
   }
 
-  if (!visible) return null
+  if (!visible || AUTH_PATHS.includes(pathname)) return null
 
   return (
     <>
