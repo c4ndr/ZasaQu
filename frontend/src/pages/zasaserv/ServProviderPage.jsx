@@ -8,13 +8,6 @@ const SKILL_LV = {
 }
 const UNIT_LABEL = { item: 'item', jam: 'jam', sesi: 'sesi', titik: 'titik', meter: 'meter' }
 
-function toWANumber(phone) {
-  const clean = phone.replace(/\D/g, '')
-  if (clean.startsWith('62')) return clean
-  if (clean.startsWith('0'))  return '62' + clean.slice(1)
-  return '62' + clean
-}
-
 export default function ServProviderPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -114,26 +107,23 @@ export default function ServProviderPage() {
         )}
 
         {/* Tombol Konsultasi */}
-        {consultationEnabled && provider.phone && (
-          <a
-            href={`https://wa.me/${toWANumber(provider.phone)}?text=${encodeURIComponent(`Halo, saya ingin konsultasi mengenai layanan ${provider.name}`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
+        {consultationEnabled && (
+          <button
+            onClick={() => navigate(`/serv/providers/${provider.id}/consult`, { state: { otherName: provider.name } })}
             style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              background: 'linear-gradient(135deg,rgba(37,211,102,0.12),rgba(37,211,102,0.06))',
-              border: '1.5px solid rgba(37,211,102,0.35)',
-              borderRadius: 14, padding: '14px 16px', marginBottom: 14,
-              textDecoration: 'none', color: 'var(--k-text)',
+              width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12,
+              background: 'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(99,102,241,0.05))',
+              border: '1.5px solid rgba(99,102,241,0.3)',
+              borderRadius: 14, padding: '14px 16px', marginBottom: 14, cursor: 'pointer',
             }}
           >
             <span style={{ fontSize: 28, flexShrink: 0 }}>💬</span>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: 700, fontSize: 14, color: '#25D366' }}>Konsultasi Dulu via WhatsApp</p>
-              <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 2 }}>Tanya ketersediaan, estimasi biaya, atau jadwal sebelum order</p>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <p style={{ fontWeight: 700, fontSize: 14, color: '#6366F1' }}>Konsultasi Sebelum Order</p>
+              <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 2 }}>Tanya ketersediaan, estimasi biaya, atau jadwal</p>
             </div>
-            <span style={{ fontSize: 18, color: '#25D366', flexShrink: 0 }}>›</span>
-          </a>
+            <span style={{ fontSize: 18, color: '#6366F1', flexShrink: 0 }}>›</span>
+          </button>
         )}
 
         {/* Services */}

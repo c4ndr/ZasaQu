@@ -315,6 +315,8 @@ function AppRoutes() {
       <Route path="/home/provider/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/serv/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/mitra/serv/orders/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/serv/providers/:id/consult" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/serv/provider/consults/:id" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/jastip" element={<PrivateRoute><JastipPage /></PrivateRoute>} />
       <Route path="/mitra/jastip" element={<PrivateRoute><MitraJastipPage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />

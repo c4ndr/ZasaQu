@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Surat Pernyataan Usaha — ZasaQu</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Times New Roman', Times, serif; color: #000; background: #fff; font-size: 12pt; line-height: 1.8; }
+
+  .print-btn { position: fixed; bottom: 24px; right: 24px; padding: 12px 24px; background: #00C896; color: #0C0C16; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 20px rgba(0,200,150,0.4); z-index: 999; font-family: Arial, sans-serif; }
+  @media print { .print-btn { display: none; } }
+
+  .page { max-width: 210mm; margin: 0 auto; padding: 20mm 25mm; }
+
+  /* Kop surat */
+  .kop { display: flex; align-items: center; gap: 20px; padding-bottom: 12px; border-bottom: 3px solid #000; margin-bottom: 8px; }
+  .logo-box { width: 70px; height: 70px; border-radius: 20px; background: linear-gradient(135deg, #00C896, #00A87D); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo-z { font-size: 36px; font-weight: 900; color: #0C0C16; font-family: Arial, sans-serif; }
+  .kop-text h1 { font-size: 18pt; font-weight: 900; font-family: Arial, sans-serif; letter-spacing: 1px; }
+  .kop-text p { font-size: 9.5pt; color: #444; font-family: Arial, sans-serif; line-height: 1.5; }
+  .kop-sub { font-size: 9pt; color: #444; text-align: center; padding: 4px 0 16px; font-family: Arial, sans-serif; }
+
+  /* Judul */
+  .surat-title { text-align: center; margin: 28px 0 6px; }
+  .surat-title h2 { font-size: 14pt; font-weight: 700; text-decoration: underline; text-transform: uppercase; letter-spacing: 1px; }
+  .surat-title p { font-size: 11pt; }
+
+  /* Body surat */
+  .surat-body { margin-top: 24px; text-align: justify; }
+  .surat-body p { margin-bottom: 14px; }
+
+  /* Data identitas */
+  .identitas { margin: 16px 0; }
+  .identitas-row { display: flex; margin-bottom: 4px; }
+  .identitas-label { width: 220px; flex-shrink: 0; }
+  .identitas-sep { width: 20px; flex-shrink: 0; }
+  .identitas-value { flex: 1; font-weight: 600; }
+
+  /* Poin pernyataan */
+  .poin-list { margin: 10px 0 10px 20px; }
+  .poin-list li { margin-bottom: 8px; }
+
+  /* Tanda tangan */
+  .ttd-section { margin-top: 40px; display: flex; justify-content: flex-end; }
+  .ttd-box { text-align: center; width: 220px; }
+  .ttd-place-date { margin-bottom: 6px; }
+  .ttd-title { margin-bottom: 70px; }
+  .ttd-name { font-weight: 700; text-decoration: underline; }
+  .ttd-role { font-size: 10.5pt; }
+
+  /* Meterai note */
+  .meterai-box { width: 100px; height: 80px; border: 2px dashed #999; border-radius: 8px; margin: 8px auto; display: flex; align-items: center; justify-content: center; font-size: 9pt; color: #999; font-family: Arial, sans-serif; }
+
+  @page { size: A4; margin: 15mm 20mm; }
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">⬇ Simpan sebagai PDF</button>
+
+<div class="page">
+
+  <!-- KOP SURAT -->
+  <div class="kop">
+    <div class="logo-box"><span class="logo-z">Z</span></div>
+    <div class="kop-text">
+      <h1>ZasaQu</h1>
+      <p>Platform Layanan Lokal Terpercaya<br>
+         Website: zasaqu.uk | Email: support@zasaqu.uk | WA: +62 852-8038-1600<br>
+         Kp. Citiis Hilir RT 16/RW 07, Desa Makasari, Kec. Kalapanunggal, Kab. Sukabumi, Jawa Barat
+      </p>
+    </div>
+  </div>
+  <div class="kop-sub">NIB: 202606-1114-7428-472 &nbsp;|&nbsp; NPWP: 76.819.384.9-405.000 &nbsp;|&nbsp; KBLI: 63122</div>
+
+  <!-- JUDUL -->
+  <div class="surat-title">
+    <h2>Surat Pernyataan Kepemilikan Usaha</h2>
+    <p>No: 001/SP-ZQ/VI/2026</p>
+  </div>
+
+  <!-- BODY -->
+  <div class="surat-body">
+    <p>Yang bertanda tangan di bawah ini:</p>
+
+    <div class="identitas">
+      <div class="identitas-row">
+        <span class="identitas-label">Nama Lengkap</span>
+        <span class="identitas-sep">:</span>
+        <span class="identitas-value">Pipit Candra Lesmana</span>
+      </div>
+      <div class="identitas-row">
+        <span class="identitas-label">Tempat, Tanggal Lahir</span>
+        <span class="identitas-sep">:</span>
+        <span class="identitas-value">Sukabumi, 08 September 1989</span>
+      </div>
+      <div class="identitas-row">
+        <span class="identitas-label">NPWP</span>
+        <span class="identitas-sep">:</span>
+        <span class="identitas-value">76.819.384.9-405.000</span>
+      </div>
+      <div class="identitas-row">
+        <span class="identitas-label">Alamat</span>
+        <span class="identitas-sep">:</span>
+        <span class="identitas-value">Kp. Citiis Hilir RT 16/RW 07, Desa Makasari, Kec. Kalapanunggal, Kab. Sukabumi, Jawa Barat 43354</span>
+      </div>
+      <div class="identitas-row">
+        <span class="identitas-label">Jabatan</span>
+        <span class="identitas-sep">:</span>
+        <span class="identitas-value">Pemilik / Pendiri ZasaQu</span>
+      </div>
+    </div>
+
+    <p>Dengan ini menyatakan dengan sesungguhnya bahwa:</p>
+
+    <ol class="poin-list">
+      <li>
+        Saya adalah pemilik sah platform digital bernama <strong>ZasaQu</strong> yang beroperasi di bawah ekosistem <strong>ZashaGo Ecosystem</strong> dengan Nomor Induk Berusaha (NIB) <strong>202606-1114-7428-472</strong>.
+      </li>
+      <li>
+        Platform ZasaQu merupakan layanan digital yang sah dan beroperasi sesuai dengan peraturan perundang-undangan yang berlaku di Republik Indonesia, dengan KBLI <strong>63122</strong> (Aktivitas Portal Web dan/atau Platform Digital dan Media Sosial).
+      </li>
+      <li>
+        Platform ZasaQu dapat diakses melalui website <strong>https://zasaqu.uk</strong> dan aplikasi Android dengan package name <strong>com.zasaqu.app</strong>, menyediakan layanan on-demand meliputi: ojek/pengiriman (ZasaGo), pesan makanan (ZasaFood), belanja produk lokal (ZasaMart), dan jasa rumah tangga (ZasaHome).
+      </li>
+      <li>
+        Seluruh transaksi keuangan dalam platform dilakukan secara sah dan transparan, dengan sistem dompet digital terintegrasi (ZasaWallet) yang mendukung metode pembayaran virtual account, QRIS, dan transfer bank.
+      </li>
+      <li>
+        Saya bertanggung jawab penuh atas seluruh aktivitas transaksi yang dilakukan melalui platform ZasaQu dan bersedia mematuhi ketentuan yang ditetapkan oleh penyedia layanan pembayaran (<em>payment gateway</em>) yang bekerja sama dengan ZasaQu.
+      </li>
+      <li>
+        Seluruh data dan informasi yang saya berikan dalam dokumen ini adalah benar dan dapat dipertanggungjawabkan. Apabila di kemudian hari terdapat ketidakbenaran dalam pernyataan ini, saya bersedia menanggung segala konsekuensi hukum yang berlaku.
+      </li>
+    </ol>
+
+    <p>Demikian surat pernyataan ini dibuat dengan sebenar-benarnya untuk digunakan sebagaimana mestinya dalam proses pendaftaran layanan pembayaran digital.</p>
+  </div>
+
+  <!-- TTD -->
+  <div class="ttd-section">
+    <div class="ttd-box">
+      <div class="ttd-place-date">Sukabumi, 12 Juni 2026</div>
+      <div class="ttd-title">Yang Membuat Pernyataan,</div>
+      <div class="meterai-box">Meterai<br>Rp 10.000</div>
+      <div style="margin-top: 8px;">
+        <div class="ttd-name">Pipit Candra Lesmana</div>
+        <div class="ttd-role">Pemilik ZasaQu</div>
+        <div style="font-size: 9.5pt; margin-top: 2px;">NIB: 202606-1114-7428-472</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

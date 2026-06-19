@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Serv;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChatRoom;
 use App\Models\ServOrder;
 use App\Models\ServProvider;
 use App\Models\ServService;
+use App\Models\User;
 use App\Services\NotificationService;
 use App\Services\ServOrderService;
 use Illuminate\Http\JsonResponse;
@@ -148,6 +150,33 @@ class ProviderController extends Controller
         $service->update(['is_active' => false]);
 
         return response()->json(['message' => 'Layanan dinonaktifkan.']);
+    }
+
+    // ── Konsultasi ───────────────────────────────────────────────────────────
+
+    public function consultations(Request $request): JsonResponse
+    {
+        $provider = $this->provider($request);
+        if (!$provider) return response()->json(['message' => 'Provider tidak ditemukan.'], 404);
+
+        $rooms = ChatRoom::where('order_type', 'zasaserv_consult')
+            ->where('provider_id', $provider->id)
+            ->withCount('messages')
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(function ($room) {
+                $lastMsg  = $room->messages()->with('sender:id,name')->latest()->first();
+                $customer = User::find($room->customer_id, ['id', 'name']);
+                return [
+                    'id'           => $room->id,
+                    'customer'     => $customer,
+                    'last_message' => $lastMsg ? ['content' => $lastMsg->content, 'created_at' => $lastMsg->created_at, 'sender_name' => $lastMsg->sender?->name] : null,
+                    'updated_at'   => $room->updated_at,
+                    'is_suspended' => $room->is_suspended,
+                ];
+            });
+
+        return response()->json(['data' => $rooms]);
     }
 
     // ── Orders ───────────────────────────────────────────────────────────────

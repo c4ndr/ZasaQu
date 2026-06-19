@@ -12,6 +12,8 @@ use App\Models\HomeOrder;
 use App\Models\MartOrder;
 use App\Models\Order;
 use App\Models\RideOrder;
+use App\Models\ServProvider;
+use App\Models\User;
 use App\Services\NotificationService;
 use App\Services\PhoneDetectionService;
 use App\Services\ViolationService;
@@ -61,9 +63,55 @@ class ChatController extends Controller
 
     public function getOrCreateRoom(int $orderId, Request $request): JsonResponse
     {
-        $type  = $request->get('type', 'zasago');
+        $type = $request->get('type', 'zasago');
+        $user = $request->user();
+
+        // ── Consultation: customer → serv_provider (pre-order) ───────────────
+        if ($type === 'zasaserv_consult') {
+            $provider = ServProvider::with('user')->findOrFail($orderId);
+
+            $room = DB::transaction(fn() => ChatRoom::firstOrCreate([
+                'order_type'  => 'zasaserv_consult',
+                'provider_id' => $provider->id,
+                'customer_id' => $user->id,
+            ]));
+
+            if ($room->wasRecentlyCreated && $provider->user) {
+                $this->notifService->send(
+                    $provider->user, 'serv_consultation',
+                    'Pesan Konsultasi Baru',
+                    "{$user->name} ingin berkonsultasi tentang layanan Anda.",
+                    ['room_id' => $room->id, 'type' => 'zasaserv_consult']
+                );
+            }
+
+            return response()->json([
+                'room'           => $room,
+                'messages'       => $room->messages()->with('sender:id,name,role')->get(),
+                'templates'      => self::TEMPLATES,
+                'room_suspended' => $room->is_suspended,
+            ]);
+        }
+
+        // ── Provider accesses consultation room by roomId ────────────────────
+        if ($type === 'zasaserv_provider_consult') {
+            $room     = ChatRoom::where('id', $orderId)->where('order_type', 'zasaserv_consult')->firstOrFail();
+            $provider = ServProvider::where('user_id', $user->id)->first();
+
+            if (!$provider || $room->provider_id !== $provider->id) {
+                return response()->json(['message' => 'Akses ditolak.'], 403);
+            }
+
+            return response()->json([
+                'room'           => $room,
+                'messages'       => $room->messages()->with('sender:id,name,role')->get(),
+                'templates'      => self::TEMPLATES,
+                'room_suspended' => $room->is_suspended,
+            ]);
+        }
+
+        // ── Normal order-based chat ──────────────────────────────────────────
         $order = $this->resolveOrder($orderId, $type);
-        $user  = $request->user();
 
         if ($order->customer_id !== $user->id && $this->getProviderUserId($order) !== $user->id) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
@@ -83,8 +131,70 @@ class ChatController extends Controller
 
     public function sendMessage(Request $request, int $roomId): JsonResponse
     {
-        $room  = ChatRoom::findOrFail($roomId);
-        $user  = $request->user();
+        $room = ChatRoom::findOrFail($roomId);
+        $user = $request->user();
+
+        // ── Consultation room ────────────────────────────────────────────────
+        if ($room->order_type === 'zasaserv_consult') {
+            $providerUserId = ServProvider::find($room->provider_id)?->user_id;
+
+            if ($room->customer_id !== $user->id && $providerUserId !== $user->id) {
+                return response()->json(['message' => 'Akses ditolak.'], 403);
+            }
+
+            if ($room->isSuspended()) {
+                return response()->json(['message' => 'Chat disuspend karena pelanggaran berulang.', 'room_suspended' => true], 403);
+            }
+
+            $data    = $request->validate(['content' => ['required', 'string', 'max:1000'], 'type' => ['in:text,template']]);
+            $content = $data['content'];
+            $msgType = $data['type'] ?? 'text';
+
+            $isBlocked = false;
+            if ($msgType !== 'template' && $this->phoneDetector->containsPhone($content)) {
+                $isBlocked = true;
+                $this->violationService->record($user);
+                $room->increment('violation_count');
+                $room->refresh();
+                if ($room->violation_count >= 5 && !$room->is_suspended) {
+                    $room->update(['is_suspended' => true, 'suspended_at' => now()]);
+                }
+            }
+
+            $message = ChatMessage::create([
+                'room_id'    => $room->id,
+                'sender_id'  => $user->id,
+                'content'    => $content,
+                'type'       => $msgType,
+                'is_blocked' => $isBlocked,
+            ]);
+            $message->load('sender:id,name,role');
+            broadcast(new NewChatMessage($message));
+
+            if (!$isBlocked) {
+                $recipientId = ($user->id === $room->customer_id) ? $providerUserId : $room->customer_id;
+                if ($recipientId) {
+                    broadcast(new ChatInboxNotification($message, $recipientId, $room));
+                    $recipient = User::find($recipientId);
+                    if ($recipient) {
+                        $this->notifService->send(
+                            $recipient, 'serv_consultation_reply', 'Pesan Konsultasi',
+                            "{$user->name}: {$content}",
+                            ['room_id' => $room->id, 'type' => 'zasaserv_consult']
+                        );
+                    }
+                }
+            }
+
+            $response = ['message' => 'Pesan terkirim.', 'data' => $message];
+            if ($isBlocked) {
+                $response['message'] = $room->fresh()->is_suspended ? 'Chat disuspend.' : 'Pesan diblokir.';
+                $response['room_suspended'] = $room->fresh()->is_suspended;
+            }
+            return response()->json($response, $isBlocked ? 422 : 201);
+        }
+
+        // ── Normal order chat ────────────────────────────────────────────────
         $order = $this->resolveOrder($room->order_id, $room->order_type ?? 'zasago');
 
         if ($order->customer_id !== $user->id && $this->getProviderUserId($order) !== $user->id) {

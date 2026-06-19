@@ -185,17 +185,22 @@ function OrderCard({ order, onUpdateStatus }) {
 
 export default function ServProviderDashboardPage() {
   const navigate = useNavigate()
-  const [provider,  setProvider]  = useState(null)
-  const [allOrders, setAllOrders] = useState([])
-  const [tab,       setTab]       = useState('pending')
-  const [loading,   setLoading]   = useState(true)
-  const [toast,     setToast]     = useState(null)
+  const [provider,      setProvider]      = useState(null)
+  const [allOrders,     setAllOrders]     = useState([])
+  const [consultations, setConsultations] = useState([])
+  const [tab,           setTab]           = useState('pending')
+  const [loading,       setLoading]       = useState(true)
+  const [toast,         setToast]         = useState(null)
   const pollRef = useRef(null)
 
   const loadOrders = useCallback(async () => {
     try {
-      const res = await api.get('/serv/provider/orders?per_page=100')
-      setAllOrders(res.data.data ?? [])
+      const [ordersRes, consultRes] = await Promise.all([
+        api.get('/serv/provider/orders?per_page=100'),
+        api.get('/serv/provider/consultations'),
+      ])
+      setAllOrders(ordersRes.data.data ?? [])
+      setConsultations(consultRes.data.data ?? [])
     } catch {}
     finally { setLoading(false) }
   }, [])
@@ -289,9 +294,10 @@ export default function ServProviderDashboardPage() {
       <div style={{ background: 'var(--k-card)', borderBottom: '1px solid var(--k-border)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex' }}>
           {[
-            ['pending', '🔔', 'Order Baru', pending.length],
-            ['active',  '⚡', 'Aktif',      active.length ],
-            ['history', '📋', 'Riwayat',    0             ],
+            ['pending',       '🔔', 'Order Baru',  pending.length      ],
+            ['active',        '⚡', 'Aktif',        active.length       ],
+            ['history',       '📋', 'Riwayat',      0                   ],
+            ['consultations', '💬', 'Konsultasi',   consultations.length],
           ].map(([k, emoji, label, count]) => (
             <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: '11px 4px 9px', border: 'none', cursor: 'pointer', background: 'transparent', color: tab === k ? '#059669' : 'var(--k-muted)', borderBottom: tab === k ? '2.5px solid #059669' : '2.5px solid transparent', fontWeight: tab === k ? 700 : 400, fontSize: 11 }}>
               <div style={{ fontSize: 17, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
@@ -326,6 +332,27 @@ export default function ServProviderDashboardPage() {
               active.length === 0
                 ? <EmptyState icon="⚡" title="Tidak ada order aktif" sub="Order yang sedang diproses muncul di sini" />
                 : active.map(o => <OrderCard key={o.id} order={o} onUpdateStatus={updateStatus} />)
+            )}
+            {tab === 'consultations' && (
+              consultations.length === 0
+                ? <EmptyState icon="💬" title="Belum ada konsultasi" sub="Pelanggan yang konsultasi sebelum order akan muncul di sini" />
+                : consultations.map(c => (
+                    <div key={c.id} onClick={() => navigate(`/serv/provider/consults/${c.id}`, { state: { otherName: c.customer?.name } })}
+                      style={{ padding: 14, borderRadius: 14, background: 'var(--k-card)', border: '1px solid var(--k-border)', marginBottom: 10, cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>👤</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--k-text)' }}>{c.customer?.name ?? 'Pelanggan'}</p>
+                        {c.last_message && (
+                          <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {c.last_message.sender_name}: {c.last_message.content}
+                          </p>
+                        )}
+                      </div>
+                      {c.last_message && (
+                        <p style={{ fontSize: 10, color: 'var(--k-muted)', flexShrink: 0 }}>{fmtTime(c.last_message.created_at)}</p>
+                      )}
+                    </div>
+                  ))
             )}
             {tab === 'history' && (
               history.length === 0

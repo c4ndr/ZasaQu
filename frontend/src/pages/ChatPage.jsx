@@ -188,8 +188,10 @@ function deriveContext(pathname, orderId) {
   if (p.startsWith('/mart/'))               return { orderType: 'zasamart', isMitra: false, backTo: `/mart/orders/${orderId}` }
   if (p.startsWith('/home/provider/orders/')) return { orderType: 'zasahome', isMitra: true,  backTo: '/home/provider' }
   if (p.startsWith('/home/orders/'))         return { orderType: 'zasahome', isMitra: false, backTo: `/home/orders/${orderId}` }
-  if (p.startsWith('/serv/orders/'))         return { orderType: 'zasaserv', isMitra: false, backTo: `/serv/orders/${orderId}` }
-  return                                            { orderType: 'zasago',   isMitra: false, backTo: `/orders/${orderId}/tracking` }
+  if (p.startsWith('/serv/orders/'))           return { orderType: 'zasaserv',               isMitra: false, backTo: `/serv/orders/${orderId}` }
+  if (p.startsWith('/serv/providers/'))        return { orderType: 'zasaserv_consult',         isMitra: false, backTo: `/serv/providers/${orderId}` }
+  if (p.startsWith('/serv/provider/consults/')) return { orderType: 'zasaserv_provider_consult', isMitra: true,  backTo: '/serv/provider' }
+  return                                              { orderType: 'zasago',                   isMitra: false, backTo: `/orders/${orderId}/tracking` }
 }
 
 export default function ChatPage() {

@@ -32,6 +32,8 @@ Route::prefix('serv/provider')->middleware(['auth:sanctum', 'role:serv_provider,
     Route::patch('services/{service}',   [ProviderController::class, 'updateService']);
     Route::delete('services/{service}',  [ProviderController::class, 'deleteService']);
 
+    Route::get('consultations',                    [ProviderController::class, 'consultations']);
+
     Route::get('orders',                           [ProviderController::class, 'orders']);
     Route::patch('orders/{order}/status',          [ProviderController::class, 'updateOrderStatus']);
 });
