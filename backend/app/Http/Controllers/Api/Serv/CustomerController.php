@@ -37,7 +37,12 @@ class CustomerController extends Controller
             return response()->json(['message' => 'Provider tidak tersedia.'], 404);
         }
 
-        return response()->json(['data' => $provider->load('services')]);
+        return response()->json([
+            'data' => $provider->load('services'),
+            'meta' => [
+                'consultation_enabled' => AdminSetting::valueOf('serv_consultation_enabled', '1') === '1',
+            ],
+        ]);
     }
 
     public function placeOrder(Request $request): JsonResponse

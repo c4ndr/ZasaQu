@@ -22,6 +22,7 @@ const GROUPS = [
   { label: '🍜 ZasaFood',             keys: ['food_commission_percent', 'food_commission_delivery_percent', 'food_auto_confirm_minutes', 'food_merchant_timeout_minutes', 'food_mitra_assign_radius_km'] },
   { label: '🛒 ZasaShop',             keys: ['mart_commission_percent'] },
   { label: '🏠 ZasaHome',             keys: ['home_commission_percent'] },
+  { label: '🔧 ZasaServis',           keys: ['serv_commission_percent', 'serv_consultation_enabled'] },
   { label: '⚙️ Umum ZasaGo',          keys: ['wallet_minimum_mitra', 'auto_confirm_minutes', 'cod_confirm_timeout_minutes', 'insurance_max_value'] },
   { label: '🚗 ZasaRide',             keys: ['ride_pending_timeout_minutes'] },
   { label: '📸 Penyimpanan Foto',     keys: ['photos_expire_days'] },

@@ -8,17 +8,28 @@ const SKILL_LV = {
 }
 const UNIT_LABEL = { item: 'item', jam: 'jam', sesi: 'sesi', titik: 'titik', meter: 'meter' }
 
+function toWANumber(phone) {
+  const clean = phone.replace(/\D/g, '')
+  if (clean.startsWith('62')) return clean
+  if (clean.startsWith('0'))  return '62' + clean.slice(1)
+  return '62' + clean
+}
+
 export default function ServProviderPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [provider, setProvider] = useState(null)
-  const [loading,  setLoading]  = useState(true)
-  const [selected, setSelected] = useState({}) // { serviceId: quantity }
-  const [booking,  setBooking]  = useState(false)
+  const [provider,             setProvider]             = useState(null)
+  const [loading,              setLoading]              = useState(true)
+  const [selected,             setSelected]             = useState({})
+  const [booking,              setBooking]              = useState(false)
+  const [consultationEnabled,  setConsultationEnabled]  = useState(false)
 
   useEffect(() => {
     api.get(`/serv/providers/${id}`)
-      .then(r => setProvider(r.data.data))
+      .then(r => {
+        setProvider(r.data.data)
+        setConsultationEnabled(r.data.meta?.consultation_enabled ?? false)
+      })
       .catch(() => navigate('/serv', { replace: true }))
       .finally(() => setLoading(false))
   }, [id])
@@ -100,6 +111,29 @@ export default function ServProviderPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Tombol Konsultasi */}
+        {consultationEnabled && provider.phone && (
+          <a
+            href={`https://wa.me/${toWANumber(provider.phone)}?text=${encodeURIComponent(`Halo, saya ingin konsultasi mengenai layanan ${provider.name}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              background: 'linear-gradient(135deg,rgba(37,211,102,0.12),rgba(37,211,102,0.06))',
+              border: '1.5px solid rgba(37,211,102,0.35)',
+              borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+              textDecoration: 'none', color: 'var(--k-text)',
+            }}
+          >
+            <span style={{ fontSize: 28, flexShrink: 0 }}>💬</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontWeight: 700, fontSize: 14, color: '#25D366' }}>Konsultasi Dulu via WhatsApp</p>
+              <p style={{ fontSize: 12, color: 'var(--k-muted)', marginTop: 2 }}>Tanya ketersediaan, estimasi biaya, atau jadwal sebelum order</p>
+            </div>
+            <span style={{ fontSize: 18, color: '#25D366', flexShrink: 0 }}>›</span>
+          </a>
         )}
 
         {/* Services */}
