@@ -8,7 +8,7 @@ const CATEGORIES = [
   { value: 'pijat',    label: 'Pijat',    emoji: '💆', grad: 'linear-gradient(135deg,#EC4899,#8B5CF6)' },
   { value: 'cleaning', label: 'Cleaning', emoji: '🧹', grad: 'linear-gradient(135deg,#10B981,#3B82F6)' },
   { value: 'tukang',   label: 'Tukang',   emoji: '🔧', grad: 'linear-gradient(135deg,#F59E0B,#EF4444)' },
-  { value: 'cukur',    label: 'Kasa Cukur', emoji: '💈', grad: 'linear-gradient(135deg,#0EA5E9,#6366F1)' },
+  { value: 'cukur',    label: 'Cukur Panggilan', emoji: '💈', grad: 'linear-gradient(135deg,#0EA5E9,#6366F1)' },
   { value: 'lainnya',  label: 'Lainnya',  emoji: '⚡', grad: 'linear-gradient(135deg,#6366F1,#EC4899)' },
 ]
 
