@@ -41,6 +41,12 @@ Route::get('health', \App\Http\Controllers\Api\HealthController::class);
 Route::get('monitor/errors',       [\App\Http\Controllers\Api\MonitorController::class, 'errors']);
 Route::get('monitor/stuck-orders',  [\App\Http\Controllers\Api\MonitorController::class, 'stuckOrders']);
 Route::get('monitor/daily-revenue', [\App\Http\Controllers\Api\MonitorController::class, 'dailyRevenue']);
+Route::get('monitor/test-run',     [\App\Http\Controllers\Api\TestRunController::class, 'run']);
+
+// ─── Telegram Bot Webhook ──────────────────────────────────────────────────
+Route::post('telegram/webhook',    [\App\Http\Controllers\Api\TelegramBotController::class, 'webhook']);
+Route::post('telegram/register',   [\App\Http\Controllers\Api\TelegramBotController::class, 'register']);
+Route::get('telegram/info',        [\App\Http\Controllers\Api\TelegramBotController::class, 'info']);
 
 // ─── Agora Token (Sanctum) ────────────────────────────────────────────────
 Route::post('call/agora-token', [\App\Http\Controllers\Api\AgoraController::class, 'token'])

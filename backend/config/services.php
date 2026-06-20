@@ -67,4 +67,9 @@ return [
         'secret' => env('MONITOR_SECRET'),
     ],
 
+    'telegram_bot' => [
+        'token'          => env('TELEGRAM_BOT_TOKEN'),
+        'webhook_secret' => env('TELEGRAM_BOT_WEBHOOK_SECRET', 'zasaqu-n8n-secret'),
+    ],
+
 ];
