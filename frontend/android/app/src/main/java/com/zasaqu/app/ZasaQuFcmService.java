@@ -19,13 +19,15 @@ import java.util.Map;
 
 /**
  * Custom FCM service — intercept incoming_call untuk tampilan layar penuh,
- * dan chat_message / serv_consultation untuk suara notifikasi kustom.
+ * chat_message / serv_consultation untuk suara chat kustom,
+ * dan wallet_credit / wallet_debit untuk suara saldo kustom.
  */
 public class ZasaQuFcmService extends FirebaseMessagingService {
 
-    static final String CHANNEL_CALLS = "zasaqu_incoming_calls";
-    static final String CHANNEL_CHAT  = "zasaqu_chat";
-    static final int    NOTIF_ID_CALL = 9901;
+    static final String CHANNEL_CALLS  = "zasaqu_incoming_calls";
+    static final String CHANNEL_CHAT   = "zasaqu_chat";
+    static final String CHANNEL_WALLET = "zasaqu_wallet";
+    static final int    NOTIF_ID_CALL  = 9901;
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
@@ -46,6 +48,15 @@ public class ZasaQuFcmService extends FirebaseMessagingService {
 
             createCallChannel();
             showFullScreenCallNotification(orderId, orderType, callerName);
+
+        } else if ("wallet_credit".equals(type) || "wallet_debit".equals(type)) {
+            createWalletChannel();
+            RemoteMessage.Notification notif = remoteMessage.getNotification();
+            String title = notif != null ? notif.getTitle() : ("wallet_credit".equals(type) ? "💰 Saldo Masuk" : "💸 Saldo Berkurang");
+            String body  = notif != null ? notif.getBody()  : data.getOrDefault("body", "Ada perubahan saldo dompetmu.");
+            if (title == null) title = data.getOrDefault("title", "wallet_credit".equals(type) ? "💰 Saldo Masuk" : "💸 Saldo Berkurang");
+            if (body  == null) body  = data.getOrDefault("body", "Ada perubahan saldo dompetmu.");
+            showWalletNotification(title, body);
 
         } else if ("chat_message".equals(type) || "serv_consultation".equals(type) || "serv_consultation_reply".equals(type)) {
             // Notifikasi pesan chat — gunakan suara kustom
@@ -133,6 +144,61 @@ public class ZasaQuFcmService extends FirebaseMessagingService {
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setSound(soundUri)
             .setVibrate(new long[]{0, 250, 100, 250})
+            .setContentIntent(tapPi)
+            .setAutoCancel(true);
+
+        try {
+            NotificationManagerCompat.from(this).notify(
+                (int) System.currentTimeMillis(), nb.build()
+            );
+        } catch (SecurityException ignored) {}
+    }
+
+    // ─── Wallet notification dengan suara kustom ─────────────────────────────
+
+    private void createWalletChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm == null || nm.getNotificationChannel(CHANNEL_WALLET) != null) return;
+
+        Uri soundUri = Uri.parse(
+            "android.resource://" + getPackageName() + "/raw/notif_saldo"
+        );
+
+        AudioAttributes audioAttr = new AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build();
+
+        NotificationChannel ch = new NotificationChannel(
+            CHANNEL_WALLET, "Saldo Dompet", NotificationManager.IMPORTANCE_HIGH);
+        ch.setDescription("Notifikasi perubahan saldo dompet ZasaQu");
+        ch.setSound(soundUri, audioAttr);
+        ch.enableVibration(true);
+        ch.setVibrationPattern(new long[]{0, 150, 80, 150});
+        nm.createNotificationChannel(ch);
+    }
+
+    private void showWalletNotification(String title, String body) {
+        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT
+            | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
+
+        Intent tapIntent = new Intent(this, MainActivity.class);
+        tapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent tapPi = PendingIntent.getActivity(this, 3, tapIntent, piFlags);
+
+        Uri soundUri = Uri.parse(
+            "android.resource://" + getPackageName() + "/raw/notif_saldo"
+        );
+
+        NotificationCompat.Builder nb = new NotificationCompat.Builder(this, CHANNEL_WALLET)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setSound(soundUri)
+            .setVibrate(new long[]{0, 150, 80, 150})
             .setContentIntent(tapPi)
             .setAutoCancel(true);
 
