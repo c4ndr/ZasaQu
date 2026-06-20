@@ -370,3 +370,31 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('broadcast', [\App\Http\Controllers\Api\Admin\BroadcastController::class, 'send']);
     });
 });
+
+// ─── Browse publik — didaftarkan SETELAH auth group agar tidak tertimpa ────
+use App\Http\Controllers\Api\Food\FoodOrderController;
+use App\Http\Controllers\Api\Home\CustomerController as HomeCustomerController;
+use App\Http\Controllers\Api\Mart\CustomerController as MartCustomerController;
+use App\Http\Controllers\Api\Serv\CustomerController as ServCustomerController;
+
+Route::prefix('food')->group(function () {
+    Route::get('merchants',         [FoodOrderController::class, 'indexMerchants']);
+    Route::get('merchants/{id}',    [FoodOrderController::class, 'showMerchant']);
+    Route::get('delivery-estimate', [FoodOrderController::class, 'estimateDelivery']);
+});
+Route::prefix('mart')->group(function () {
+    Route::get('categories',         [MartCustomerController::class, 'categories']);
+    Route::get('products',           [MartCustomerController::class, 'products']);
+    Route::get('products/{product}', [MartCustomerController::class, 'product']);
+    Route::get('sellers',            [MartCustomerController::class, 'sellers']);
+    Route::get('sellers/{seller}',   [MartCustomerController::class, 'seller']);
+});
+Route::prefix('serv')->group(function () {
+    Route::get('providers',            [ServCustomerController::class, 'providers']);
+    Route::get('providers/{provider}', [ServCustomerController::class, 'provider']);
+});
+Route::prefix('home')->group(function () {
+    Route::get('providers',            [HomeCustomerController::class, 'providers']);
+    Route::get('providers/{provider}', [HomeCustomerController::class, 'provider']);
+});
+Route::get('ride/estimate', [RideCustomerController::class, 'estimate']);
