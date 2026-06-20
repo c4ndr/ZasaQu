@@ -34,6 +34,15 @@ function ModuleRoute({ featureKey, children }) {
   return children
 }
 
+// Khusus route mitra — cek feature flag tapi TIDAK blokir mitra_motor/mitra_mobil
+function MitraModuleRoute({ featureKey, children }) {
+  const { features } = useAppInfo()
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (features && features[featureKey] === false) return <Navigate to="/dashboard" replace />
+  return children
+}
+
 // Route browsing publik — guest boleh masuk, login baru wajib saat mau order
 function BrowseRoute({ featureKey, children }) {
   const { features } = useAppInfo()
@@ -359,8 +368,8 @@ function AppRoutes() {
       <Route path="/food/orders" element={<ModuleRoute featureKey="zasafood"><FoodOrdersPage /></ModuleRoute>} />
       <Route path="/food/orders/:id" element={<ModuleRoute featureKey="zasafood"><FoodTrackingPage /></ModuleRoute>} />
       <Route path="/food/jastip/sessions" element={<ModuleRoute featureKey="zasafood"><FoodJastipSessionsPage /></ModuleRoute>} />
-      <Route path="/mitra/food/orders" element={<MitraRoute><ModuleRoute featureKey="zasafood"><MitraFoodOrdersPage /></ModuleRoute></MitraRoute>} />
-      <Route path="/mitra/mart/orders" element={<MitraRoute><ModuleRoute featureKey="zasamart"><MitraMartOrdersPage /></ModuleRoute></MitraRoute>} />
+      <Route path="/mitra/food/orders" element={<MitraRoute><MitraModuleRoute featureKey="zasafood"><MitraFoodOrdersPage /></MitraModuleRoute></MitraRoute>} />
+      <Route path="/mitra/mart/orders" element={<MitraRoute><MitraModuleRoute featureKey="zasamart"><MitraMartOrdersPage /></MitraModuleRoute></MitraRoute>} />
       <Route path="/mitra/onboarding" element={<PrivateRoute><MitraOnboardingPage /></PrivateRoute>} />
       <Route path="/admin/mitra/verify" element={<AdminRoute><AdminMitraVerificationPage /></AdminRoute>} />
       <Route path="/admin/mitra/review" element={<AdminRoute><AdminMitraReviewPage /></AdminRoute>} />
@@ -412,10 +421,10 @@ function AppRoutes() {
       <Route path="/ride" element={<BrowseRoute featureKey="zasaride"><RidePage /></BrowseRoute>} />
       <Route path="/ride/orders" element={<ModuleRoute featureKey="zasaride"><RideOrdersPage /></ModuleRoute>} />
       <Route path="/ride/chat/:id" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
-      <Route path="/mitra/ride" element={<MitraRoute><ModuleRoute featureKey="zasaride"><MitraRidePage /></ModuleRoute></MitraRoute>} />
+      <Route path="/mitra/ride" element={<MitraRoute><MitraModuleRoute featureKey="zasaride"><MitraRidePage /></MitraModuleRoute></MitraRoute>} />
       <Route path="/mitra/aktivitas" element={<MitraRoute><MitraAktivitasPage /></MitraRoute>} />
-      <Route path="/mitra/home/orders" element={<MitraRoute><ModuleRoute featureKey="zasahome"><MitraHomeOrdersPage /></ModuleRoute></MitraRoute>} />
-      <Route path="/mitra/serv/orders" element={<MitraRoute><ModuleRoute featureKey="zasaserv"><MitraServOrdersPage /></ModuleRoute></MitraRoute>} />
+      <Route path="/mitra/home/orders" element={<MitraRoute><MitraModuleRoute featureKey="zasahome"><MitraHomeOrdersPage /></MitraModuleRoute></MitraRoute>} />
+      <Route path="/mitra/serv/orders" element={<MitraRoute><MitraModuleRoute featureKey="zasaserv"><MitraServOrdersPage /></MitraModuleRoute></MitraRoute>} />
       <Route path="/ride/mitra/chat/:id" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/admin/ride" element={<AdminRoute><AdminRideOrdersPage /></AdminRoute>} />
 
