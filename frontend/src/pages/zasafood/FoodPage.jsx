@@ -201,7 +201,7 @@ export default function FoodPage() {
                   overflow: 'hidden', position: 'relative',
                 }}>
                   {m.banner_path
-                    ? <img src={storageUrl(m.banner_path, m.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <img src={storageUrl(m.banner_path, m.updated_at)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <span style={{ fontSize: 48 }}>🍜</span>
                   }
                   <span style={{
@@ -230,7 +230,7 @@ export default function FoodPage() {
                     position: 'relative', zIndex: 1,
                   }}>
                     {m.logo_path
-                      ? <img src={storageUrl(m.logo_path, m.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <img src={storageUrl(m.logo_path, m.updated_at)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : '🏪'
                     }
                   </div>

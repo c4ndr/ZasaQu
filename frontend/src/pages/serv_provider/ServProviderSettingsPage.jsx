@@ -4,20 +4,12 @@ import api, { storageUrl } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { isNative } from '../../utils/nativePlatform'
+import { compressImage } from '../../utils/compressImage'
 
 async function pickImageNative() {
   const photo = await Camera.getPhoto({ allowEditing: false, resultType: CameraResultType.DataUrl, source: CameraSource.Photos, quality: 75, width: 1200, height: 1200 })
   if (!photo.dataUrl) throw new Error('Tidak ada data foto')
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      const max = 1200; const r = Math.min(max / img.width, max / img.height, 1)
-      const cv = document.createElement('canvas'); cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r)
-      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height)
-      resolve({ dataUrl: cv.toDataURL('image/jpeg', 0.80), mime: 'image/jpeg' })
-    }
-    img.onerror = () => reject(new Error('Gagal memproses foto')); img.src = photo.dataUrl
-  })
+  return compressImage(photo.dataUrl)
 }
 
 const SKILL_LEVELS = [
@@ -128,25 +120,22 @@ export default function ServProviderSettingsPage() {
   async function handleUploadWeb(e, type) {
     const file = e.target.files?.[0]
     if (!file) return
-    const maxBytes = type === 'logo' ? 5 * 1024 * 1024 : 10 * 1024 * 1024
     if (!file.type.startsWith('image/')) { showToast('error', 'File harus berupa gambar.'); e.target.value = ''; return }
-    if (file.size > maxBytes) { showToast('error', `Maks ${type === 'logo' ? '5' : '10'}MB.`); e.target.value = ''; return }
     setUploading(u => ({ ...u, [type]: true }))
-    const reader = new FileReader()
-    reader.onload = async ev => {
-      const dataUrl = ev.target.result
-      const mime    = file.type
+    try {
+      const raw = await new Promise((res, rej) => {
+        const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(file)
+      })
+      const maxW = type === 'banner' ? 1600 : 800
+      const { dataUrl, mime } = await compressImage(raw, { maxWidth: maxW, maxHeight: maxW })
       setPreviews(p => ({ ...p, [type]: dataUrl }))
-      try {
-        const res = await api.post(`/serv/provider/upload-${type}-base64`, { data: dataUrl, mime })
-        setProvider(p => ({ ...p, [`${type}_path`]: res.data[`${type}_path`] }))
-        showToast('success', `${type === 'logo' ? 'Logo' : 'Banner'} berhasil diupload.`)
-      } catch (err) {
-        setPreviews(p => ({ ...p, [type]: null }))
-        showToast('error', err.response?.data?.message || 'Gagal upload.')
-      } finally { setUploading(u => ({ ...u, [type]: false })); e.target.value = '' }
-    }
-    reader.readAsDataURL(file)
+      const res = await api.post(`/serv/provider/upload-${type}-base64`, { data: dataUrl, mime })
+      setProvider(p => ({ ...p, [`${type}_path`]: res.data[`${type}_path`] }))
+      showToast('success', `${type === 'logo' ? 'Logo' : 'Banner'} berhasil diupload.`)
+    } catch (err) {
+      setPreviews(p => ({ ...p, [type]: null }))
+      showToast('error', err?.response?.data?.message || 'Gagal upload.')
+    } finally { setUploading(u => ({ ...u, [type]: false })); e.target.value = '' }
   }
 
   async function handleSaveAcct(e) {

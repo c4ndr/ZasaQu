@@ -8,6 +8,7 @@ const CATEGORIES = [
   { value: 'pijat',    label: 'Pijat',    emoji: '💆', grad: 'linear-gradient(135deg,#EC4899,#8B5CF6)' },
   { value: 'cleaning', label: 'Cleaning', emoji: '🧹', grad: 'linear-gradient(135deg,#10B981,#3B82F6)' },
   { value: 'tukang',   label: 'Tukang',   emoji: '🔧', grad: 'linear-gradient(135deg,#F59E0B,#EF4444)' },
+  { value: 'cukur',    label: 'Kasa Cukur', emoji: '💈', grad: 'linear-gradient(135deg,#0EA5E9,#6366F1)' },
   { value: 'lainnya',  label: 'Lainnya',  emoji: '⚡', grad: 'linear-gradient(135deg,#6366F1,#EC4899)' },
 ]
 
@@ -136,8 +137,8 @@ export default function ZasaHomePage() {
 }
 
 function ProviderCard({ provider: p, onClick }) {
-  const catGrad = { laundry: 'linear-gradient(135deg,#3B82F6,#06B6D4)', pijat: 'linear-gradient(135deg,#EC4899,#8B5CF6)', cleaning: 'linear-gradient(135deg,#10B981,#3B82F6)', tukang: 'linear-gradient(135deg,#F59E0B,#EF4444)', lainnya: 'linear-gradient(135deg,#6366F1,#EC4899)' }
-  const catEmoji = { laundry: '👕', pijat: '💆', cleaning: '🧹', tukang: '🔧', lainnya: '⚡' }
+  const catGrad = { laundry: 'linear-gradient(135deg,#3B82F6,#06B6D4)', pijat: 'linear-gradient(135deg,#EC4899,#8B5CF6)', cleaning: 'linear-gradient(135deg,#10B981,#3B82F6)', tukang: 'linear-gradient(135deg,#F59E0B,#EF4444)', cukur: 'linear-gradient(135deg,#0EA5E9,#6366F1)', lainnya: 'linear-gradient(135deg,#6366F1,#EC4899)' }
+  const catEmoji = { laundry: '👕', pijat: '💆', cleaning: '🧹', tukang: '🔧', cukur: '💈', lainnya: '⚡' }
   const priceInfo = startingPrice(p)
   const lv = p.skill_level ? SKILL_LV[p.skill_level] : null
 
@@ -149,7 +150,7 @@ function ProviderCard({ provider: p, onClick }) {
     }}>
       {/* Banner mini */}
       <div style={{ height: 70, background: p.banner_path ? undefined : (catGrad[p.category] ?? 'linear-gradient(135deg,#6366F1,#8B5CF6)'), position: 'relative', overflow: 'hidden' }}>
-        {p.banner_path && <img src={storageUrl(p.banner_path, p.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+        {p.banner_path && <img src={storageUrl(p.banner_path, p.updated_at)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)' }} />
         {/* Status badge */}
         <span style={{ position: 'absolute', top: 8, right: 10, fontSize: 10, fontWeight: 800, padding: '3px 9px', borderRadius: 20, background: p.is_open ? 'rgba(0,200,150,0.9)' : 'rgba(0,0,0,0.5)', color: '#fff', backdropFilter: 'blur(4px)' }}>

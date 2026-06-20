@@ -17,6 +17,10 @@ export const CATEGORY_CONFIG = {
     flow: 'on_site', addressLabel: 'Alamat Layanan', pickupOption: false, schedulable: true, icon: '🔧', scheduleLabel: 'Waktu Kunjungan',
     skills: ['Instalasi Listrik', 'Plumbing / Pipa', 'Cat Tembok', 'Pasang Keramik', 'Las Besi', 'AC Service', 'Atap & Bocor', 'Bongkar Pasang Furnitur'],
   },
+  cukur: {
+    flow: 'on_site', addressLabel: 'Alamat Kunjungan', pickupOption: false, schedulable: true, icon: '💈', scheduleLabel: 'Waktu Kunjungan',
+    skills: ['Potong Rambut', 'Cukur Jenggot', 'Trim & Styling', 'Cuci Rambut', 'Creambath', 'Pewarnaan Rambut', 'Perawatan Kumis', 'Cukur Kepala'],
+  },
   lainnya: {
     flow: 'on_site', addressLabel: 'Alamat Layanan', pickupOption: false, schedulable: true, icon: '⚡', scheduleLabel: 'Waktu Kunjungan',
     skills: [],

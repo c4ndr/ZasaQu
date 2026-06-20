@@ -102,7 +102,7 @@ class HomeController extends Controller
     {
         $data = $request->validate([
             'name'          => ['required', 'string', 'max:100'],
-            'category'      => ['required', 'in:laundry,pijat,cleaning,tukang,lainnya'],
+            'category'      => ['required', 'in:laundry,pijat,cleaning,tukang,cukur,lainnya'],
             'address'       => ['required', 'string', 'max:255'],
             'phone'         => ['nullable', 'string', 'max:20'],
             'open_time'     => ['nullable', 'date_format:H:i'],

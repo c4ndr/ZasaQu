@@ -4,9 +4,9 @@ import MerchantLocationPicker from '../../components/MerchantLocationPicker'
 import api from '../../services/api'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { isNative } from '../../utils/nativePlatform'
+import { compressImage } from '../../utils/compressImage'
 
 async function pickImageNative() {
-  // Tidak pakai requestPermissions — Camera.getPhoto sudah handle izin sendiri
   const photo = await Camera.getPhoto({
     allowEditing: false,
     resultType: CameraResultType.DataUrl,
@@ -15,24 +15,8 @@ async function pickImageNative() {
     width: 800,
     height: 800,
   })
-
   if (!photo.dataUrl) throw new Error('Tidak ada data foto dari galeri')
-
-  // Resize via canvas
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      const max = 800
-      const r   = Math.min(max / img.width, max / img.height, 1)
-      const cv  = document.createElement('canvas')
-      cv.width  = Math.round(img.width  * r)
-      cv.height = Math.round(img.height * r)
-      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height)
-      resolve({ dataUrl: cv.toDataURL('image/jpeg', 0.75), mime: 'image/jpeg' })
-    }
-    img.onerror = () => reject(new Error('Gagal memproses foto'))
-    img.src = photo.dataUrl
-  })
+  return compressImage(photo.dataUrl, { maxWidth: 800, maxHeight: 800 })
 }
 
 // Error boundary — mencegah crash Leaflet/map merusak seluruh halaman
@@ -107,19 +91,20 @@ export default function SellerSettingsPage() {
   }
 
   const uploadImg = async (file, type, setUpl, setPreview) => {
-    // Web fallback: terima File object, upload FormData
-    const maxBytes = type === 'logo' ? 5 * 1024 * 1024 : 10 * 1024 * 1024
     if (!file.type.startsWith('image/')) { showToast('error', 'File harus berupa gambar.'); return }
-    if (file.size > maxBytes) { showToast('error', `Maks ${type === 'logo' ? '5' : '10'}MB.`); return }
     setUpl(true)
-    const fd = new FormData(); fd.append('image', file)
     try {
-      const res = await api.post(`/mart/seller/upload-${type}`, fd)
+      const raw = await new Promise((res, rej) => {
+        const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(file)
+      })
+      const maxW = type === 'banner' ? 1600 : 800
+      const { dataUrl, mime } = await compressImage(raw, { maxWidth: maxW, maxHeight: maxW })
+      const res = await api.post(`/mart/seller/upload-${type}-base64`, { data: dataUrl, mime })
       setProfile(p => ({ ...p, [`${type}_path`]: res.data.path }))
-      setPreview(URL.createObjectURL(file))
+      setPreview(dataUrl)
       showToast('success', `${type === 'logo' ? 'Logo' : 'Banner'} berhasil diupload.`)
     } catch (err) {
-      showToast('error', err.response?.data?.message || 'Gagal upload.')
+      showToast('error', err?.response?.data?.message || 'Gagal upload.')
     } finally { setUpl(false) }
   }
 

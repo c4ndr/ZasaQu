@@ -109,7 +109,7 @@ export default function ZasaServPage() {
               {/* Logo */}
               <div style={{ width: 64, height: 64, borderRadius: 14, flexShrink: 0, overflow: 'hidden', background: cat.grad, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {p.logo_path
-                  ? <img src={storageUrl(p.logo_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? <img src={storageUrl(p.logo_path)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <span style={{ fontSize: 26 }}>{cat.emoji}</span>}
               </div>
 

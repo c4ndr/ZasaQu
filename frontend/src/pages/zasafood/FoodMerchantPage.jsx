@@ -209,7 +209,7 @@ export default function FoodMerchantPage() {
         {/* Banner */}
         <div style={{ height: 140, background: 'var(--k-input)', overflow: 'hidden', position: 'relative' }}>
           {merchant?.banner_path
-            ? <img src={storageUrl(merchant.banner_path, merchant.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img src={storageUrl(merchant.banner_path, merchant.updated_at)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>🍜</div>
           }
           {/* Overlay gradient bottom */}
@@ -237,7 +237,7 @@ export default function FoodMerchantPage() {
             marginTop: -24, border: '2.5px solid var(--k-card)',
             position: 'relative', zIndex: 1,
           }}>
-            {merchant?.logo_path ? <img src={storageUrl(merchant.logo_path, merchant.updated_at)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
+            {merchant?.logo_path ? <img src={storageUrl(merchant.logo_path, merchant.updated_at)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🏪'}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{merchant?.name}</div>

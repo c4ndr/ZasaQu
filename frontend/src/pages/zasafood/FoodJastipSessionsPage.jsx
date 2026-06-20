@@ -145,7 +145,7 @@ function SessionCard({ session: s, navigate }) {
                   background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
                 }}>
                   {m.logo_path
-                    ? <img src={storageUrl(m.logo_path)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <img src={storageUrl(m.logo_path)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : '🏪'
                   }
                 </div>

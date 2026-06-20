@@ -5,13 +5,14 @@ import api, { storageUrl } from '../../services/api'
 
 const UNIT_LABEL = { kg: '/kg', item: '/item', jam: '/jam', sesi: '/sesi' }
 
-const CAT_EMOJI = { laundry: '👕', pijat: '💆', cleaning: '🧹', tukang: '🔧', lainnya: '⚡' }
+const CAT_EMOJI = { laundry: '👕', pijat: '💆', cleaning: '🧹', tukang: '🔧', cukur: '💈', lainnya: '⚡' }
 
 const CAT_GRAD = {
   laundry:  'linear-gradient(135deg,#3B82F6,#06B6D4)',
   pijat:    'linear-gradient(135deg,#EC4899,#8B5CF6)',
   cleaning: 'linear-gradient(135deg,#10B981,#3B82F6)',
   tukang:   'linear-gradient(135deg,#F59E0B,#EF4444)',
+  cukur:    'linear-gradient(135deg,#0EA5E9,#6366F1)',
   lainnya:  'linear-gradient(135deg,#6366F1,#EC4899)',
 }
 
@@ -89,7 +90,7 @@ export default function HomeProviderPage() {
       {/* ── Banner hero ── */}
       <div style={{ position: 'relative', height: 220, overflow: 'hidden' }}>
         {provider.banner_path
-          ? <img src={storageUrl(provider.banner_path, provider.updated_at)} alt="banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <img src={storageUrl(provider.banner_path, provider.updated_at)} alt="banner" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <div style={{ width: '100%', height: '100%', background: grad, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, opacity: 0.6 }}>
               {CAT_EMOJI[provider.category] ?? '🏠'}
             </div>
@@ -118,7 +119,7 @@ export default function HomeProviderPage() {
           <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
             {/* Logo */}
             <div style={{ width: 60, height: 60, borderRadius: 16, overflow: 'hidden', flexShrink: 0, border: '2px solid var(--k-border)', background: 'var(--k-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
-              {provider.logo_path ? <img src={storageUrl(provider.logo_path, provider.updated_at)} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (CAT_EMOJI[provider.category] ?? '🏠')}
+              {provider.logo_path ? <img src={storageUrl(provider.logo_path, provider.updated_at)} alt="logo" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (CAT_EMOJI[provider.category] ?? '🏠')}
             </div>
             <div style={{ flex: 1 }}>
               <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--k-text)', lineHeight: 1.2, marginBottom: 4 }}>{provider.name}</h1>

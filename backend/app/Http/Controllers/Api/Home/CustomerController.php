@@ -66,7 +66,7 @@ class CustomerController extends Controller
             return response()->json(['message' => 'Provider tidak tersedia.'], 422);
         }
 
-        $onSiteCategories = ['pijat', 'cleaning', 'tukang', 'lainnya'];
+        $onSiteCategories = ['pijat', 'cleaning', 'tukang', 'cukur', 'lainnya'];
         $isOnSite         = in_array($provider->category, $onSiteCategories);
 
         // On-site: provider selalu datang ke pelanggan, tidak ada pilihan pickup

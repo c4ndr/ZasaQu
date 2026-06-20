@@ -199,7 +199,7 @@ class ProviderController extends Controller
             return response()->json(['message' => 'Tidak ditemukan.'], 404);
         }
 
-        $onSiteCategories = ['pijat', 'cleaning', 'tukang', 'lainnya'];
+        $onSiteCategories = ['pijat', 'cleaning', 'tukang', 'cukur', 'lainnya'];
         $isOnSite         = in_array($provider->category, $onSiteCategories);
 
         $allowed = $isOnSite ? [

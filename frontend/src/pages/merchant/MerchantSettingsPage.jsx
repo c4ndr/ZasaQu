@@ -4,6 +4,7 @@ import api, { storageUrl } from '../../services/api'
 import MerchantLocationPicker from '../../components/MerchantLocationPicker'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { isNative } from '../../utils/nativePlatform'
+import { compressImage } from '../../utils/compressImage'
 
 async function pickImageNative() {
   const photo = await Camera.getPhoto({
@@ -15,20 +16,7 @@ async function pickImageNative() {
     height: 1200,
   })
   if (!photo.dataUrl) throw new Error('Tidak ada data foto')
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      const max = 1200
-      const r   = Math.min(max / img.width, max / img.height, 1)
-      const cv  = document.createElement('canvas')
-      cv.width  = Math.round(img.width * r)
-      cv.height = Math.round(img.height * r)
-      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height)
-      resolve({ dataUrl: cv.toDataURL('image/jpeg', 0.80), mime: 'image/jpeg' })
-    }
-    img.onerror = () => reject(new Error('Gagal memproses foto'))
-    img.src = photo.dataUrl
-  })
+  return compressImage(photo.dataUrl)
 }
 
 function fmtStatus(s) {
@@ -114,37 +102,23 @@ export default function MerchantSettingsPage() {
   async function handleUpload(e, type) {
     const file = e.target.files?.[0]
     if (!file) return
-
-    const maxBytes = type === 'logo' ? 5 * 1024 * 1024 : 10 * 1024 * 1024
     const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|heic|gif)$/i.test(file.name)
-    if (!isImage) {
-      showToast('error', 'File harus berupa gambar (JPG, PNG, WEBP).')
-      e.target.value = ''
-      return
-    }
-    if (file.size > maxBytes) {
-      showToast('error', `Ukuran maksimal ${type === 'logo' ? '5' : '10'}MB.`)
-      e.target.value = ''
-      return
-    }
-
-    const localUrl = URL.createObjectURL(file)
-    setPreviews(p => ({ ...p, [type]: localUrl }))
+    if (!isImage) { showToast('error', 'File harus berupa gambar (JPG, PNG, WEBP).'); e.target.value = ''; return }
     setUploading(u => ({ ...u, [type]: true }))
-
-    const fd = new FormData()
-    fd.append('image', file)
     try {
-      const res = await api.post(`/food/merchant/upload-${type}`, fd)
-      setMerchant(m => ({ ...m, [`${type}_path`]: res.data[`${type}_path`], [`${type}_ts`]: Date.now() }))
-      showToast('success', res.data.message)
+      const raw = await new Promise((res, rej) => {
+        const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(file)
+      })
+      const maxW = type === 'banner' ? 1600 : 800
+      const { dataUrl, mime } = await compressImage(raw, { maxWidth: maxW, maxHeight: maxW })
+      setPreviews(p => ({ ...p, [type]: dataUrl }))
+      const res = await api.post(`/food/merchant/upload-${type}-base64`, { data: dataUrl, mime })
+      setMerchant(m => ({ ...m, [`${type}_path`]: res.data[`${type}_path`] }))
+      showToast('success', res.data.message || `${type === 'logo' ? 'Logo' : 'Banner'} diperbarui.`)
     } catch (err) {
       setPreviews(p => ({ ...p, [type]: null }))
-      showToast('error', err.response?.data?.message || 'Gagal upload.')
-    } finally {
-      setUploading(u => ({ ...u, [type]: false }))
-      e.target.value = ''
-    }
+      showToast('error', err?.response?.data?.message || 'Gagal upload.')
+    } finally { setUploading(u => ({ ...u, [type]: false })); e.target.value = '' }
   }
 
   function showToast(type, msg) {
