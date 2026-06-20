@@ -63,4 +63,8 @@ return [
         'app_certificate' => env('AGORA_APP_CERTIFICATE'),
     ],
 
+    'monitor' => [
+        'secret' => env('MONITOR_SECRET'),
+    ],
+
 ];

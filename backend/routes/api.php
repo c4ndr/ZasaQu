@@ -37,6 +37,11 @@ use Illuminate\Support\Facades\Route;
 // ─── Health Check ──────────────────────────────────────────────────────────
 Route::get('health', \App\Http\Controllers\Api\HealthController::class);
 
+// ─── Monitor (n8n internal) ────────────────────────────────────────────────
+Route::get('monitor/errors',       [\App\Http\Controllers\Api\MonitorController::class, 'errors']);
+Route::get('monitor/stuck-orders',  [\App\Http\Controllers\Api\MonitorController::class, 'stuckOrders']);
+Route::get('monitor/daily-revenue', [\App\Http\Controllers\Api\MonitorController::class, 'dailyRevenue']);
+
 // ─── Agora Token (Sanctum) ────────────────────────────────────────────────
 Route::post('call/agora-token', [\App\Http\Controllers\Api\AgoraController::class, 'token'])
     ->middleware('auth:sanctum');
