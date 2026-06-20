@@ -91,10 +91,13 @@ class HomeController extends Controller
     public function suspendProvider(Request $request, int $id): JsonResponse
     {
         $data     = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);
-        $provider = HomeProvider::findOrFail($id);
+        $provider = HomeProvider::with('user')->findOrFail($id);
 
         $old = $provider->status;
         $provider->update(['status' => 'suspended', 'is_open' => false]);
+        if ($provider->user) {
+            $provider->user->update(['status' => 'suspended']);
+        }
 
         $this->auditLogService->log($request->user(), 'suspend_home_provider', $provider,
             ['status' => $old], ['status' => 'suspended', 'reason' => $data['reason'] ?? null]);

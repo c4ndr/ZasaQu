@@ -57,18 +57,30 @@ class MartController extends Controller
 
     public function approveSeller(Request $request, int $id): JsonResponse
     {
-        $seller = MartSeller::findOrFail($id);
+        $seller = MartSeller::with('user')->findOrFail($id);
+
+        if ($seller->status === 'active') {
+            return response()->json(['message' => 'Toko sudah aktif.'], 422);
+        }
+
+        $old = $seller->status;
         $seller->update(['status' => 'active']);
-        $seller->user->update(['status' => 'active']);
-        $this->auditLogService->log($request->user(), 'approve_mart_seller', $seller, ['status' => 'pending'], ['status' => 'active']);
+        if ($seller->user && $seller->user->status === 'pending_review') {
+            $seller->user->update(['status' => 'active']);
+        }
+
+        $this->auditLogService->log($request->user(), 'approve_mart_seller', $seller, ['status' => $old], ['status' => 'active']);
         return response()->json(['message' => "Toko {$seller->name} diaktifkan."]);
     }
 
     public function suspendSeller(Request $request, int $id): JsonResponse
     {
         $data   = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);
-        $seller = MartSeller::findOrFail($id);
+        $seller = MartSeller::with('user')->findOrFail($id);
         $seller->update(['status' => 'suspended', 'is_open' => false]);
+        if ($seller->user) {
+            $seller->user->update(['status' => 'suspended']);
+        }
         $this->auditLogService->log($request->user(), 'suspend_mart_seller', $seller, [], $data);
         return response()->json(['message' => "Toko {$seller->name} disuspend."]);
     }

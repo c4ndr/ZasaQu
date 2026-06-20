@@ -143,10 +143,13 @@ class ServController extends Controller
     public function suspendProvider(Request $request, int $id): JsonResponse
     {
         $data     = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);
-        $provider = ServProvider::findOrFail($id);
+        $provider = ServProvider::with('user')->findOrFail($id);
 
         $old = $provider->status;
         $provider->update(['status' => 'suspended', 'is_open' => false]);
+        if ($provider->user) {
+            $provider->user->update(['status' => 'suspended']);
+        }
 
         $this->auditLogService->log($request->user(), 'suspend_serv_provider', $provider,
             ['status' => $old], ['status' => 'suspended', 'reason' => $data['reason'] ?? null]);
