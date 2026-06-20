@@ -217,9 +217,19 @@ public class ZasaQuFcmService extends FirebaseMessagingService {
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm == null || nm.getNotificationChannel(CHANNEL_CALLS) != null) return;
 
+        Uri soundUri = Uri.parse(
+            "android.resource://" + getPackageName() + "/raw/ringtone_call"
+        );
+
+        AudioAttributes audioAttr = new AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build();
+
         NotificationChannel ch = new NotificationChannel(
             CHANNEL_CALLS, "Panggilan Masuk", NotificationManager.IMPORTANCE_HIGH);
         ch.setDescription("Notifikasi panggilan suara masuk ZasaQu");
+        ch.setSound(soundUri, audioAttr);
         ch.enableVibration(true);
         ch.setVibrationPattern(new long[]{0, 800, 400, 800, 400, 800});
         nm.createNotificationChannel(ch);
@@ -242,12 +252,18 @@ public class ZasaQuFcmService extends FirebaseMessagingService {
         tapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent tapPi = PendingIntent.getActivity(this, 1, tapIntent, piFlags);
 
+        Uri callSoundUri = Uri.parse(
+            "android.resource://" + getPackageName() + "/raw/ringtone_call"
+        );
+
         NotificationCompat.Builder nb = new NotificationCompat.Builder(this, CHANNEL_CALLS)
             .setSmallIcon(android.R.drawable.ic_menu_call)
             .setContentTitle("📞 Panggilan Masuk")
             .setContentText(callerName + " sedang menghubungi Anda")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setSound(callSoundUri)
+            .setVibrate(new long[]{0, 800, 400, 800, 400, 800})
             .setFullScreenIntent(fullScreenPi, true)
             .setContentIntent(tapPi)
             .setAutoCancel(false)
