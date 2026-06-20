@@ -24,7 +24,8 @@ import java.util.Map;
  */
 public class ZasaQuFcmService extends FirebaseMessagingService {
 
-    static final String CHANNEL_CALLS   = "zasaqu_incoming_calls";
+    // v2: channel tanpa suara — IncomingCallActivity yang handle audio sepenuhnya
+    static final String CHANNEL_CALLS   = "zasaqu_incoming_calls_v2";
     static final String CHANNEL_CHAT    = "zasaqu_chat";
     static final String CHANNEL_WALLET  = "zasaqu_wallet";
     static final String CHANNEL_GENERAL = "zasaqu_general";
@@ -217,21 +218,13 @@ public class ZasaQuFcmService extends FirebaseMessagingService {
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm == null || nm.getNotificationChannel(CHANNEL_CALLS) != null) return;
 
-        Uri soundUri = Uri.parse(
-            "android.resource://" + getPackageName() + "/raw/ringtone_call"
-        );
-
-        AudioAttributes audioAttr = new AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build();
-
+        // Tidak ada suara di channel — IncomingCallActivity yang handle audio sepenuhnya
+        // agar tidak tumpang tindih dengan ringtone yang diputar Activity.
         NotificationChannel ch = new NotificationChannel(
             CHANNEL_CALLS, "Panggilan Masuk", NotificationManager.IMPORTANCE_HIGH);
         ch.setDescription("Notifikasi panggilan suara masuk ZasaQu");
-        ch.setSound(soundUri, audioAttr);
-        ch.enableVibration(true);
-        ch.setVibrationPattern(new long[]{0, 800, 400, 800, 400, 800});
+        ch.setSound(null, null);
+        ch.enableVibration(false);
         nm.createNotificationChannel(ch);
     }
 
@@ -252,18 +245,13 @@ public class ZasaQuFcmService extends FirebaseMessagingService {
         tapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent tapPi = PendingIntent.getActivity(this, 1, tapIntent, piFlags);
 
-        Uri callSoundUri = Uri.parse(
-            "android.resource://" + getPackageName() + "/raw/ringtone_call"
-        );
-
+        // Tidak set sound/vibrate di sini — IncomingCallActivity yang handle sepenuhnya
         NotificationCompat.Builder nb = new NotificationCompat.Builder(this, CHANNEL_CALLS)
             .setSmallIcon(android.R.drawable.ic_menu_call)
             .setContentTitle("📞 Panggilan Masuk")
             .setContentText(callerName + " sedang menghubungi Anda")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
-            .setSound(callSoundUri)
-            .setVibrate(new long[]{0, 800, 400, 800, 400, 800})
             .setFullScreenIntent(fullScreenPi, true)
             .setContentIntent(tapPi)
             .setAutoCancel(false)
