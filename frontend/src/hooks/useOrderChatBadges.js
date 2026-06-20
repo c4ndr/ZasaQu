@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import echo from '../services/echo'
 import api from '../services/api'
 
 function playChatSound() {
+  if (Capacitor.isNativePlatform()) return
   try {
     const ctx  = new (window.AudioContext || window.webkitAudioContext)()
     const gain = ctx.createGain()

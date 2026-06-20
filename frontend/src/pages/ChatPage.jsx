@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useParams, useLocation } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { useAuth } from '../context/AuthContext'
 import useChatRoom from '../hooks/useChatRoom'
 import useVoiceCall from '../hooks/useVoiceCall'
@@ -159,6 +160,9 @@ function DateDivider({ label }) {
 
 // ── Halaman utama ─────────────────────────────────────────────────────────────
 function playNotif() {
+  // Di Android native, suara pesan sudah ditangani oleh FCM notification channel.
+  // JS oscillator hanya untuk fallback di browser.
+  if (Capacitor.isNativePlatform()) return
   try {
     const ctx  = new (window.AudioContext || window.webkitAudioContext)()
     const osc  = ctx.createOscillator()
