@@ -303,7 +303,7 @@ function AppRoutes() {
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
       <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
       <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
-      <Route path="/dashboard" element={<PrivateRoute><DashboardRedirect /></PrivateRoute>} />
+      <Route path="/dashboard" element={<DashboardRedirect />} />
       <Route path="/wallet" element={<PrivateRoute><WalletPage /></PrivateRoute>} />
       <Route path="/topup" element={<PrivateRoute><TopUpPage /></PrivateRoute>} />
       <Route path="/withdraw" element={<PrivateRoute><WithdrawPage /></PrivateRoute>} />

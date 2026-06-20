@@ -98,7 +98,7 @@ export default function LandingPage() {
                 style={{ padding: '17px', borderRadius: 16, border: 'none', background: 'linear-gradient(135deg,#00C896,#00A87D)', color: '#0C0C16', fontWeight: 900, fontSize: 16, cursor: 'pointer', boxShadow: '0 10px 32px rgba(0,200,150,0.35)' }}>
                 Mulai Gratis Sekarang →
               </button>
-              <button onClick={() => navigate('/food')}
+              <button onClick={() => navigate('/dashboard')}
                 style={{ padding: '15px', borderRadius: 16, border: '1px solid rgba(0,200,150,0.25)', background: 'rgba(0,200,150,0.07)', color: '#00C896', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
                 Jelajahi Dulu Tanpa Daftar →
               </button>
