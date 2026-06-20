@@ -24,10 +24,11 @@ import java.util.Map;
  */
 public class ZasaQuFcmService extends FirebaseMessagingService {
 
-    static final String CHANNEL_CALLS  = "zasaqu_incoming_calls";
-    static final String CHANNEL_CHAT   = "zasaqu_chat";
-    static final String CHANNEL_WALLET = "zasaqu_wallet";
-    static final int    NOTIF_ID_CALL  = 9901;
+    static final String CHANNEL_CALLS   = "zasaqu_incoming_calls";
+    static final String CHANNEL_CHAT    = "zasaqu_chat";
+    static final String CHANNEL_WALLET  = "zasaqu_wallet";
+    static final String CHANNEL_GENERAL = "zasaqu_general";
+    static final int    NOTIF_ID_CALL   = 9901;
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
@@ -268,13 +269,42 @@ public class ZasaQuFcmService extends FirebaseMessagingService {
         } catch (Exception ignored) {}
     }
 
+    private void createGeneralChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm == null || nm.getNotificationChannel(CHANNEL_GENERAL) != null) return;
+
+        Uri soundUri = Uri.parse(
+            "android.resource://" + getPackageName() + "/raw/notif_umum"
+        );
+
+        AudioAttributes audioAttr = new AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build();
+
+        NotificationChannel ch = new NotificationChannel(
+            CHANNEL_GENERAL, "Notifikasi Umum", NotificationManager.IMPORTANCE_DEFAULT);
+        ch.setDescription("Notifikasi umum ZasaQu");
+        ch.setSound(soundUri, audioAttr);
+        ch.enableVibration(true);
+        nm.createNotificationChannel(ch);
+    }
+
     private void showSimpleNotification(String title, String body) {
         if (title == null && body == null) return;
-        NotificationCompat.Builder nb = new NotificationCompat.Builder(this, "zasaqu_general")
+        createGeneralChannel();
+
+        Uri soundUri = Uri.parse(
+            "android.resource://" + getPackageName() + "/raw/notif_umum"
+        );
+
+        NotificationCompat.Builder nb = new NotificationCompat.Builder(this, CHANNEL_GENERAL)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title != null ? title : "ZasaQu")
             .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setSound(soundUri)
             .setAutoCancel(true);
         try {
             NotificationManagerCompat.from(this).notify((int) System.currentTimeMillis(), nb.build());
