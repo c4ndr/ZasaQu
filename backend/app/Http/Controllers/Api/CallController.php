@@ -6,10 +6,14 @@ use App\Events\CallSignal;
 use App\Http\Controllers\Controller;
 use App\Models\ChatRoom;
 use App\Models\FoodOrder;
+use App\Models\HomeOrder;
 use App\Models\MartOrder;
 use App\Models\Order;
+use App\Models\RideOrder;
+use App\Models\ServOrder;
 use App\Models\User;
 use App\Services\FcmService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,7 +24,7 @@ class CallController extends Controller
     {
         $data = $request->validate([
             'order_id'    => ['required', 'integer'],
-            'order_type'  => ['required', 'in:zasago,zasafood,zasamart'],
+            'order_type'  => ['required', 'in:zasago,zasafood,zasamart,zasaride,zasahome,zasaserv,zasaserv_consult,zasaserv_provider_consult'],
             'signal_type' => ['required', 'in:offer,answer,ice-candidate,end,ring'],
             'data'        => ['nullable'],
         ]);
@@ -28,8 +32,9 @@ class CallController extends Controller
         $user  = $request->user();
         $order = $this->resolveOrder($data['order_id'], $data['order_type']);
 
-        // Hanya pelanggan dan mitra order ini yang boleh sinyal
-        if ($order->customer_id !== $user->id && $order->mitra_id !== $user->id) {
+        [$customerId, $mitraid] = $this->resolveParties($order, $data['order_type']);
+
+        if ($customerId !== $user->id && $mitraid !== $user->id) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
@@ -43,14 +48,10 @@ class CallController extends Controller
             $user->id,
         ));
 
-        // ring/offer/end juga dikirim ke channel personal penerima agar bisa diterima
-        // meski penerima tidak sedang berada di halaman ChatPage
-        $receiverId = ($order->customer_id === $user->id)
-            ? $order->mitra_id
-            : $order->customer_id;
+        // ring/offer/end juga dikirim ke channel personal penerima
+        $receiverId = ($customerId === $user->id) ? $mitraid : $customerId;
 
         if ($receiverId && in_array($data['signal_type'], ['ring', 'offer', 'end'])) {
-            // Format nama pemanggil — mitra mendapat label agar penerima tahu konteksnya
             $callerLabel = $this->formatCallerName($user);
 
             $ctxData = [
@@ -58,7 +59,6 @@ class CallController extends Controller
                 'order_type'  => $data['order_type'],
                 'caller_name' => $callerLabel,
             ];
-            // Sertakan SDP offer agar callee tidak perlu berlangganan order channel dulu
             if ($data['signal_type'] === 'offer') {
                 $ctxData['sdp'] = $data['data'];
             }
@@ -69,7 +69,6 @@ class CallController extends Controller
                 $user->id,
             ));
 
-            // Data-only FCM → ZasaQuFcmService tampilkan layar penuh incoming call
             if ($data['signal_type'] === 'ring') {
                 try {
                     $receiver = User::find($receiverId);
@@ -92,13 +91,28 @@ class CallController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    private function resolveOrder(int $orderId, string $type): \Illuminate\Database\Eloquent\Model
+    private function resolveOrder(int $orderId, string $type): Model
     {
         return match($type) {
-            'zasafood' => FoodOrder::findOrFail($orderId),
-            'zasamart' => MartOrder::findOrFail($orderId),
-            default    => Order::findOrFail($orderId),
+            'zasafood'                   => FoodOrder::findOrFail($orderId),
+            'zasamart'                   => MartOrder::findOrFail($orderId),
+            'zasaride'                   => RideOrder::findOrFail($orderId),
+            'zasahome'                   => HomeOrder::findOrFail($orderId),
+            'zasaserv'                   => ServOrder::findOrFail($orderId),
+            'zasaserv_consult',
+            'zasaserv_provider_consult'  => ChatRoom::findOrFail($orderId),
+            default                      => Order::findOrFail($orderId),
         };
+    }
+
+    /** Kembalikan [customer_id, mitra/provider_id] dari model order apapun */
+    private function resolveParties(Model $order, string $type): array
+    {
+        if (in_array($type, ['zasaserv_consult', 'zasaserv_provider_consult'])) {
+            // ChatRoom memakai provider_id bukan mitra_id
+            return [$order->customer_id, $order->provider_id];
+        }
+        return [$order->customer_id, $order->mitra_id];
     }
 
     /** Format nama pemanggil — mitra mendapat label "(Mitra ZasaQu)" */
