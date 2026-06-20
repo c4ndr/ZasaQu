@@ -69,6 +69,10 @@ public class IncomingCallActivity extends AppCompatActivity {
         if (callerName == null || callerName.isEmpty()) callerName = "Pengguna ZasaQu";
         callerNamePref = callerName;
 
+        // Batalkan notifikasi segera agar suara notification channel tidak overlap
+        // dengan ringtone yang akan diputar oleh Activity ini.
+        cancelCallNotification();
+
         buildUI(callerName);
         startRingtone();
         startVibration();
@@ -221,19 +225,19 @@ public class IncomingCallActivity extends AppCompatActivity {
         try {
             AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
             if (am != null) {
-                // Paksa volume ring ke maksimal
                 int max = am.getStreamMaxVolume(AudioManager.STREAM_RING);
                 am.setStreamVolume(AudioManager.STREAM_RING, max, 0);
             }
-            Uri uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+            // Pakai file ringtone kustom supaya tidak overlap dengan default system ringtone
+            Uri uri = Uri.parse("android.resource://" + getPackageName() + "/raw/ringtone_call");
             ringtone = RingtoneManager.getRingtone(this, uri);
             if (ringtone != null) {
+                ringtone.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build());
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     ringtone.setLooping(true);
-                    ringtone.setAudioAttributes(new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build());
                 }
                 ringtone.play();
             }
