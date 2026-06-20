@@ -125,7 +125,7 @@ class FoodController extends Controller
 
     public function approveMerchant(Request $request, int $id): JsonResponse
     {
-        $merchant = FoodMerchant::findOrFail($id);
+        $merchant = FoodMerchant::with('user')->findOrFail($id);
 
         if ($merchant->status === 'active') {
             return response()->json(['message' => 'Merchant sudah aktif.'], 422);
@@ -133,6 +133,9 @@ class FoodController extends Controller
 
         $old = $merchant->status;
         $merchant->update(['status' => 'active']);
+        if ($merchant->user) {
+            $merchant->user->update(['status' => 'active']);
+        }
 
         $this->auditLogService->log($request->user(), 'approve_merchant', $merchant,
             ['status' => $old], ['status' => 'active']);
@@ -217,10 +220,13 @@ class FoodController extends Controller
     public function suspendMerchant(Request $request, int $id): JsonResponse
     {
         $data     = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);
-        $merchant = FoodMerchant::findOrFail($id);
+        $merchant = FoodMerchant::with('user')->findOrFail($id);
 
         $old = $merchant->status;
         $merchant->update(['status' => 'suspended', 'is_open' => false]);
+        if ($merchant->user) {
+            $merchant->user->update(['status' => 'suspended']);
+        }
 
         $this->auditLogService->log($request->user(), 'suspend_merchant', $merchant,
             ['status' => $old], ['status' => 'suspended', 'reason' => $data['reason'] ?? null]);
