@@ -87,8 +87,8 @@ class CustomerController extends Controller
         $services   = HomeService::whereIn('id', $serviceIds)
             ->where('provider_id', $provider->id)
             ->where('is_active', true)
-            ->keyBy('id')
-            ->get();
+            ->get()
+            ->keyBy('id');
 
         foreach ($data['items'] as $item) {
             $service = $services->get($item['service_id']);

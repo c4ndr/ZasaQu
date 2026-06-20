@@ -35,7 +35,7 @@ class AuthController extends Controller
             'shop_lng'      => ['nullable', 'numeric', 'between:-180,180'],
             // Home provider fields
             'provider_name'     => ['required_if:role,home_provider', 'nullable', 'string', 'max:100'],
-            'provider_category' => ['required_if:role,home_provider', 'nullable', 'in:laundry,pijat,cleaning,tukang,lainnya'],
+            'provider_category' => ['required_if:role,home_provider', 'nullable', 'in:laundry,pijat,cleaning,tukang,cukur,lainnya'],
             'provider_address'  => ['required_if:role,home_provider', 'nullable', 'string', 'max:255'],
             'provider_phone'    => ['nullable', 'string', 'max:20'],
             'provider_lat'      => ['nullable', 'numeric', 'between:-90,90'],

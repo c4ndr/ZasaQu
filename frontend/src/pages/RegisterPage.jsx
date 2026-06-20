@@ -19,6 +19,7 @@ const HOME_CATEGORIES = [
   { value: 'pijat',    label: 'Pijat & Relaksasi' },
   { value: 'cleaning', label: 'Cleaning Service' },
   { value: 'tukang',   label: 'Tukang & Perbaikan' },
+  { value: 'cukur',    label: 'Cukur Panggilan' },
   { value: 'lainnya',  label: 'Lainnya' },
 ]
 

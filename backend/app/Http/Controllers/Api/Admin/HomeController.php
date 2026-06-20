@@ -78,6 +78,10 @@ class HomeController extends Controller
         $old = $provider->status;
         $provider->update(['status' => 'active']);
 
+        if ($provider->user && $provider->user->status === 'pending_review') {
+            $provider->user->update(['status' => 'active']);
+        }
+
         $this->auditLogService->log($request->user(), 'approve_home_provider', $provider,
             ['status' => $old], ['status' => 'active']);
 
