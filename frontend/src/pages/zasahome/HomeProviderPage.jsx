@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import api, { storageUrl } from '../../services/api'
 
 const UNIT_LABEL = { kg: '/kg', item: '/item', jam: '/jam', sesi: '/sesi' }
@@ -31,6 +32,8 @@ function estimatedDate(estimatedHours) {
 export default function HomeProviderPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
   const [provider, setProvider] = useState(null)
   const [loading,  setLoading]  = useState(true)
   const [cart,     setCart]     = useState({})
@@ -61,6 +64,7 @@ export default function HomeProviderPage() {
   const totalPrice = provider?.services?.reduce((s, sv) => s + (cart[sv.id] ?? 0) * sv.price, 0) ?? 0
 
   function proceedOrder() {
+    if (!user) { navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`); return }
     const items = Object.entries(cart).map(([sid, qty]) => {
       const sv = provider.services.find(s => s.id === parseInt(sid))
       return { service_id: sv.id, quantity: qty, service: sv }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import api, { storageUrl } from '../../services/api'
 
 const SKILL_LV = {
@@ -11,6 +12,8 @@ const UNIT_LABEL = { item: 'item', jam: 'jam', sesi: 'sesi', titik: 'titik', met
 export default function ServProviderPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
   const [provider,             setProvider]             = useState(null)
   const [loading,              setLoading]              = useState(true)
   const [selected,             setSelected]             = useState({})
@@ -40,6 +43,7 @@ export default function ServProviderPage() {
 
   function handleBooking() {
     if (!totalItems) return
+    if (!user) { navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`); return }
     const items = Object.entries(selected).map(([service_id, quantity]) => ({
       service_id: parseInt(service_id), quantity,
     }))

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { GoogleMap, OverlayView } from '@react-google-maps/api'
 import { useAuth } from '../../context/AuthContext'
 import useAppInfo from '../../hooks/useAppInfo'
@@ -326,6 +326,7 @@ export default function RidePage() {
   const { user } = useAuth()
   const { wallet_enabled: walletEnabled } = useAppInfo()
   const navigate  = useNavigate()
+  const location  = useLocation()
 
   const [step, setStep]           = useState(1)
   const [vehicleType, setVehicle] = useState('motor')
@@ -442,6 +443,7 @@ export default function RidePage() {
   }
 
   const handleBook = async () => {
+    if (!user) { navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`); return }
     setLoading(true); setError(null)
     try {
       const res = await api.post('/ride/orders', {

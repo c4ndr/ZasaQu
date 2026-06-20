@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { isNative } from '../utils/nativePlatform'
+import { useAuth } from '../context/AuthContext'
 
 const AUTH_PATHS = ['/login', '/register', '/forgot-password']
 const ADMIN_PREFIX = '/admin'
@@ -24,9 +25,11 @@ export default function ApkPopup() {
   const [visible, setVisible] = useState(false)
   const [animOut, setAnimOut] = useState(false)
   const { pathname } = useLocation()
+  const { user } = useAuth()
   const apkSize = useApkSize()
 
   useEffect(() => {
+    if (!user) { setVisible(false); return }
     if (AUTH_PATHS.includes(pathname)) { setVisible(false); return }
     if (pathname.startsWith(ADMIN_PREFIX)) { setVisible(false); return }
     if (isNative) return
@@ -34,7 +37,7 @@ export default function ApkPopup() {
       const t = setTimeout(() => setVisible(true), 2000)
       return () => clearTimeout(t)
     }
-  }, [pathname])
+  }, [pathname, user])
 
   const dismiss = () => {
     shownThisLoad = true
@@ -42,7 +45,7 @@ export default function ApkPopup() {
     setTimeout(() => setVisible(false), 280)
   }
 
-  if (!visible || AUTH_PATHS.includes(pathname)) return null
+  if (!visible || !user || AUTH_PATHS.includes(pathname)) return null
 
   return (
     <>

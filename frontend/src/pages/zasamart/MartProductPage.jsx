@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import useMartCartCount from '../../hooks/useMartCartCount'
 
@@ -10,6 +11,8 @@ const STORAGE  = import.meta.env.VITE_STORAGE_URL || ((import.meta.env.VITE_API_
 export default function MartProductPage() {
   const { id }       = useParams()
   const navigate     = useNavigate()
+  const location     = useLocation()
+  const { user }     = useAuth()
   const { count: cartCount } = useMartCartCount()
   const [product, setProduct] = useState(null)
   const [imgIdx, setImgIdx]   = useState(0)
@@ -24,6 +27,7 @@ export default function MartProductPage() {
   }, [id])
 
   const addToCart = async () => {
+    if (!user) { navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`); return }
     setAdding(true); setMsg('')
     try {
       await api.post('/mart/cart', { product_id: product.id, quantity: qty })
@@ -199,6 +203,7 @@ export default function MartProductPage() {
               🛒 Keranjang
             </button>
             <button onClick={async () => {
+              if (!user) { navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`); return }
               await addToCart()
               navigate('/mart/cart')
             }} disabled={adding}

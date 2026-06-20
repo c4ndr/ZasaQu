@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import api, { storageUrl } from '../../services/api'
 
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
@@ -90,6 +91,7 @@ export default function FoodMerchantPage() {
   const { id }     = useParams()
   const navigate   = useNavigate()
   const location   = useLocation()
+  const { user }   = useAuth()
   const autoJoinSession = location.state?.autoJoinSession ?? null
   const [merchant, setMerchant]   = useState(null)
   const [loading,  setLoading]    = useState(true)
@@ -164,6 +166,7 @@ export default function FoodMerchantPage() {
   const cartCount = cartItems.reduce((s, l) => s + l.qty, 0)
 
   function goToCart() {
+    if (!user) { navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`); return }
     navigate('/food/cart', { state: {
       merchant,
       cart: cartItems.map(l => ({

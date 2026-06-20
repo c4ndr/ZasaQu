@@ -33,6 +33,15 @@ function ModuleRoute({ featureKey, children }) {
   if (PROVIDER_ONLY_ROLES.includes(user.role)) return <Navigate to="/dashboard" replace />
   return children
 }
+
+// Route browsing publik — guest boleh masuk, login baru wajib saat mau order
+function BrowseRoute({ featureKey, children }) {
+  const { features } = useAppInfo()
+  const { user } = useAuth()
+  if (features && features[featureKey] === false) return <Navigate to={user ? '/dashboard' : '/'} replace />
+  if (user && PROVIDER_ONLY_ROLES.includes(user.role)) return <Navigate to="/dashboard" replace />
+  return children
+}
 import MitraOrderAlert from './components/MitraOrderAlert'
 
 // ── Lazy-load semua halaman agar bundle awal lebih kecil ──────────────────────
@@ -324,8 +333,8 @@ function AppRoutes() {
       <Route path="/addresses" element={<PrivateRoute><AddressesPage /></PrivateRoute>} />
 
       {/* ZasaHome */}
-      <Route path="/home" element={<ModuleRoute featureKey="zasahome"><ZasaHomePage /></ModuleRoute>} />
-      <Route path="/home/providers/:id" element={<ModuleRoute featureKey="zasahome"><HomeProviderPage /></ModuleRoute>} />
+      <Route path="/home" element={<BrowseRoute featureKey="zasahome"><ZasaHomePage /></BrowseRoute>} />
+      <Route path="/home/providers/:id" element={<BrowseRoute featureKey="zasahome"><HomeProviderPage /></BrowseRoute>} />
       <Route path="/home/checkout" element={<ModuleRoute featureKey="zasahome"><HomeCheckoutPage /></ModuleRoute>} />
       <Route path="/home/orders" element={<ModuleRoute featureKey="zasahome"><HomeMyOrdersPage /></ModuleRoute>} />
       <Route path="/home/orders/:id" element={<ModuleRoute featureKey="zasahome"><HomeOrderDetailPage /></ModuleRoute>} />
@@ -334,8 +343,8 @@ function AppRoutes() {
       <Route path="/home/provider/settings" element={<HomeProviderRoute><HomeProviderSettingsPage /></HomeProviderRoute>} />
 
       {/* ZasaServ */}
-      <Route path="/serv" element={<ModuleRoute featureKey="zasaserv"><ZasaServPage /></ModuleRoute>} />
-      <Route path="/serv/providers/:id" element={<ModuleRoute featureKey="zasaserv"><ServProviderPage /></ModuleRoute>} />
+      <Route path="/serv" element={<BrowseRoute featureKey="zasaserv"><ZasaServPage /></BrowseRoute>} />
+      <Route path="/serv/providers/:id" element={<BrowseRoute featureKey="zasaserv"><ServProviderPage /></BrowseRoute>} />
       <Route path="/serv/checkout" element={<ModuleRoute featureKey="zasaserv"><ServCheckoutPage /></ModuleRoute>} />
       <Route path="/serv/orders" element={<ModuleRoute featureKey="zasaserv"><ServMyOrdersPage /></ModuleRoute>} />
       <Route path="/serv/orders/:id" element={<ModuleRoute featureKey="zasaserv"><ServOrderDetailPage /></ModuleRoute>} />
@@ -344,8 +353,8 @@ function AppRoutes() {
       <Route path="/serv/provider/settings" element={<ServProviderRoute><ServProviderSettingsPage /></ServProviderRoute>} />
 
       {/* ZasaFood */}
-      <Route path="/food" element={<ModuleRoute featureKey="zasafood"><FoodPage /></ModuleRoute>} />
-      <Route path="/food/merchants/:id" element={<ModuleRoute featureKey="zasafood"><FoodMerchantPage /></ModuleRoute>} />
+      <Route path="/food" element={<BrowseRoute featureKey="zasafood"><FoodPage /></BrowseRoute>} />
+      <Route path="/food/merchants/:id" element={<BrowseRoute featureKey="zasafood"><FoodMerchantPage /></BrowseRoute>} />
       <Route path="/food/cart" element={<ModuleRoute featureKey="zasafood"><FoodCartPage /></ModuleRoute>} />
       <Route path="/food/orders" element={<ModuleRoute featureKey="zasafood"><FoodOrdersPage /></ModuleRoute>} />
       <Route path="/food/orders/:id" element={<ModuleRoute featureKey="zasafood"><FoodTrackingPage /></ModuleRoute>} />
@@ -378,13 +387,13 @@ function AppRoutes() {
       <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogPage /></AdminRoute>} />
 
       {/* ZasaShop — Customer */}
-      <Route path="/mart" element={<ModuleRoute featureKey="zasamart"><ZasaShopPage /></ModuleRoute>} />
-      <Route path="/mart/products/:id" element={<ModuleRoute featureKey="zasamart"><MartProductPage /></ModuleRoute>} />
+      <Route path="/mart" element={<BrowseRoute featureKey="zasamart"><ZasaShopPage /></BrowseRoute>} />
+      <Route path="/mart/products/:id" element={<BrowseRoute featureKey="zasamart"><MartProductPage /></BrowseRoute>} />
       <Route path="/mart/cart" element={<ModuleRoute featureKey="zasamart"><MartCartPage /></ModuleRoute>} />
       <Route path="/mart/checkout" element={<ModuleRoute featureKey="zasamart"><MartCheckoutPage /></ModuleRoute>} />
       <Route path="/mart/orders" element={<ModuleRoute featureKey="zasamart"><MartOrdersPage /></ModuleRoute>} />
       <Route path="/mart/orders/:id" element={<ModuleRoute featureKey="zasamart"><MartOrderDetailPage /></ModuleRoute>} />
-      <Route path="/mart/sellers/:id" element={<ModuleRoute featureKey="zasamart"><MartSellerPage /></ModuleRoute>} />
+      <Route path="/mart/sellers/:id" element={<BrowseRoute featureKey="zasamart"><MartSellerPage /></BrowseRoute>} />
 
       {/* ZasaShop — Seller */}
       <Route path="/seller" element={<SellerRoute><SellerDashboardPage /></SellerRoute>} />
@@ -400,7 +409,7 @@ function AppRoutes() {
       <Route path="/admin/mart/orders" element={<AdminRoute><AdminMartOrdersPage /></AdminRoute>} />
 
       {/* ZasaRide */}
-      <Route path="/ride" element={<ModuleRoute featureKey="zasaride"><RidePage /></ModuleRoute>} />
+      <Route path="/ride" element={<BrowseRoute featureKey="zasaride"><RidePage /></BrowseRoute>} />
       <Route path="/ride/orders" element={<ModuleRoute featureKey="zasaride"><RideOrdersPage /></ModuleRoute>} />
       <Route path="/ride/chat/:id" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/mitra/ride" element={<MitraRoute><ModuleRoute featureKey="zasaride"><MitraRidePage /></ModuleRoute></MitraRoute>} />

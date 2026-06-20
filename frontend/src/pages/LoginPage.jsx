@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 
@@ -14,6 +14,8 @@ export default function LoginPage() {
 
   const { login }  = useAuth()
   const navigate   = useNavigate()
+  const location   = useLocation()
+  const redirectTo = (() => { const r = new URLSearchParams(location.search).get('redirect') || ''; return r.startsWith('/') ? r : '/dashboard' })()
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleSendOtp = async () => {
@@ -38,7 +40,7 @@ export default function LoginPage() {
         ? await api.post('/auth/login', { email: form.email, password: form.password })
         : await api.post('/auth/otp/login', { phone: form.phone, otp: form.otp })
       login(res.data.user, res.data.token)
-      navigate('/dashboard')
+      navigate(redirectTo)
     } catch (err) {
       setError(err.response?.data?.message || 'Login gagal.')
     } finally { setLoading(false) }
