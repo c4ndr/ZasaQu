@@ -2,10 +2,10 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const SERVICES = [
-  { emoji: '🛵', name: 'ZasaGo',   tagline: 'Ojek & Kurir',       desc: 'Antar jemput & pengiriman ekspres ke seluruh area layanan.',   color: '#F97316', bg: 'rgba(249,115,22,0.12)' },
-  { emoji: '🍔', name: 'ZasaFood', tagline: 'Pesan Makanan',      desc: 'Ratusan menu dari warung dan restoran lokal favoritmu.',        color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
-  { emoji: '🛒', name: 'ZasaMart', tagline: 'Belanja Lokal',      desc: 'Produk kebutuhan dari pedagang lokal yang terpercaya.',         color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
-  { emoji: '🏠', name: 'ZasaHome', tagline: 'Jasa Rumah',         desc: 'Cleaning, laundry, pijat, tukang — semua bisa dipesan.',        color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
+  { emoji: '🛵', name: 'ZasaRide', tagline: 'Ojek & Antar',       desc: 'Antar jemput & perjalanan ekspres ke seluruh area layanan.',   color: '#F97316', bg: 'rgba(249,115,22,0.12)', route: '/ride' },
+  { emoji: '🍔', name: 'ZasaFood', tagline: 'Pesan Makanan',      desc: 'Ratusan menu dari warung dan restoran lokal favoritmu.',        color: '#EF4444', bg: 'rgba(239,68,68,0.12)',  route: '/food' },
+  { emoji: '🛒', name: 'ZasaMart', tagline: 'Belanja Lokal',      desc: 'Produk kebutuhan dari pedagang lokal yang terpercaya.',         color: '#10B981', bg: 'rgba(16,185,129,0.12)', route: '/mart' },
+  { emoji: '🏠', name: 'ZasaHome', tagline: 'Jasa Rumah',         desc: 'Cleaning, laundry, pijat, tukang — semua bisa dipesan.',        color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)', route: '/home' },
 ]
 
 const STEPS = [
@@ -98,8 +98,12 @@ export default function LandingPage() {
                 style={{ padding: '17px', borderRadius: 16, border: 'none', background: 'linear-gradient(135deg,#00C896,#00A87D)', color: '#0C0C16', fontWeight: 900, fontSize: 16, cursor: 'pointer', boxShadow: '0 10px 32px rgba(0,200,150,0.35)' }}>
                 Mulai Gratis Sekarang →
               </button>
+              <button onClick={() => navigate('/food')}
+                style={{ padding: '15px', borderRadius: 16, border: '1px solid rgba(0,200,150,0.25)', background: 'rgba(0,200,150,0.07)', color: '#00C896', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+                Jelajahi Dulu Tanpa Daftar →
+              </button>
               <button onClick={() => navigate('/login')}
-                style={{ padding: '15px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+                style={{ padding: '13px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
                 Sudah punya akun? Masuk
               </button>
             </div>
@@ -123,12 +127,13 @@ export default function LandingPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {SERVICES.map(s => (
-            <button key={s.name} onClick={() => navigate('/layanan')}
+            <button key={s.name} onClick={() => navigate(s.route)}
               style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', padding: '20px 16px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s' }}>
               <div style={{ width: 52, height: 52, borderRadius: 16, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 12 }}>{s.emoji}</div>
               <p style={{ fontSize: 15, fontWeight: 900, color: '#fff', margin: '0 0 3px' }}>{s.name}</p>
               <p style={{ fontSize: 11, fontWeight: 700, color: s.color, margin: '0 0 6px', letterSpacing: '0.03em' }}>{s.tagline}</p>
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: 0, lineHeight: 1.5 }}>{s.desc}</p>
+              <p style={{ fontSize: 11, color: s.color, margin: '8px 0 0', fontWeight: 700 }}>Lihat →</p>
             </button>
           ))}
         </div>
