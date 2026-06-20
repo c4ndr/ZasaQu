@@ -4,6 +4,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.net.Uri;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
@@ -16,24 +18,26 @@ import com.google.firebase.messaging.RemoteMessage;
 import java.util.Map;
 
 /**
- * Custom FCM service — intercept incoming_call untuk tampilan layar penuh.
- * Semua pesan lain diteruskan ke Capacitor via reflection.
+ * Custom FCM service — intercept incoming_call untuk tampilan layar penuh,
+ * dan chat_message / serv_consultation untuk suara notifikasi kustom.
  */
 public class ZasaQuFcmService extends FirebaseMessagingService {
 
     static final String CHANNEL_CALLS = "zasaqu_incoming_calls";
+    static final String CHANNEL_CHAT  = "zasaqu_chat";
     static final int    NOTIF_ID_CALL = 9901;
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         Map<String, String> data = remoteMessage.getData();
 
-        if ("incoming_call".equals(data.get("type"))) {
+        String type = data.get("type");
+
+        if ("incoming_call".equals(type)) {
             String orderId    = data.containsKey("order_id")    ? data.get("order_id")    : "";
             String orderType  = data.containsKey("order_type")  ? data.get("order_type")  : "zasago";
             String callerName = data.containsKey("caller_name") ? data.get("caller_name") : "Pengguna ZasaQu";
 
-            // Simpan agar tap notif biasa (bukan full-screen) juga bisa membuka call
             getSharedPreferences("zasaqu_call", MODE_PRIVATE).edit()
                 .putString("notif_order_id",    orderId)
                 .putString("notif_order_type",  orderType)
@@ -42,6 +46,18 @@ public class ZasaQuFcmService extends FirebaseMessagingService {
 
             createCallChannel();
             showFullScreenCallNotification(orderId, orderType, callerName);
+
+        } else if ("chat_message".equals(type) || "serv_consultation".equals(type) || "serv_consultation_reply".equals(type)) {
+            // Notifikasi pesan chat — gunakan suara kustom
+            createChatChannel();
+            RemoteMessage.Notification notif = remoteMessage.getNotification();
+            String title = notif != null ? notif.getTitle() : "💬 Pesan Baru";
+            String body  = notif != null ? notif.getBody()  : "Ada pesan baru dari ZasaQu";
+            // Fallback ke data payload jika notification payload kosong (data-only FCM)
+            if (title == null) title = data.containsKey("title") ? data.get("title") : "💬 Pesan Baru";
+            if (body  == null) body  = data.containsKey("body")  ? data.get("body")  : "Ada pesan baru dari ZasaQu";
+            showChatNotification(title, body);
+
         } else {
             // Teruskan ke Capacitor PushNotificationsPlugin via reflection
             forwardToCapacitor(remoteMessage);
@@ -69,6 +85,62 @@ public class ZasaQuFcmService extends FirebaseMessagingService {
             RemoteMessage.Notification notif = remoteMessage.getNotification();
             if (notif != null) showSimpleNotification(notif.getTitle(), notif.getBody());
         }
+    }
+
+    // ─── Chat notification dengan suara kustom ───────────────────────────────
+
+    private void createChatChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm == null || nm.getNotificationChannel(CHANNEL_CHAT) != null) return;
+
+        Uri soundUri = Uri.parse(
+            "android.resource://" + getPackageName() + "/raw/notif_chat"
+        );
+
+        AudioAttributes audioAttr = new AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build();
+
+        NotificationChannel ch = new NotificationChannel(
+            CHANNEL_CHAT, "Pesan Chat", NotificationManager.IMPORTANCE_HIGH);
+        ch.setDescription("Notifikasi pesan chat ZasaQu");
+        ch.setSound(soundUri, audioAttr);
+        ch.enableVibration(true);
+        ch.setVibrationPattern(new long[]{0, 250, 100, 250});
+        nm.createNotificationChannel(ch);
+    }
+
+    private void showChatNotification(String title, String body) {
+        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT
+            | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
+
+        Intent tapIntent = new Intent(this, MainActivity.class);
+        tapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent tapPi = PendingIntent.getActivity(this, 2, tapIntent, piFlags);
+
+        // Android 7 ke bawah: set sound lewat builder (channel tidak ada)
+        Uri soundUri = Uri.parse(
+            "android.resource://" + getPackageName() + "/raw/notif_chat"
+        );
+
+        NotificationCompat.Builder nb = new NotificationCompat.Builder(this, CHANNEL_CHAT)
+            .setSmallIcon(android.R.drawable.ic_dialog_email)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setSound(soundUri)
+            .setVibrate(new long[]{0, 250, 100, 250})
+            .setContentIntent(tapPi)
+            .setAutoCancel(true);
+
+        try {
+            NotificationManagerCompat.from(this).notify(
+                (int) System.currentTimeMillis(), nb.build()
+            );
+        } catch (SecurityException ignored) {}
     }
 
     // ─── Full-screen incoming call ────────────────────────────────────────────
