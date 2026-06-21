@@ -28,12 +28,13 @@ class RideStatusUpdated implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'order_id'    => $this->order->id,
-            'status'      => $this->order->status,
-            'prev_status' => $this->prevStatus,
-            'message'     => $this->statusMessage(),
-            'emoji'       => $this->statusEmoji(),
-            'mitra'       => $this->order->mitra ? [
+            'order_id'         => $this->order->id,
+            'status'           => $this->order->status,
+            'prev_status'      => $this->prevStatus,
+            'proof_photo_path' => $this->order->proof_photo_path,
+            'message'          => $this->statusMessage(),
+            'emoji'            => $this->statusEmoji(),
+            'mitra'            => $this->order->mitra ? [
                 'id'   => $this->order->mitra->id,
                 'name' => $this->order->mitra->name,
             ] : null,

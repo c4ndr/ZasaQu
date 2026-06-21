@@ -370,10 +370,22 @@ export default function RidePage() {
   useEffect(() => {
     if (!activeOrder) return
     const ch = echo.channel(`ride.orders.${activeOrder.id}`)
-    ch.listen('.ride.status.updated', (data) => {
-      setActiveOrder(prev => prev ? { ...prev, ...data } : prev)
-      if (data.status === 'completed' || data.status === 'cancelled') {
+    ch.listen('.ride.status.updated', async (data) => {
+      if (data.status === 'completed') {
+        // Fetch order lengkap agar proof_photo_path tersedia, lalu tahan 30 detik
+        // supaya orang tua sempat melihat foto bukti tiba di sekolah
+        try {
+          const res = await api.get(`/ride/orders/${activeOrder.id}`)
+          setActiveOrder(res.data)
+        } catch {
+          setActiveOrder(prev => prev ? { ...prev, ...data } : prev)
+        }
+        setTimeout(checkActive, 30000)
+      } else if (data.status === 'cancelled') {
+        setActiveOrder(prev => prev ? { ...prev, ...data } : prev)
         setTimeout(checkActive, 2000)
+      } else {
+        setActiveOrder(prev => prev ? { ...prev, ...data } : prev)
       }
     })
     return () => echo.leave(`ride.orders.${activeOrder.id}`)
