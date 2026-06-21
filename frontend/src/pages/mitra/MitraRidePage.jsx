@@ -66,6 +66,18 @@ function ActiveRideCard({ order, onUpdate }) {
     } finally { setLoading(false) }
   }
 
+  const canCancel = ['accepted', 'on_pickup'].includes(order.status)
+  const cancelOrder = async () => {
+    if (!window.confirm('Batalkan perjalanan ini? Tindakan ini tidak bisa dibatalkan.')) return
+    setLoading(true)
+    try {
+      await api.patch(`/ride/mitra/orders/${order.id}/status`, { status: 'cancelled', reason: 'Dibatalkan oleh mitra' })
+      onUpdate()
+    } catch (e) {
+      alert(e.response?.data?.message || 'Gagal membatalkan perjalanan.')
+    } finally { setLoading(false) }
+  }
+
   return (
     <div style={{
       background: 'var(--k-card)', border: '1px solid var(--k-border)',
@@ -207,6 +219,16 @@ function ActiveRideCard({ order, onUpdate }) {
           opacity: loading ? 0.7 : 1,
         }}>
           {loading ? 'Memproses...' : needPhoto ? '📸 Upload foto dulu' : info.nextLabel}
+        </button>
+      )}
+      {canCancel && (
+        <button onClick={cancelOrder} disabled={loading} style={{
+          width: '100%', marginTop: 10, padding: '12px', borderRadius: 14,
+          background: 'transparent', border: '1px solid rgba(239,68,68,0.4)',
+          color: 'var(--k-danger, #EF4444)', fontSize: 13, fontWeight: 700,
+          cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1,
+        }}>
+          Batalkan Perjalanan
         </button>
       )}
     </div>

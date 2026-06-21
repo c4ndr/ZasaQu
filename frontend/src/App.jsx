@@ -520,6 +520,9 @@ function NotifBridge() {
     const token = localStorage.getItem('token') || ''
     const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '') + '/api'
     AgoraVoice.setCallConfig({ baseUrl, token }).catch(() => {})
+    // Pre-initialize Agora saat user login agar joinChannel lebih cepat saat telepon
+    const appId = import.meta.env.VITE_AGORA_APP_ID || ''
+    if (appId) AgoraVoice.initialize({ appId }).catch(() => {})
 
     // Flush pending FCM token yang disimpan saat user belum login
     const pendingFcm = localStorage.getItem('_pending_fcm_token')
@@ -536,7 +539,9 @@ function NotifBridge() {
       try {
         const res = await AgoraVoice.getPendingCall()
         if (res?.orderId && res?.orderType) {
-          storeIncomingCall({ orderId: res.orderId, orderType: res.orderType, callerName: res.callerName || null })
+          // senderId='__native__' mencegah VoiceCallBridge menampilkan overlay +
+          // memainkan ringtone JS (native ringtone sudah berhenti di IncomingCallActivity.answer)
+          storeIncomingCall({ orderId: res.orderId, orderType: res.orderType, callerName: res.callerName || null, senderId: '__native__' })
           if (res.autoAnswer) markAutoAnswer()
           const targetPath = resolveChatPath(user.role, res.orderType, res.orderId)
           navigate(targetPath)

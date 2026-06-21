@@ -25,9 +25,19 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
   const startingRef    = useRef(false)
   const agoraJoined    = useRef(false)
   const remoteAudio    = useRef(null)    // Agora tidak butuh ini, dijaga untuk CallModal
+  const cachedTokenRef = useRef(null)    // token di-prefetch saat mount untuk percepat joinChannel
 
   // Nama channel Agora — pakai orderId sehingga kedua pihak join ke channel yang sama
   const agoraChannel = `${orderType}_${orderId}`
+
+  // Pre-fetch token Agora saat ChatPage mount agar joinChannel tidak perlu tunggu API
+  useEffect(() => {
+    if (!IS_ANDROID || !orderId) return
+    const uid = currentUserId ? parseInt(currentUserId) : 0
+    api.post('/call/agora-token', { channel_name: agoraChannel, uid })
+      .then(({ data }) => { cachedTokenRef.current = data.token })
+      .catch(() => {})
+  }, [agoraChannel, currentUserId]) // eslint-disable-line
 
   // ─── Incoming call buffer (sama seperti sebelumnya) ──────────────────────────
   useEffect(() => {
@@ -69,6 +79,7 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
     startingRef.current     = false
     isCallerRef.current     = false   // reset agar panggilan berikutnya bisa menerima
     pendingOfferRef.current = null
+    cachedTokenRef.current  = null
     setCallState('idle')
     setDuration(0)
     setIsMuted(false)
@@ -85,12 +96,16 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
       throw new Error('init: ' + (e?.message || JSON.stringify(e)))
     }
     const uid = currentUserId ? parseInt(currentUserId) : 0
-    let token
-    try {
-      const { data } = await api.post('/call/agora-token', { channel_name: agoraChannel, uid })
-      token = data.token
-    } catch (e) {
-      throw new Error('token: ' + (e?.response?.status || e?.message || JSON.stringify(e)))
+    // Pakai cached token jika tersedia (di-prefetch saat mount) — hindari round-trip API
+    let token = cachedTokenRef.current
+    cachedTokenRef.current = null   // pakai sekali saja, fetch ulang jika perlu
+    if (!token) {
+      try {
+        const { data } = await api.post('/call/agora-token', { channel_name: agoraChannel, uid })
+        token = data.token
+      } catch (e) {
+        throw new Error('token: ' + (e?.response?.status || e?.message || JSON.stringify(e)))
+      }
     }
     try {
       await AgoraVoice.joinChannel({ token, channelName: agoraChannel, uid })
@@ -179,7 +194,11 @@ export default function useVoiceCall(orderId, orderType = 'zasago', currentUserI
     const listeners = []
     const setup = async () => {
       // Saat lawan bicara join channel → panggilan aktif (untuk caller)
+      // Hentikan ringback/ringtone LANGSUNG sebelum React commit — cegah tumpang tindih
+      // antara ringback dan audio Agora yang sudah mengalir.
       const l1 = await AgoraVoice.addListener('userJoined', () => {
+        stopRingtone()
+        stopRingback()
         setCallState(prev => {
           if (prev === 'ringing') { startTimerRef.current(); return 'active' }
           return prev
