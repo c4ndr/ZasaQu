@@ -1,9 +1,14 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
+import { App } from '@capacitor/app'
 import { useAuth } from '../context/AuthContext'
 import echo from '../services/echo'
-import { showBubble, resetBubbleBadge, hasOverlayPermission, requestOverlayPermission } from '../services/floatingBubble'
+import {
+  showBubble, resetBubbleBadge,
+  hasOverlayPermission, requestOverlayPermission,
+  hasBatteryOptimizationExemption, requestBatteryOptimization,
+} from '../services/floatingBubble'
 
 const IS_ANDROID = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
 
@@ -64,7 +69,32 @@ export default function useFloatingBubble() {
   // ── Minta izin overlay sekali saat pertama login ──────────────────────────
   useEffect(() => {
     if (!IS_ANDROID || !user) return
-    hasOverlayPermission().then(granted => { if (!granted) requestOverlayPermission() })
+
+    async function ensurePermissions() {
+      const overlayGranted = await hasOverlayPermission()
+      if (!overlayGranted) {
+        await requestOverlayPermission()
+        return // battery akan diminta setelah user balik dari Settings
+      }
+      const batteryExempt = await hasBatteryOptimizationExemption()
+      if (!batteryExempt) requestBatteryOptimization()
+    }
+
+    ensurePermissions()
+  }, [user?.id])
+
+  // ── Re-check izin saat app kembali ke foreground (setelah dari Settings) ──
+  useEffect(() => {
+    if (!IS_ANDROID || !user) return
+    let handle
+    App.addListener('appStateChange', async ({ isActive }) => {
+      if (!isActive) return
+      const overlayGranted = await hasOverlayPermission()
+      if (!overlayGranted) return
+      const batteryExempt = await hasBatteryOptimizationExemption()
+      if (!batteryExempt) requestBatteryOptimization()
+    }).then(h => { handle = h })
+    return () => { handle?.remove() }
   }, [user?.id])
 
   // ── Subscribe pesan chat masuk via WebSocket ──────────────────────────────

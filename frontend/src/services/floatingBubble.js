@@ -46,3 +46,18 @@ export async function resetBubbleBadge() {
   if (!IS_ANDROID) return
   try { await FloatingBubble.resetBadge() } catch {}
 }
+
+// Cek apakah app sudah dibebaskan dari battery optimization
+export async function hasBatteryOptimizationExemption() {
+  if (!IS_ANDROID) return true
+  try {
+    const { exempt } = await FloatingBubble.hasBatteryOptimizationExemption()
+    return exempt
+  } catch { return true }
+}
+
+// Minta user bebaskan app dari battery optimization (buka dialog sistem)
+export async function requestBatteryOptimization() {
+  if (!IS_ANDROID) return
+  try { await FloatingBubble.requestBatteryOptimization() } catch {}
+}

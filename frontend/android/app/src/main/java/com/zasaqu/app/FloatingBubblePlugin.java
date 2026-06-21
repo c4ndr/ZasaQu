@@ -3,6 +3,7 @@ package com.zasaqu.app;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
 import android.provider.Settings;
 
 import com.getcapacitor.JSObject;
@@ -80,6 +81,27 @@ public class FloatingBubblePlugin extends Plugin {
             || Settings.canDrawOverlays(getContext());
     }
 
+    @PluginMethod
+    public void hasBatteryOptimizationExemption(PluginCall call) {
+        PowerManager pm = (PowerManager) getContext().getSystemService(getContext().POWER_SERVICE);
+        boolean exempt = pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName());
+        JSObject ret = new JSObject();
+        ret.put("exempt", exempt);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void requestBatteryOptimization(PluginCall call) {
+        try {
+            Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                Uri.parse("package:" + getContext().getPackageName()));
+            getActivity().startActivity(i);
+        } catch (Exception ignored) {}
+        JSObject ret = new JSObject();
+        ret.put("opened", true);
+        call.resolve(ret);
+    }
+
     private void startBubbleService(String action, PluginCall call) {
         Intent i = new Intent(getContext(), FloatingBubbleService.class);
         i.setAction(action);
@@ -87,7 +109,13 @@ public class FloatingBubblePlugin extends Plugin {
         i.putExtra("label", call.getString("label", "Order aktif"));
         i.putExtra("route", call.getString("route", "/"));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            getContext().startForegroundService(i);
+            try {
+                getContext().startForegroundService(i);
+            } catch (Exception e) {
+                // Android 12+ ForegroundServiceStartNotAllowedException saat app di background
+                // Fallback ke startService — tidak crash, mungkin tidak jalan, tapi aman
+                try { getContext().startService(i); } catch (Exception ignored) {}
+            }
         } else {
             getContext().startService(i);
         }
