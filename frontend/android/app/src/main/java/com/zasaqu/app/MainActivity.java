@@ -6,6 +6,10 @@ import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+
+    // Dipakai ZasaQuFcmService untuk cek apakah app sedang foreground
+    public static volatile boolean isInForeground = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         WebView.setWebContentsDebuggingEnabled(true);
@@ -13,6 +17,18 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(FloatingBubblePlugin.class);
         super.onCreate(savedInstanceState);
         handleBubbleRoute(getIntent());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        isInForeground = true;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isInForeground = false;
     }
 
     @Override

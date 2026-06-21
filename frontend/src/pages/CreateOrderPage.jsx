@@ -318,9 +318,13 @@ export default function CreateOrderPage() {
                 )}
               </div>
 
-              {selectedCat?.requires_disclaimer && (
+              {(selectedCat?.requires_disclaimer || Number(form.item_value) > 200000) && (
                 <div style={{ background: 'rgba(246,173,85,0.08)', border: '1px solid rgba(246,173,85,0.2)', borderRadius: 14, padding: '12px 14px' }}>
-                  <p style={{ color: 'var(--k-warn)', fontSize: 12, marginBottom: 10 }}>⚠️ Barang ini memerlukan disclaimer risiko kerusakan.</p>
+                  <p style={{ color: 'var(--k-warn)', fontSize: 12, marginBottom: 10 }}>
+                    {Number(form.item_value) > 200000
+                      ? '⚠️ Nilai barang melebihi Rp200.000. Risiko kehilangan/kerusakan ditanggung pengirim.'
+                      : '⚠️ Barang ini memerlukan disclaimer risiko kerusakan.'}
+                  </p>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                     <input type="checkbox" name="requires_disclaimer" checked={form.requires_disclaimer} onChange={handleChange} style={{ accentColor: 'var(--k-accent)', width: 16, height: 16 }} />
                     <span style={{ color: 'var(--k-sub)', fontSize: 13 }}>Saya mengerti dan menyetujui risiko</span>

@@ -27,8 +27,8 @@ const DEFAULT_BANNERS = [
   },
   {
     gradient: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-    emoji: '📦', title: 'ZasaGo — Kurir Lokal Andalan',
-    subtitle: 'Pengiriman cepat ke seluruh area, harga transparan.',
+    emoji: '🛍️', title: 'Jastip — Titip Beli Barang',
+    subtitle: 'Titip belanja ke mitra terpercaya, hemat waktu & tenaga.',
   },
   {
     gradient: 'linear-gradient(135deg, #00C896 0%, #00A87D 100%)',
@@ -527,11 +527,11 @@ export default function DashboardPage() {
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
 
-              {/* ZasaGo */}
+              {/* Jastip */}
               <ServiceCard
                 to={feat.zasago ? '/jastip' : null}
-                emoji="📦" bgDecor="🚚"
-                title="ZasaGo" desc="Kirim & titip barang"
+                emoji="🛍️" bgDecor="📦"
+                title="Jastip" desc="Titip beli barang"
                 badge={feat.zasago ? 'AKTIF' : 'SEGERA'}
                 badgeColor={feat.zasago ? '#059669' : 'var(--k-muted)'}
                 badgeBg={feat.zasago ? 'rgba(0,200,150,0.12)' : 'var(--k-input)'}
