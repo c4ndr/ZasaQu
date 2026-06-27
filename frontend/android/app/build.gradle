@@ -7,7 +7,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.zasaqu.app"
+    namespace "com.zasaqu.com"
     compileSdk rootProject.ext.compileSdkVersion
     // Override compileOptions agar cocok dengan Java 17 yang terinstal
     compileOptions {
@@ -15,7 +15,7 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
     defaultConfig {
-        applicationId "com.zasaqu.app"
+        applicationId "com.zasaqu.com"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 104

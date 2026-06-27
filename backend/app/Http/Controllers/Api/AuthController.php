@@ -158,6 +158,27 @@ class AuthController extends Controller
         ]);
     }
 
+    public function uploadPhoto(Request $request): JsonResponse
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'max:5120', 'mimes:jpg,jpeg,png,webp'],
+        ]);
+
+        $user = $request->user();
+
+        if ($user->photo_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->photo_path);
+        }
+
+        $path = $request->file('photo')->store('user-photos', 'public');
+        $user->update(['photo_path' => $path]);
+
+        return response()->json([
+            'message'   => 'Foto profil berhasil diperbarui.',
+            'photo_url' => $user->fresh()->photo_url,
+        ]);
+    }
+
     public function saveFcmToken(Request $request): JsonResponse
     {
         $data = $request->validate(['fcm_token' => ['required', 'string', 'max:500']]);
@@ -179,5 +200,38 @@ class AuthController extends Controller
         $request->user()->update(['password' => Hash::make($data['new_password'])]);
 
         return response()->json(['message' => 'Password berhasil diubah.']);
+    }
+
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'password' => ['required'],
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($data['password'], $user->password)) {
+            return response()->json(['message' => 'Password tidak sesuai.'], 422);
+        }
+
+        if ($user->wallet && $user->wallet->balance > 0) {
+            return response()->json([
+                'message' => 'Saldo dompet Anda masih Rp' . number_format($user->wallet->balance, 0, ',', '.') . '. Tarik saldo terlebih dahulu sebelum menutup akun.',
+            ], 422);
+        }
+
+        // Anonimisasi data — riwayat order tetap ada untuk keperluan keuangan
+        $user->tokens()->delete();
+        $user->update([
+            'name'      => 'Pengguna Dihapus',
+            'email'     => 'deleted_' . $user->id . '_' . time() . '@zasaqu.invalid',
+            'phone'     => null,
+            'address'   => null,
+            'fcm_token' => null,
+            'status'    => 'banned',
+            'password'  => Hash::make(\Illuminate\Support\Str::random(32)),
+        ]);
+
+        return response()->json(['message' => 'Akun berhasil dihapus.']);
     }
 }

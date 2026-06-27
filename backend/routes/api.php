@@ -79,6 +79,8 @@ Route::prefix('auth')->group(function () {
         Route::patch('profile', [AuthController::class, 'updateProfile']);
         Route::post('change-password', [AuthController::class, 'changePassword']);
         Route::post('fcm-token', [AuthController::class, 'saveFcmToken']);
+        Route::post('photo', [AuthController::class, 'uploadPhoto']);
+        Route::delete('account', [AuthController::class, 'deleteAccount']);
     });
 });
 

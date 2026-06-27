@@ -1,4 +1,4 @@
-package com.zasaqu.app;
+package com.zasaqu.com;
 
 import android.app.KeyguardManager;
 import android.content.SharedPreferences;

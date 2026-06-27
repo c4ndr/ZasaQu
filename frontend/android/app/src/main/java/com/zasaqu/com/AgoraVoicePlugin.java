@@ -1,4 +1,4 @@
-package com.zasaqu.app;
+package com.zasaqu.com;
 
 import android.Manifest;
 import android.content.SharedPreferences;

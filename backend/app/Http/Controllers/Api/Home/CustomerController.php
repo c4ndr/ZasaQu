@@ -49,7 +49,7 @@ class CustomerController extends Controller
             'pickup_address'      => ['required', 'string', 'max:255'],
             'pickup_lat'          => ['nullable', 'numeric'],
             'pickup_lng'          => ['nullable', 'numeric'],
-            'pickup_type'         => ['nullable', 'in:antar_jemput,mandiri'],
+            'pickup_type'         => ['nullable', 'in:antar_jemput,mandiri,on_site'],
             'scheduled_at'        => ['nullable', 'date', 'after:now'],
             'delivery_address'    => ['nullable', 'string', 'max:255'],
             'delivery_lat'        => ['nullable', 'numeric'],

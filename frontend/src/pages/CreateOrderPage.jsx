@@ -180,8 +180,9 @@ export default function CreateOrderPage() {
   const navigate = useNavigate()
   const { addresses } = useAddresses()
   const { wallet_enabled: walletEnabled } = useAppInfo()
-  const [categories, setCategories] = useState([])
-  const [catError,   setCatError]   = useState(false)
+  const [categories,  setCategories]  = useState([])
+  const [catError,    setCatError]    = useState(false)
+  const [catLoading,  setCatLoading]  = useState(false)
   const [form, setForm] = useState({
     pickup_address: '', pickup_lat: '', pickup_lng: '',
     dropoff_address: '', dropoff_lat: '', dropoff_lng: '',
@@ -196,9 +197,19 @@ export default function CreateOrderPage() {
   const [estimating, setEstimating] = useState(false)
   const [promo,      setPromo]      = useState({ promoCode: null, discountAmount: 0 })
 
-  const fetchCategories = useCallback(() => {
+  const fetchCategories = useCallback((isRetry = false) => {
     setCatError(false)
-    api.get('/item-categories').then(r => setCategories(r.data)).catch(() => setCatError(true))
+    setCatLoading(true)
+    api.get('/item-categories')
+      .then(r => { setCategories(Array.isArray(r.data) ? r.data : []); setCatLoading(false) })
+      .catch(() => {
+        setCatLoading(false)
+        if (!isRetry) {
+          setTimeout(() => fetchCategories(true), 2500)
+        } else {
+          setCatError(true)
+        }
+      })
   }, [])
   useEffect(() => { fetchCategories() }, [fetchCategories])
 
@@ -308,11 +319,11 @@ export default function CreateOrderPage() {
                 {catError ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: 'rgba(245,101,101,0.07)', border: '1px solid rgba(245,101,101,0.2)' }}>
                     <p style={{ flex: 1, color: 'var(--k-danger)', fontSize: 12 }}>⚠ Gagal memuat kategori.</p>
-                    <button type="button" onClick={fetchCategories} style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'var(--k-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>Coba Lagi</button>
+                    <button type="button" onClick={() => fetchCategories(false)} style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'var(--k-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>Coba Lagi</button>
                   </div>
                 ) : (
-                  <select name="item_category_id" value={form.item_category_id} onChange={handleChange} className="input-field" style={{ cursor: 'pointer' }}>
-                    <option value="">Pilih kategori barang</option>
+                  <select name="item_category_id" value={form.item_category_id} onChange={handleChange} className="input-field" style={{ cursor: catLoading ? 'wait' : 'pointer' }} disabled={catLoading}>
+                    <option value="">{catLoading ? '⏳ Memuat kategori...' : 'Pilih kategori barang'}</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 )}

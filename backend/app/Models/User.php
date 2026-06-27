@@ -24,6 +24,7 @@ class User extends Authenticatable
         'email',
         'phone',
         'address',
+        'photo_path',
         'fcm_token',
         'password',
         'role',
@@ -38,6 +39,8 @@ class User extends Authenticatable
         // phone ditampilkan agar user bisa lihat & edit nomornya sendiri
     ];
 
+    protected $appends = ['photo_url'];
+
     protected function casts(): array
     {
         return [
@@ -45,6 +48,13 @@ class User extends Authenticatable
             'phone_verified_at'  => 'datetime',
             'password'           => 'hashed',
         ];
+    }
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        return $this->photo_path
+            ? asset('storage/' . $this->photo_path)
+            : null;
     }
 
     public function wallet()

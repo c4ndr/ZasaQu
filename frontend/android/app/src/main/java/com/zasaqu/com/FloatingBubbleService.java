@@ -1,4 +1,4 @@
-package com.zasaqu.app;
+package com.zasaqu.com;
 
 import android.app.Notification;
 import android.app.NotificationChannel;

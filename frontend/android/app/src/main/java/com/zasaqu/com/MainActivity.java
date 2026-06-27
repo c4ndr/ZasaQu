@@ -1,4 +1,4 @@
-package com.zasaqu.app;
+package com.zasaqu.com;
 
 import android.content.Intent;
 import android.os.Bundle;

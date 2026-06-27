@@ -77,9 +77,15 @@ const ROLE_LABEL = {
   mitra_mobil: { label: 'Mitra Mobil', color: '#63B3ED', bg: 'rgba(99,179,237,0.12)'  },
 }
 
-function Avatar({ name, size = 72 }) {
+function Avatar({ name, photoUrl, size = 72 }) {
   const initial = (name ?? '?')[0].toUpperCase()
   const hue = [...(name ?? 'U')].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
+  if (photoUrl) {
+    return (
+      <img src={photoUrl} alt={name}
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+    )
+  }
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -97,6 +103,13 @@ export default function ProfilePage() {
   const timerEditRef = useRef(null)
   const timerPassRef = useRef(null)
   const [walletBalance, setWalletBalance] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletePassword,  setDeletePassword]  = useState('')
+  const [deleteError,     setDeleteError]     = useState('')
+  const [deleting,        setDeleting]        = useState(false)
+  const appVersion = import.meta.env.VITE_APP_VERSION ?? '1.0.0'
+  const photoInputRef = useRef(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -191,13 +204,59 @@ export default function ProfilePage() {
     logout(); navigate('/login')
   }
 
+  async function handlePhotoChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoUploading(true)
+    const form = new FormData()
+    form.append('photo', file)
+    try {
+      const res = await api.post('/auth/photo', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+      updateUser({ photo_url: res.data.photo_url })
+    } catch {
+      alert('Gagal mengupload foto. Pastikan ukuran file < 5 MB.')
+    } finally {
+      setPhotoUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteError('')
+    setDeleting(true)
+    try {
+      await api.delete('/auth/account', { data: { password: deletePassword } })
+      logout()
+      navigate('/login')
+    } catch (err) {
+      setDeleteError(err.response?.data?.message ?? 'Gagal menghapus akun.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--k-bg)', paddingBottom: 100 }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* Header */}
       <div style={{ padding: '52px 20px 24px', background: 'linear-gradient(180deg, #0C0C22 0%, var(--k-bg) 100%)', textAlign: 'center' }}>
-        <Avatar name={user?.name} size={80} />
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+          <Avatar name={user?.name} photoUrl={user?.photo_url} size={80} />
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={photoUploading}
+            style={{
+              position: 'absolute', bottom: 0, right: 0,
+              width: 28, height: 28, borderRadius: '50%', border: '2px solid var(--k-bg)',
+              background: 'var(--k-accent)', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, cursor: 'pointer', padding: 0,
+            }}>
+            {photoUploading ? '⏳' : '📷'}
+          </button>
+          <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+        </div>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--k-text)', marginTop: 14, marginBottom: 6 }}>
           {user?.name}
         </h2>
@@ -457,7 +516,76 @@ export default function ProfilePage() {
           🚪 Keluar dari Akun
         </button>
 
+        {/* Hapus Akun */}
+        <button onClick={() => setShowDeleteModal(true)} style={{
+          width: '100%', padding: '12px', borderRadius: 18, border: 'none',
+          background: 'none', color: 'var(--k-muted)',
+          fontWeight: 600, fontSize: 13, cursor: 'pointer',
+          textDecoration: 'underline',
+        }}>
+          Hapus Akun
+        </button>
+
+        {/* Versi App */}
+        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--k-muted)', paddingBottom: 8 }}>
+          ZasaQu v{appVersion}
+        </p>
+
       </div>
+
+      {/* Modal Hapus Akun */}
+      {showDeleteModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 999,
+          background: 'rgba(0,0,0,0.6)', display: 'flex',
+          alignItems: 'flex-end', justifyContent: 'center',
+        }} onClick={() => { if (!deleting) { setShowDeleteModal(false); setDeletePassword(''); setDeleteError('') } }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--k-card)', borderRadius: '24px 24px 0 0',
+            padding: '28px 20px 40px', width: '100%', maxWidth: 480,
+          }}>
+            <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--k-danger)', marginBottom: 6 }}>⚠️ Hapus Akun</p>
+            <p style={{ fontSize: 13, color: 'var(--k-muted)', marginBottom: 20, lineHeight: 1.6 }}>
+              Akun dan data pribadi Anda akan dihapus permanen. Riwayat transaksi tetap disimpan untuk keperluan keuangan. Tindakan ini <strong>tidak dapat dibatalkan</strong>.
+            </p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-muted)', marginBottom: 6 }}>Konfirmasi Password</p>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={e => setDeletePassword(e.target.value)}
+              placeholder="Masukkan password Anda"
+              style={{
+                width: '100%', padding: '13px 16px', borderRadius: 14, fontSize: 14,
+                border: '1.5px solid var(--k-border)', background: 'var(--k-bg)',
+                color: 'var(--k-text)', marginBottom: 10, boxSizing: 'border-box',
+              }}
+            />
+            {deleteError && <p style={{ fontSize: 12, color: 'var(--k-danger)', marginBottom: 10 }}>⚠ {deleteError}</p>}
+            <button
+              onClick={handleDeleteAccount}
+              disabled={!deletePassword || deleting}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                background: deletePassword && !deleting ? 'var(--k-danger)' : 'var(--k-border)',
+                color: '#fff', fontWeight: 800, fontSize: 15,
+                cursor: deletePassword && !deleting ? 'pointer' : 'not-allowed',
+                marginBottom: 10,
+              }}>
+              {deleting ? 'Menghapus...' : 'Hapus Akun Saya'}
+            </button>
+            <button
+              onClick={() => { setShowDeleteModal(false); setDeletePassword(''); setDeleteError('') }}
+              disabled={deleting}
+              style={{
+                width: '100%', padding: '13px', borderRadius: 14, border: '1.5px solid var(--k-border)',
+                background: 'none', color: 'var(--k-muted)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+              }}>
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
+
       <BottomNav />
     </div>
   )

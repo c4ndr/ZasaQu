@@ -12,7 +12,11 @@ class OrderController extends Controller
 {
     public function __construct(private OrderService $orderService) {}
     public function categories(): JsonResponse {
-        return response()->json(ItemCategory::active()->get());
+        try {
+            return response()->json(ItemCategory::active()->orderBy('name')->get());
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Gagal memuat kategori.'], 503);
+        }
     }
     public function index(Request $request): JsonResponse {
         $userId = $request->user()->id;

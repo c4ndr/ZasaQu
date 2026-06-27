@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId:   'com.zasaqu.app',
+  appId:   'com.zasaqu.com',
   appName: 'ZasaQu',
   webDir:  'dist',
 
@@ -14,7 +14,7 @@ const config: CapacitorConfig = {
   },
 
   android: {
-    allowMixedContent: true,    // izinkan HTTP (ubah ke false jika server sudah HTTPS)
+    allowMixedContent: false,
     backgroundColor:   '#0C0C16',
     // Minta izin lokasi presisi tinggi (foreground)
     useLegacyBridge: false,
