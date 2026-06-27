@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Mart;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\CompressesImage;
 use App\Models\MartOrder;
 use App\Models\MartProduct;
 use App\Models\MartSeller;
@@ -15,6 +16,8 @@ use Illuminate\Support\Str;
 
 class SellerController extends Controller
 {
+    use CompressesImage;
+
     private function seller(Request $request): MartSeller
     {
         $seller = $request->user()->martSeller;
@@ -61,7 +64,7 @@ class SellerController extends Controller
 
         if ($seller->$field) Storage::disk('public')->delete($seller->$field);
 
-        $path = $request->file('image')->store("mart_sellers/{$seller->id}", 'public');
+        $path = $this->compressAndStore($request->file('image'), "mart_sellers/{$seller->id}", Str::random(20) . '.jpg');
         $seller->update([$field => $path]);
 
         return response()->json(['path' => $path]);
@@ -80,10 +83,7 @@ class SellerController extends Controller
         if ($seller->$field) Storage::disk('public')->delete($seller->$field);
 
         $binary   = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['data']));
-        $ext      = match($data['mime']) { 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', default => 'jpg' };
-        $filename = "mart_sellers/{$seller->id}/" . Str::random(20) . ".{$ext}";
-
-        Storage::disk('public')->put($filename, $binary);
+        $filename = $this->compressBinaryAndStore($binary, $data['mime'], "mart_sellers/{$seller->id}", Str::random(20) . '.jpg');
         $seller->update([$field => $filename]);
 
         return response()->json(['path' => $filename]);
@@ -145,7 +145,7 @@ class SellerController extends Controller
         $request->validate(['image' => ['required', 'image', 'max:2048']]);
         $product = $this->seller($request)->allProducts()->findOrFail($id);
 
-        $path   = $request->file('image')->store("mart_products/{$product->id}", 'public');
+        $path   = $this->compressAndStore($request->file('image'), "mart_products/{$product->id}", Str::random(20) . '.jpg', 1280, 1280);
         $images = $product->images ?? [];
         if (count($images) >= 5) array_shift($images);
         $images[] = $path;
@@ -164,10 +164,7 @@ class SellerController extends Controller
         $product = $this->seller($request)->allProducts()->findOrFail($id);
 
         $binary   = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['data']));
-        $ext      = match($data['mime']) { 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', default => 'jpg' };
-        $filename = "mart_products/{$product->id}/" . Str::random(20) . ".{$ext}";
-
-        Storage::disk('public')->put($filename, $binary);
+        $filename = $this->compressBinaryAndStore($binary, $data['mime'], "mart_products/{$product->id}", Str::random(20) . '.jpg');
 
         $images = $product->images ?? [];
         if (count($images) >= 5) array_shift($images);

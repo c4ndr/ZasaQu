@@ -12,15 +12,15 @@
   --k-border:    #E4E6EC;
   --k-border2:   #D0D3DD;
 
-  /* ── Brand orange ───────────────────────────── */
-  --k-primary:   #F97316;
-  --k-primary2:  #EA580C;
-  --k-primary-bg: rgba(249,115,22,0.10);
+  /* ── Brand green ───────────────────────────── */
+  --k-primary:   #00C896;
+  --k-primary2:  #00A87D;
+  --k-primary-bg: rgba(0,200,150,0.10);
 
   /* ── Accent green (sukses / konfirmasi) ─────── */
   --k-accent:    #00C896;
   --k-accent2:   #00A87D;
-  --k-glow:      rgba(249,115,22,0.12);
+  --k-glow:      rgba(0,200,150,0.15);
 
   /* ── Teks ───────────────────────────────────── */
   --k-text:      #1A1A2E;
@@ -37,10 +37,10 @@
   --k-shadow-lg: 0 8px 28px rgba(0,0,0,0.12);
 
   /* ── Header dashboard ───────────────────────── */
-  --k-header-bg: linear-gradient(150deg, #FFF4EE 0%, #FFFAF7 45%, #FFFFFF 100%);
-  --k-header-blob1: rgba(249,115,22,0.07);
-  --k-header-blob2: rgba(249,115,22,0.05);
-  --k-header-blob3: rgba(234,88,12,0.05);
+  --k-header-bg: linear-gradient(150deg, #7EDEC2 0%, #A8EDD9 55%, #D8F9F1 100%);
+  --k-header-blob1: rgba(0,200,150,0.25);
+  --k-header-blob2: rgba(0,200,150,0.18);
+  --k-header-blob3: rgba(0,168,125,0.18);
 }
 
 /* ── Dark theme ──────────────────────────────── */
@@ -57,10 +57,10 @@
   --k-muted:     #6B7280;
   --k-shadow:    0 2px 8px rgba(0,0,0,0.30);
   --k-shadow-lg: 0 8px 28px rgba(0,0,0,0.50);
-  --k-header-bg: linear-gradient(150deg, #1F1A17 0%, #1E1F2B 55%, #1A1D25 100%);
-  --k-header-blob1: rgba(249,115,22,0.10);
-  --k-header-blob2: rgba(249,115,22,0.07);
-  --k-header-blob3: rgba(234,88,12,0.07);
+  --k-header-bg: linear-gradient(150deg, #0D1F1A 0%, #0F1E1B 55%, #0F1117 100%);
+  --k-header-blob1: rgba(0,200,150,0.12);
+  --k-header-blob2: rgba(0,200,150,0.08);
+  --k-header-blob3: rgba(0,168,125,0.08);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

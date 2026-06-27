@@ -21,7 +21,7 @@ const ROLE_LABELS = {
 
 const DEFAULT_BANNERS = [
   {
-    gradient: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+    gradient: 'linear-gradient(135deg, #00C896 0%, #00A87D 100%)',
     emoji: '🎉', title: 'Selamat Datang di ZasaQu!',
     subtitle: 'Kirim barang, pesan makanan, semua dalam satu aplikasi.',
   },
@@ -231,14 +231,14 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Baris logo + tombol kanan */}
+        {/* Baris logo kiri + tombol kanan */}
         <div style={{
           padding: '10px 20px 4px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <img src={app_logo_url || '/logo-zasaqu.png'} alt={app_name || 'ZasaQu'}
             onError={e => { e.currentTarget.src = '/logo-zasaqu.png' }}
-            style={{ height: 28, display: 'block' }} />
+            style={{ height: 50, display: 'block' }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {/* Toggle mode gelap/terang */}
@@ -286,7 +286,7 @@ export default function DashboardPage() {
           </h1>
           <span style={{
             display: 'inline-block', padding: '4px 12px', borderRadius: 100,
-            background: 'rgba(249,115,22,0.10)', color: 'var(--k-primary)',
+            background: 'rgba(0,200,150,0.10)', color: 'var(--k-primary)',
             fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
           }}>
             {ROLE_LABELS[user?.role]}
@@ -366,11 +366,11 @@ export default function DashboardPage() {
         {/* ── Kartu Saldo ──────────────────────────── */}
         <div style={{
           borderRadius: 24,
-          background: 'linear-gradient(135deg, #F97316 0%, #EA580C 55%, #C2410C 100%)',
+          background: 'linear-gradient(135deg, #00C896 0%, #00A87D 55%, #007D5E 100%)',
           padding: '24px 24px 20px',
           position: 'relative', overflow: 'hidden',
           marginBottom: 16,
-          boxShadow: '0 8px 24px rgba(249,115,22,0.30)',
+          boxShadow: '0 8px 24px rgba(0,200,150,0.30)',
         }}>
           {/* Dekorasi lingkaran */}
           <div style={{
@@ -455,7 +455,7 @@ export default function DashboardPage() {
                 <Link to="/mitra/food/orders" style={{ flex: 1, minWidth: 80, textDecoration: 'none' }}>
                   <div style={{ background: 'var(--k-card)', border: '1px solid var(--k-border)', borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
                     <div style={{ fontSize: 22, marginBottom: 4 }}>🍜</div>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: '#EA580C' }}>ZasaFood</p>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-primary)' }}>ZasaFood</p>
                   </div>
                 </Link>
               )}
@@ -502,8 +502,8 @@ export default function DashboardPage() {
                 bgDecor="📦"
                 title="Kirim Sekarang"
                 desc="Buat order pengiriman baru"
-                gradient="linear-gradient(135deg, #FFF4EE 0%, #FFF8F5 100%)"
-                borderColor="rgba(249,115,22,0.20)"
+                gradient="linear-gradient(135deg, #EDFAF5 0%, #F5FDFB 100%)"
+                borderColor="rgba(0,200,150,0.20)"
               />
               <MainCard
                 to="/orders"
@@ -546,10 +546,10 @@ export default function DashboardPage() {
                 emoji="🍜" bgDecor="🍱"
                 title="ZasaFood" desc="Makanan & minuman"
                 badge={feat.zasafood ? 'AKTIF' : 'SEGERA'}
-                badgeColor={feat.zasafood ? '#EA580C' : 'var(--k-muted)'}
-                badgeBg={feat.zasafood ? 'rgba(249,115,22,0.12)' : 'var(--k-input)'}
-                gradient="linear-gradient(145deg, #FFF4EE 0%, #FFFBF7 100%)"
-                borderColor="rgba(249,115,22,0.18)"
+                badgeColor={feat.zasafood ? 'var(--k-primary)' : 'var(--k-muted)'}
+                badgeBg={feat.zasafood ? 'rgba(0,200,150,0.12)' : 'var(--k-input)'}
+                gradient="linear-gradient(145deg, #EDFAF5 0%, #F5FDFB 100%)"
+                borderColor="rgba(0,200,150,0.18)"
                 active={feat.zasafood !== false}
               />
 

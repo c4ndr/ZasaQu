@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\CompressesImage;
 use App\Models\Promo;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class PromoController extends Controller
 {
+    use CompressesImage;
+
     public function __construct(private AuditLogService $auditLogService) {}
 
     public function index(): JsonResponse
@@ -33,7 +37,7 @@ class PromoController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $request->file('image')->store('promos', 'public');
+            $data['image_path'] = $this->compressAndStore($request->file('image'), 'promos', Str::random(40) . '.jpg', 1280, 800);
         }
 
         $promo = Promo::create($data);
@@ -63,7 +67,7 @@ class PromoController extends Controller
             if ($promo->image_path) {
                 Storage::disk('public')->delete($promo->image_path);
             }
-            $data['image_path'] = $request->file('image')->store('promos', 'public');
+            $data['image_path'] = $this->compressAndStore($request->file('image'), 'promos', Str::random(40) . '.jpg', 1280, 800);
         }
 
         $old = $promo->toArray();

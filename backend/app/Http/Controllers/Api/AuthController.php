@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\CompressesImage;
 use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    use CompressesImage;
+
     public function __construct(private AuthService $authService) {}
 
     public function register(Request $request): JsonResponse
@@ -170,7 +174,7 @@ class AuthController extends Controller
             \Illuminate\Support\Facades\Storage::disk('public')->delete($user->photo_path);
         }
 
-        $path = $request->file('photo')->store('user-photos', 'public');
+        $path = $this->compressAndStore($request->file('photo'), 'user-photos', Str::random(40) . '.jpg', 800, 800);
         $user->update(['photo_path' => $path]);
 
         return response()->json([

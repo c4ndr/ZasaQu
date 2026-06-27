@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\CompressesImage;
 use App\Models\AdminSetting;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
 
 class SettingController extends Controller
 {
+    use CompressesImage;
+
     public function __construct(private AuditLogService $auditLogService) {}
 
     public function index(): JsonResponse
@@ -48,7 +51,7 @@ class SettingController extends Controller
             Storage::disk('public')->delete($setting->value);
         }
 
-        $path = $request->file('logo')->store('logos', 'public');
+        $path = $this->compressAndStore($request->file('logo'), 'logos', Str::random(40) . '.jpg', 800, 800);
 
         $old = $setting->value;
         $setting->update(['value' => $path, 'updated_by' => $request->user()->id]);
@@ -80,10 +83,8 @@ class SettingController extends Controller
 
         $b64       = preg_replace('/^data:image\/\w+;base64,/', '', $request->input('data'));
         $imageData = base64_decode($b64);
-        $ext       = $request->input('mime') === 'image/png' ? 'png' : 'jpg';
-        $filename  = 'logos/' . Str::random(40) . '.' . $ext;
-
-        Storage::disk('public')->put($filename, $imageData);
+        $randName  = Str::random(40) . '.jpg';
+        $filename  = $this->compressBinaryAndStore($imageData, $request->input('mime'), 'logos', $randName, 800, 800);
 
         $old = $setting->value;
         $setting->update(['value' => $filename, 'updated_by' => $request->user()->id]);

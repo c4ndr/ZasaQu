@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Home;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\CompressesImage;
 use App\Models\HomeOrder;
 use App\Models\HomeProvider;
 use App\Models\HomeService;
@@ -14,6 +15,8 @@ use Illuminate\Support\Str;
 
 class ProviderController extends Controller
 {
+    use CompressesImage;
+
     public function __construct(private HomeOrderService $homeOrderService) {}
 
     private function provider(Request $request): HomeProvider
@@ -83,7 +86,7 @@ class ProviderController extends Controller
         $request->validate(['image' => ['required', 'image', 'max:' . ($type === 'logo' ? 5120 : 10240)]]);
 
         $old = $provider->{"{$type}_path"};
-        $path = $request->file('image')->store("home_providers/{$provider->id}", 'public');
+        $path = $this->compressAndStore($request->file('image'), "home_providers/{$provider->id}", "{$type}.jpg");
 
         $provider->update(["{$type}_path" => $path]);
         if ($old && $old !== $path) Storage::disk('public')->delete($old);
@@ -108,10 +111,7 @@ class ProviderController extends Controller
 
         $old    = $provider->{"{$type}_path"};
         $binary = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['data']));
-        $ext    = match($data['mime']) { 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', default => 'jpg' };
-        $path   = "home_providers/{$provider->id}/{$type}." . $ext;
-
-        Storage::disk('public')->put($path, $binary);
+        $path   = $this->compressBinaryAndStore($binary, $data['mime'], "home_providers/{$provider->id}", "{$type}.jpg");
         $provider->update(["{$type}_path" => $path]);
         if ($old && $old !== $path) Storage::disk('public')->delete($old);
 
