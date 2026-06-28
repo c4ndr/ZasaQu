@@ -109,7 +109,7 @@ public class FloatingBubbleService extends Service {
         density        = dm.density;
         screenWidth    = dm.widthPixels;
         screenHeight   = dm.heightPixels;
-        bubbleSize     = (int) (40 * density);
+        bubbleSize     = (int) (56 * density);
         trashThreshold = (int) (130 * density);
     }
 
