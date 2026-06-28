@@ -115,8 +115,9 @@ export default function ApkPopup() {
           {/* Fitur */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
             {[
-              { icon: '🔔', text: 'Notifikasi pesanan real-time' },
+              { icon: '🔔', text: 'Notifikasi pesanan & chat real-time' },
               { icon: '📍', text: 'Lacak kurir langsung di peta' },
+              { icon: '😎', text: 'Avatar emoji baru — tanpa upload foto' },
               { icon: '⚡', text: 'Lebih cepat & ringan dari browser' },
             ].map(({ icon, text }) => (
               <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
