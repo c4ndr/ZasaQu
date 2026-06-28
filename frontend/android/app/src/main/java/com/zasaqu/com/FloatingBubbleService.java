@@ -26,9 +26,13 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import android.util.Log;
+
 import androidx.core.app.NotificationCompat;
 
 public class FloatingBubbleService extends Service {
+
+    private static final String TAG = "ZasaQuBubble";
 
     private static final String CHANNEL_ID = "bubble_channel";
     private static final int    NOTIF_ID   = 42;
@@ -93,14 +97,20 @@ public class FloatingBubbleService extends Service {
         if (currentRoute == null) currentRoute = "/";
 
         if (bubbleView == null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(NOTIF_ID, buildNotification(),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
-            } else {
-                startForeground(NOTIF_ID, buildNotification());
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    startForeground(NOTIF_ID, buildNotification(),
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+                } else {
+                    startForeground(NOTIF_ID, buildNotification());
+                }
+                initMetrics();
+                Log.d(TAG, "initMetrics: w=" + screenWidth + " h=" + screenHeight + " d=" + density + " sz=" + bubbleSize);
+                showBubble();
+                Log.d(TAG, "showBubble() OK");
+            } catch (Exception e) {
+                Log.e(TAG, "createOrUpdate failed: " + e.getMessage(), e);
             }
-            initMetrics();
-            showBubble();
         }
     }
 
