@@ -4,9 +4,35 @@ import useMartCartCount from '../hooks/useMartCartCount'
 import useAppInfo from '../hooks/useAppInfo'
 import useUnreadNotifCount from '../hooks/useUnreadNotifCount'
 
-function AvatarIcon({ name, isActive }) {
-  const initial = (name ?? '?')[0].toUpperCase()
+function parsePreset(preset) {
+  if (!preset) return null
+  const [emoji, color] = preset.split('|')
+  return emoji && color ? { emoji, color } : null
+}
+
+function AvatarIcon({ name, photoUrl, avatarPreset, isActive }) {
+  const preset = parsePreset(avatarPreset)
   const hue = [...(name ?? 'U')].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
+  if (preset) {
+    return (
+      <div style={{
+        width: 26, height: 26, borderRadius: '50%',
+        background: preset.color,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 15,
+        outline: isActive ? `2px solid ${preset.color}` : 'none',
+        outlineOffset: 1,
+      }}>{preset.emoji}</div>
+    )
+  }
+  if (photoUrl) {
+    return (
+      <img src={photoUrl} alt={name}
+        style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover',
+          outline: isActive ? `2px solid hsl(${hue},60%,45%)` : 'none' }} />
+    )
+  }
+  const initial = (name ?? '?')[0].toUpperCase()
   return (
     <div style={{
       width: 26, height: 26, borderRadius: '50%',
@@ -250,7 +276,7 @@ export default function BottomNav() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {avatar
-                      ? <AvatarIcon name={user.name} isActive={isActive} />
+                      ? <AvatarIcon name={user.name} photoUrl={user.photo_url} avatarPreset={user.avatar_preset} isActive={isActive} />
                       : <Icon filled={isActive} />
                     }
                     {badgeNum > 0 && (

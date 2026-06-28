@@ -80,6 +80,8 @@ Route::prefix('auth')->group(function () {
         Route::post('change-password', [AuthController::class, 'changePassword']);
         Route::post('fcm-token', [AuthController::class, 'saveFcmToken']);
         Route::post('photo', [AuthController::class, 'uploadPhoto']);
+        Route::post('photo-base64', [AuthController::class, 'uploadPhotoBase64']);
+        Route::post('avatar-preset', [AuthController::class, 'saveAvatarPreset']);
         Route::delete('account', [AuthController::class, 'deleteAccount']);
     });
 });

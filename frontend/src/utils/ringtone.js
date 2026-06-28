@@ -1,10 +1,11 @@
 // Singleton audio manager untuk ringtone & ringback.
-// Pada Android native, gunakan AudioManager via Capacitor (lebih keras, ring stream).
-// Fallback: Web Audio API untuk web/debug.
+// Android native: pakai ringtone_call.mp3 via AgoraVoice plugin (ring stream, volume penuh).
+// Web/debug: Web Audio API oscillator.
 
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 
 const IS_ANDROID = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+const AgoraVoice = IS_ANDROID ? registerPlugin('AgoraVoice') : null
 
 // ─── RINGTONE (callee) ───────────────────────────────────────────────────────
 
@@ -59,6 +60,11 @@ export function startRingtone() {
   if (ringActive) return
   ringActive = true
 
+  if (IS_ANDROID) {
+    try { AgoraVoice.playRingtone() } catch {}
+    return
+  }
+
   // Getar kuat pola panggilan masuk
   try { navigator.vibrate?.([600, 200, 600, 200, 600, 800]) } catch {}
 
@@ -74,6 +80,12 @@ export function stopRingtone() {
   ringActive = false
   clearInterval(ringTimer)
   ringTimer = null
+
+  if (IS_ANDROID) {
+    try { AgoraVoice.stopRingtone() } catch {}
+    return Promise.resolve()
+  }
+
   try { navigator.vibrate?.(0) } catch {}
   if (ringCtx && ringCtx.state !== 'closed') {
     const p = ringCtx.close().catch(() => {})

@@ -5,6 +5,9 @@ import BottomNav from '../components/BottomNav'
 import api from '../services/api'
 import useAppInfo from '../hooks/useAppInfo'
 import { useTheme } from '../hooks/useTheme'
+import { isNative } from '../utils/nativePlatform'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { compressImage } from '../utils/compressImage'
 
 // ── Baris notifikasi yang bisa diklik ────────────────────────────────────────
 function NotifRow() {
@@ -77,15 +80,35 @@ const ROLE_LABEL = {
   mitra_mobil: { label: 'Mitra Mobil', color: '#63B3ED', bg: 'rgba(99,179,237,0.12)'  },
 }
 
-function Avatar({ name, photoUrl, size = 72 }) {
-  const initial = (name ?? '?')[0].toUpperCase()
-  const hue = [...(name ?? 'U')].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
+const AVATAR_EMOJIS = ['😀','😎','🤩','🥳','😇','🤠','😈','👻','🤖','👽','🐱','🐶','🦊','🐼','🦁','🌟','⚡','🔥','💎','🎮']
+const AVATAR_COLORS = ['#16A34A','#2563EB','#7C3AED','#EA580C','#DC2626','#0891B2','#DB2777','#4B5563']
+
+function parsePreset(preset) {
+  if (!preset) return null
+  const [emoji, color] = preset.split('|')
+  return emoji && color ? { emoji, color } : null
+}
+
+function Avatar({ name, photoUrl, avatarPreset, size = 72 }) {
+  const preset = parsePreset(avatarPreset)
+  if (preset) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: '50%', flexShrink: 0,
+        background: preset.color,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: size * 0.52,
+      }}>{preset.emoji}</div>
+    )
+  }
   if (photoUrl) {
     return (
       <img src={photoUrl} alt={name}
         style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
     )
   }
+  const initial = (name ?? '?')[0].toUpperCase()
+  const hue = [...(name ?? 'U')].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -109,7 +132,11 @@ export default function ProfilePage() {
   const [deleting,        setDeleting]        = useState(false)
   const appVersion = import.meta.env.VITE_APP_VERSION ?? '1.0.0'
   const photoInputRef = useRef(null)
-  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoUploading,    setPhotoUploading]    = useState(false)
+  const [showAvatarPicker,  setShowAvatarPicker]  = useState(false)
+  const [pickerEmoji,       setPickerEmoji]       = useState('😀')
+  const [pickerColor,       setPickerColor]       = useState('#16A34A')
+  const [savingAvatar,      setSavingAvatar]      = useState(false)
 
   useEffect(() => {
     return () => {
@@ -208,10 +235,12 @@ export default function ProfilePage() {
     const file = e.target.files?.[0]
     if (!file) return
     setPhotoUploading(true)
-    const form = new FormData()
-    form.append('photo', file)
     try {
-      const res = await api.post('/auth/photo', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const raw = await new Promise((res, rej) => {
+        const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(file)
+      })
+      const { dataUrl, mime } = await compressImage(raw, { maxWidth: 800, maxHeight: 800 })
+      const res = await api.post('/auth/photo-base64', { data: dataUrl, mime })
       updateUser({ photo_url: res.data.photo_url })
     } catch {
       alert('Gagal mengupload foto. Pastikan ukuran file < 5 MB.')
@@ -219,6 +248,44 @@ export default function ProfilePage() {
       setPhotoUploading(false)
       e.target.value = ''
     }
+  }
+
+  async function handlePhotoNative() {
+    setPhotoUploading(true)
+    try {
+      const photo = await Camera.getPhoto({
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Photos,
+        quality: 75,
+        width: 800,
+        height: 800,
+      })
+      if (!photo.dataUrl) throw new Error('Tidak ada data foto')
+      const { dataUrl, mime } = await compressImage(photo.dataUrl, { maxWidth: 800, maxHeight: 800 })
+      const res = await api.post('/auth/photo-base64', { data: dataUrl, mime })
+      updateUser({ photo_url: res.data.photo_url })
+    } catch (e) {
+      const msg = String(e?.message || '')
+      if (!/cancel(l?ed)?|user denied/i.test(msg)) alert('Gagal mengupload foto.')
+    } finally { setPhotoUploading(false) }
+  }
+
+  function openAvatarPicker() {
+    const preset = parsePreset(user?.avatar_preset)
+    if (preset) { setPickerEmoji(preset.emoji); setPickerColor(preset.color) }
+    setShowAvatarPicker(true)
+  }
+
+  async function handleSaveAvatarPreset() {
+    setSavingAvatar(true)
+    try {
+      const res = await api.post('/auth/avatar-preset', { emoji: pickerEmoji, color: pickerColor })
+      updateUser({ avatar_preset: res.data.avatar_preset, photo_url: null })
+      setShowAvatarPicker(false)
+    } catch {
+      alert('Gagal menyimpan avatar.')
+    } finally { setSavingAvatar(false) }
   }
 
   async function handleDeleteAccount() {
@@ -242,9 +309,9 @@ export default function ProfilePage() {
       {/* Header */}
       <div style={{ padding: '52px 20px 24px', background: 'linear-gradient(180deg, #0C0C22 0%, var(--k-bg) 100%)', textAlign: 'center' }}>
         <div style={{ position: 'relative', display: 'inline-block' }}>
-          <Avatar name={user?.name} photoUrl={user?.photo_url} size={80} />
+          <Avatar name={user?.name} photoUrl={user?.photo_url} avatarPreset={user?.avatar_preset} size={80} />
           <button
-            onClick={() => photoInputRef.current?.click()}
+            onClick={openAvatarPicker}
             disabled={photoUploading}
             style={{
               position: 'absolute', bottom: 0, right: 0,
@@ -253,9 +320,9 @@ export default function ProfilePage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 14, cursor: 'pointer', padding: 0,
             }}>
-            {photoUploading ? '⏳' : '📷'}
+            ✏️
           </button>
-          <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+          {!isNative && <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />}
         </div>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--k-text)', marginTop: 14, marginBottom: 6 }}>
           {user?.name}
@@ -581,6 +648,77 @@ export default function ProfilePage() {
                 background: 'none', color: 'var(--k-muted)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
               }}>
               Batal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Sheet — Pilih Avatar */}
+      {showAvatarPicker && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 999,
+          background: 'rgba(0,0,0,0.6)', display: 'flex',
+          alignItems: 'flex-end', justifyContent: 'center',
+        }} onClick={() => setShowAvatarPicker(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--k-card)', borderRadius: '24px 24px 0 0',
+            padding: '24px 20px 40px', width: '100%', maxWidth: 480,
+          }}>
+            <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--k-text)', marginBottom: 4 }}>Pilih Avatar</p>
+            <p style={{ fontSize: 12, color: 'var(--k-muted)', marginBottom: 18 }}>Tidak perlu upload foto — langsung jadi!</p>
+
+            {/* Preview */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+              <div style={{
+                width: 72, height: 72, borderRadius: '50%',
+                background: pickerColor,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 38,
+              }}>{pickerEmoji}</div>
+            </div>
+
+            {/* Grid Emoji */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 18 }}>
+              {AVATAR_EMOJIS.map(e => (
+                <button key={e} onClick={() => setPickerEmoji(e)} style={{
+                  fontSize: 28, padding: '6px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: pickerEmoji === e ? 'var(--k-accent)' : 'var(--k-card2)',
+                  outline: pickerEmoji === e ? '2px solid var(--k-accent)' : 'none',
+                }}>{e}</button>
+              ))}
+            </div>
+
+            {/* Pilih Warna */}
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--k-muted)', marginBottom: 10 }}>Warna Latar</p>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 24, flexWrap: 'wrap' }}>
+              {AVATAR_COLORS.map(c => (
+                <button key={c} onClick={() => setPickerColor(c)} style={{
+                  width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                  background: c,
+                  outline: pickerColor === c ? `3px solid ${c}` : 'none',
+                  outlineOffset: 2,
+                  boxShadow: pickerColor === c ? '0 0 0 2px var(--k-bg)' : 'none',
+                }} />
+              ))}
+            </div>
+
+            <button onClick={handleSaveAvatarPreset} disabled={savingAvatar} style={{
+              width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+              background: savingAvatar ? 'var(--k-border)' : 'var(--k-accent)',
+              color: '#0C0C16', fontWeight: 800, fontSize: 15, cursor: savingAvatar ? 'not-allowed' : 'pointer',
+              marginBottom: 10,
+            }}>
+              {savingAvatar ? 'Menyimpan...' : 'Pakai Avatar Ini'}
+            </button>
+
+            {/* Opsi upload foto tetap tersedia */}
+            <button onClick={() => { setShowAvatarPicker(false); isNative ? handlePhotoNative() : photoInputRef.current?.click() }}
+              disabled={photoUploading} style={{
+                width: '100%', padding: '13px', borderRadius: 14,
+                border: '1.5px solid var(--k-border)', background: 'none',
+                color: 'var(--k-muted)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+              }}>
+              {photoUploading ? 'Mengupload...' : '📷 Upload Foto sebagai gantinya'}
             </button>
           </div>
         </div>

@@ -118,25 +118,13 @@ public class FloatingBubbleService extends Service {
     private void showBubble() {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         DisplayMetrics dm = getResources().getDisplayMetrics();
-        int sz     = bubbleSize;                    // 80dp
-        int shOff  = (int)(5 * dm.density);
-        int pad    = (int)(14 * dm.density);        // ruang badge + shadow
-        int winSz  = sz + pad;
+        int sz    = bubbleSize;
+        int pad   = (int)(14 * dm.density);        // ruang badge
+        int winSz = sz + pad;
 
         FrameLayout root = new FrameLayout(this);
 
-        // Layer 1: Shadow lembut di bawah logo
-        View shadow = new View(this);
-        GradientDrawable shadowBg = new GradientDrawable();
-        shadowBg.setShape(GradientDrawable.OVAL);
-        shadowBg.setColor(Color.parseColor("#45000000"));
-        shadow.setBackground(shadowBg);
-        FrameLayout.LayoutParams shadowP = new FrameLayout.LayoutParams(sz, (int)(sz * 0.75f));
-        shadowP.leftMargin = shOff;
-        shadowP.topMargin  = (int)(sz * 0.35f) + shOff;
-        root.addView(shadow, shadowP);
-
-        // Layer 2: Logo ZasaQu (PNG transparan — bentuk chat bubble kuning)
+        // Layer 1: Logo ZasaQu (PNG transparan)
         ImageView logoView = new ImageView(this);
         logoView.setImageResource(R.drawable.bubble_logo);
         logoView.setScaleType(ImageView.ScaleType.FIT_CENTER);

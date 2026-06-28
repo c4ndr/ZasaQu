@@ -183,6 +183,55 @@ class AuthController extends Controller
         ]);
     }
 
+    public function uploadPhotoBase64(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'data' => ['required', 'string'],
+            'mime' => ['required', 'string', 'in:image/jpeg,image/png,image/webp,image/gif'],
+        ]);
+
+        $user   = $request->user();
+        $binary = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['data']));
+
+        if ($user->photo_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->photo_path);
+        }
+
+        $path = $this->compressBinaryAndStore($binary, $data['mime'], 'user-photos', Str::random(40) . '.jpg', 800, 800);
+        $user->update(['photo_path' => $path]);
+
+        return response()->json([
+            'message'   => 'Foto profil berhasil diperbarui.',
+            'photo_url' => $user->fresh()->photo_url,
+        ]);
+    }
+
+    public function saveAvatarPreset(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'emoji' => ['required', 'string', 'max:10'],
+            'color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+        ]);
+
+        $user = $request->user();
+
+        // Hapus foto lama jika ada, preset menggantikan foto
+        if ($user->photo_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->photo_path);
+        }
+
+        $user->update([
+            'avatar_preset' => $data['emoji'] . '|' . $data['color'],
+            'photo_path'    => null,
+        ]);
+
+        return response()->json([
+            'message'       => 'Avatar berhasil diperbarui.',
+            'avatar_preset' => $user->avatar_preset,
+            'photo_url'     => null,
+        ]);
+    }
+
     public function saveFcmToken(Request $request): JsonResponse
     {
         $data = $request->validate(['fcm_token' => ['required', 'string', 'max:500']]);

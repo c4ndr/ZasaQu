@@ -2,6 +2,12 @@ package com.zasaqu.com;
 
 import android.Manifest;
 import android.content.SharedPreferences;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
+import android.os.Build;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
@@ -28,6 +34,7 @@ import io.agora.rtc2.RtcEngineConfig;
 public class AgoraVoicePlugin extends Plugin {
 
     private RtcEngine rtcEngine = null;
+    private Ringtone callRingtone = null;
 
     @PluginMethod
     public void initialize(PluginCall call) {
@@ -219,8 +226,76 @@ public class AgoraVoicePlugin extends Plugin {
         }
     };
 
+    // Cooldown agar tidak double-bunyi saat pesan masuk berturutan cepat
+    private long lastNotifChatTime = 0;
+
+    @PluginMethod
+    public void playNotifChat(PluginCall call) {
+        long now = System.currentTimeMillis();
+        if (now - lastNotifChatTime < 1000) {
+            call.resolve(new JSObject());
+            return;
+        }
+        lastNotifChatTime = now;
+        try {
+            Uri uri = Uri.parse("android.resource://" + getContext().getPackageName() + "/raw/notif_chat");
+            Ringtone r = RingtoneManager.getRingtone(getContext(), uri);
+            if (r != null) {
+                r.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build());
+                r.play();
+            }
+        } catch (Exception ignored) {}
+        call.resolve(new JSObject());
+    }
+
+    @PluginMethod
+    public void playRingtone(PluginCall call) {
+        try {
+            stopCallRingtone();
+            AudioManager am = (AudioManager) getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
+            if (am != null) {
+                int max = am.getStreamMaxVolume(AudioManager.STREAM_RING);
+                am.setStreamVolume(AudioManager.STREAM_RING, max, 0);
+            }
+            Uri uri = Uri.parse("android.resource://" + getContext().getPackageName() + "/raw/ringtone_call");
+            callRingtone = RingtoneManager.getRingtone(getContext(), uri);
+            if (callRingtone != null) {
+                callRingtone.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    callRingtone.setLooping(true);
+                }
+                callRingtone.play();
+            }
+        } catch (Exception ignored) {}
+        JSObject r = new JSObject();
+        r.put("success", true);
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void stopRingtone(PluginCall call) {
+        stopCallRingtone();
+        JSObject r = new JSObject();
+        r.put("success", true);
+        call.resolve(r);
+    }
+
+    private void stopCallRingtone() {
+        try {
+            if (callRingtone != null && callRingtone.isPlaying()) callRingtone.stop();
+        } catch (Exception ignored) {}
+        callRingtone = null;
+    }
+
     @Override
     protected void handleOnDestroy() {
+        stopCallRingtone();
         if (rtcEngine != null) {
             rtcEngine.leaveChannel();
             RtcEngine.destroy();

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useParams, useLocation } from 'react-router-dom'
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { useAuth } from '../context/AuthContext'
 import useChatRoom from '../hooks/useChatRoom'
 import useVoiceCall from '../hooks/useVoiceCall'
@@ -158,11 +158,16 @@ function DateDivider({ label }) {
   )
 }
 
+const _isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+const AgoraVoice = _isAndroid ? registerPlugin('AgoraVoice') : null
+
 // ── Halaman utama ─────────────────────────────────────────────────────────────
 function playNotif() {
-  // Di Android native, suara pesan sudah ditangani oleh FCM notification channel.
-  // JS oscillator hanya untuk fallback di browser.
-  if (Capacitor.isNativePlatform()) return
+  if (_isAndroid) {
+    // FCM tidak mainkan suara saat foreground — play notif_chat.mp3 via native plugin
+    try { AgoraVoice.playNotifChat() } catch {}
+    return
+  }
   try {
     const ctx  = new (window.AudioContext || window.webkitAudioContext)()
     const osc  = ctx.createOscillator()
