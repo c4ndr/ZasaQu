@@ -783,12 +783,12 @@ function NavMap({ order, gpsLocation, height = 300 }) {
 
   // Fit peta agar mitra + target selalu terlihat
   const refitMap = useCallback(() => {
-    const map = mapRef.current?.getMap()
+    const map = mapRef.current
     if (!map || !mapLoaded.current) return
     const pts = gpsLocation
       ? [[gpsLocation.lat, gpsLocation.lng], toPos]
       : [pickup, dropoff]
-    fitPoints(map, pts, 80)
+    fitGoogleMap(map, pts, 80)
   }, [gpsLocation, toPos, pickup, dropoff]) // eslint-disable-line
 
   // Refit saat status order berubah (misal: on_pickup → picked_up, target pindah ke dropoff)
@@ -800,9 +800,9 @@ function NavMap({ order, gpsLocation, height = 300 }) {
   // Auto-follow GPS — fit mitra + target dalam satu view
   useEffect(() => {
     if (!gpsLocation || !mapLoaded.current) return
-    const map = mapRef.current?.getMap()
+    const map = mapRef.current
     if (!map) return
-    fitPoints(map, [[gpsLocation.lat, gpsLocation.lng], toPos], 80)
+    fitGoogleMap(map, [[gpsLocation.lat, gpsLocation.lng], toPos], 80)
   }, [gpsLocation]) // eslint-disable-line
 
   // GeoJSON route
