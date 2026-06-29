@@ -12,7 +12,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
+        WebView.setWebContentsDebuggingEnabled(false);
         registerPlugin(AgoraVoicePlugin.class);
         registerPlugin(FloatingBubblePlugin.class);
         super.onCreate(savedInstanceState);
