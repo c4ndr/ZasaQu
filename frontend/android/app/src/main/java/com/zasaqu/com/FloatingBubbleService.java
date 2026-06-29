@@ -105,9 +105,7 @@ public class FloatingBubbleService extends Service {
                     startForeground(NOTIF_ID, buildNotification());
                 }
                 initMetrics();
-                Log.d(TAG, "initMetrics: w=" + screenWidth + " h=" + screenHeight + " d=" + density + " sz=" + bubbleSize);
                 showBubble();
-                Log.d(TAG, "showBubble() OK");
             } catch (Exception e) {
                 Log.e(TAG, "createOrUpdate failed: " + e.getMessage(), e);
             }
