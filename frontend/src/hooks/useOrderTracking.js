@@ -13,12 +13,15 @@ export default function useOrderTracking(orderId) {
   // Poll lokasi awal dari server
   useEffect(() => {
     if (!orderId) return
+    let mounted = true
     api.get(`/orders/${orderId}/location`).then(r => {
+      if (!mounted) return
       if (r.data.gps_active) {
         setMitraLocation(r.data.location)
         setGpsActive(true)
       }
     }).catch(() => {})
+    return () => { mounted = false }
   }, [orderId])
 
   // Subscribe ke channel WebSocket

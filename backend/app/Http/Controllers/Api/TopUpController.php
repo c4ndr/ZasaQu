@@ -286,7 +286,8 @@ class TopUpController extends Controller
         // Cek ke iPaymu jika punya session ID
         if ($topUp->ipaymu_session_id) {
             $result = $this->ipaymuService->checkStatus($topUp->ipaymu_session_id);
-            $status = strtolower($result['Data']['Status'] ?? '');
+            $data   = is_array($result['Data'] ?? null) ? $result['Data'] : [];
+            $status = strtolower($data['Status'] ?? '');
 
             if ($status === 'berhasil' || $status === 'sukses') {
                 $credited = false;
