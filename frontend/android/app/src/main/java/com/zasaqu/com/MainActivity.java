@@ -41,15 +41,18 @@ public class MainActivity extends BridgeActivity {
     private void handleBubbleRoute(Intent intent) {
         if (intent == null) return;
         String route = intent.getStringExtra("bubble_route");
-        if (route != null && !route.isEmpty() && getBridge() != null) {
-            final String r = route;
-            getBridge().getWebView().post(() ->
-                getBridge().getWebView().evaluateJavascript(
+        if (route == null || route.isEmpty() || getBridge() == null) return;
+        final WebView webView = getBridge().getWebView();
+        if (webView == null) return;
+        final String r = route;
+        webView.post(() -> {
+            try {
+                webView.evaluateJavascript(
                     "window.__bubbleRoute = '" + r.replace("'", "\\'") + "'; " +
                     "window.dispatchEvent(new CustomEvent('bubbleNavigate', { detail: '" + r.replace("'", "\\'") + "' }));",
                     null
-                )
-            );
-        }
+                );
+            } catch (Exception ignored) {}
+        });
     }
 }

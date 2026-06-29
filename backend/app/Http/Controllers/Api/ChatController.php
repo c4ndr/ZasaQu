@@ -246,7 +246,12 @@ class ChatController extends Controller
         broadcast(new NewChatMessage($message));
 
         if (!$isBlocked) {
-            $recipient = ($user->id === $order->customer_id) ? $order->mitra : $order->customer;
+            if ($user->id === $order->customer_id) {
+                $recipientId = $this->getProviderUserId($order);
+                $recipient   = $recipientId ? User::find($recipientId) : null;
+            } else {
+                $recipient = $order->customer;
+            }
             if ($recipient) {
                 broadcast(new ChatInboxNotification($message, $recipient->id, $room));
                 $this->notifService->newChatMessage($recipient, $user->name, $order->order_number, $order->id, $room->order_type ?? 'zasago');

@@ -127,6 +127,7 @@ public class FloatingBubbleService extends Service {
 
     private void showBubble() {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        if (windowManager == null) { Log.e(TAG, "WindowManager null"); return; }
         DisplayMetrics dm = getResources().getDisplayMetrics();
         int sz    = bubbleSize;
         int pad   = (int)(14 * dm.density);        // ruang badge
@@ -242,7 +243,7 @@ public class FloatingBubbleService extends Service {
                         }
                         lp.x = newX;
                         lp.y = newY;
-                        windowManager.updateViewLayout(bubbleView, lp);
+                        try { windowManager.updateViewLayout(bubbleView, lp); } catch (Exception ignored) { break; }
                         float scale = nearTrash ? 0.72f : 1f;
                         bubbleView.setScaleX(scale);
                         bubbleView.setScaleY(scale);
@@ -404,7 +405,7 @@ public class FloatingBubbleService extends Service {
 
     private Notification buildNotification() {
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (nm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel ch = new NotificationChannel(
                 CHANNEL_ID, "ZasaQu Aktif", NotificationManager.IMPORTANCE_MIN);
             ch.setShowBadge(false);

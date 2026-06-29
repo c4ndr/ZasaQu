@@ -122,6 +122,7 @@ export default function useFloatingBubble() {
 
     return () => {
       channel.stopListening('.chat.inbox')
+      echo.leave(`user.${user.id}`)
     }
   }, [user?.id, user?.role])
 }

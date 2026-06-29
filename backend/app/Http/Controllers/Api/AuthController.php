@@ -191,7 +191,11 @@ class AuthController extends Controller
         ]);
 
         $user   = $request->user();
-        $binary = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['data']));
+        $binary = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['data']), true);
+
+        if ($binary === false || strlen($binary) > 5242880) {
+            return response()->json(['message' => 'Ukuran file terlalu besar (maks 5MB).'], 422);
+        }
 
         if ($user->photo_path) {
             \Illuminate\Support\Facades\Storage::disk('public')->delete($user->photo_path);
@@ -215,19 +219,19 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        // Hapus foto lama jika ada, preset menggantikan foto
-        if ($user->photo_path) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->photo_path);
-        }
-
-        $user->update([
-            'avatar_preset' => $data['emoji'] . '|' . $data['color'],
-            'photo_path'    => null,
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $data) {
+            if ($user->photo_path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->photo_path);
+            }
+            $user->update([
+                'avatar_preset' => $data['emoji'] . '|' . $data['color'],
+                'photo_path'    => null,
+            ]);
+        });
 
         return response()->json([
             'message'       => 'Avatar berhasil diperbarui.',
-            'avatar_preset' => $user->avatar_preset,
+            'avatar_preset' => $user->fresh()->avatar_preset,
             'photo_url'     => null,
         ]);
     }

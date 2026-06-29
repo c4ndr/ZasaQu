@@ -162,6 +162,7 @@ const _isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === '
 const AgoraVoice = _isAndroid ? registerPlugin('AgoraVoice') : null
 
 // ── Halaman utama ─────────────────────────────────────────────────────────────
+let _notifCtx = null
 function playNotif() {
   if (_isAndroid) {
     // FCM tidak mainkan suara saat foreground — play notif_chat.mp3 via native plugin
@@ -169,7 +170,10 @@ function playNotif() {
     return
   }
   try {
-    const ctx  = new (window.AudioContext || window.webkitAudioContext)()
+    if (!_notifCtx || _notifCtx.state === 'closed') {
+      _notifCtx = new (window.AudioContext || window.webkitAudioContext)()
+    }
+    const ctx  = _notifCtx
     const osc  = ctx.createOscillator()
     const gain = ctx.createGain()
     osc.connect(gain)

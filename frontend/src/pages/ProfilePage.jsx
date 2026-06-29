@@ -273,7 +273,8 @@ export default function ProfilePage() {
 
   function openAvatarPicker() {
     const preset = parsePreset(user?.avatar_preset)
-    if (preset) { setPickerEmoji(preset.emoji); setPickerColor(preset.color) }
+    setPickerEmoji(preset?.emoji ?? '😀')
+    setPickerColor(preset?.color ?? '#16A34A')
     setShowAvatarPicker(true)
   }
 
@@ -281,7 +282,8 @@ export default function ProfilePage() {
     setSavingAvatar(true)
     try {
       const res = await api.post('/auth/avatar-preset', { emoji: pickerEmoji, color: pickerColor })
-      updateUser({ avatar_preset: res.data.avatar_preset, photo_url: null })
+      const newPreset = res.data?.avatar_preset ?? `${pickerEmoji}|${pickerColor}`
+      updateUser({ avatar_preset: newPreset, photo_url: null })
       setShowAvatarPicker(false)
     } catch {
       alert('Gagal menyimpan avatar.')
