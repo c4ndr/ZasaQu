@@ -6,6 +6,7 @@ use App\Models\AdminSetting;
 use App\Models\JastipSession;
 use App\Models\Order;
 use App\Models\User;
+use Illuminate\Support\Facades\App;
 
 class JastipService
 {
@@ -27,7 +28,7 @@ class JastipService
         );
         $corridor = (int) $this->getSetting('corridor_default_meters', 500);
 
-        return JastipSession::create([
+        $session = JastipSession::create([
             'mitra_id'        => $mitra->id,
             'master_order_id' => $data['master_order_id'] ?? null,
             'status'          => 'active',
@@ -41,6 +42,14 @@ class JastipService
             'corridor_width'  => $data['corridor_width'] ?? $corridor,
             'max_jastip'      => $maxJastip,
         ]);
+
+        // Notifikasi ke semua pelanggan (best-effort, cooldown 2 jam per mitra)
+        try {
+            $dest = $data['destination_address'] ?? $data['origin_address'] ?? '';
+            App::make(NotificationService::class)->jastipSessionStarted($mitra, $dest, 'zasago');
+        } catch (\Throwable) {}
+
+        return $session;
     }
 
     public function getActiveSessions(string $vehicleType, ?float $lat = null, ?float $lng = null, int $radiusMeters = 5000): \Illuminate\Database\Eloquent\Collection

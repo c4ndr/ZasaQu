@@ -162,6 +162,7 @@ const SellerOrdersPage       = lazy_(() => import('./pages/seller/SellerOrdersPa
 const SellerProductsPage     = lazy_(() => import('./pages/seller/SellerProductsPage'))
 const SellerSettingsPage     = lazy_(() => import('./pages/seller/SellerSettingsPage'))
 const SellerWalletPage       = lazy_(() => import('./pages/seller/SellerWalletPage'))
+const SellerMartChatsPage    = lazy_(() => import('./pages/seller/SellerMartChatsPage'))
 
 // Merchant
 const MerchantDashboardPage  = lazy_(() => import('./pages/merchant/MerchantDashboardPage'))
@@ -403,6 +404,7 @@ function AppRoutes() {
       <Route path="/mart/orders" element={<ModuleRoute featureKey="zasamart"><MartOrdersPage /></ModuleRoute>} />
       <Route path="/mart/orders/:id" element={<ModuleRoute featureKey="zasamart"><MartOrderDetailPage /></ModuleRoute>} />
       <Route path="/mart/sellers/:id" element={<BrowseRoute featureKey="zasamart"><MartSellerPage /></BrowseRoute>} />
+      <Route path="/mart/sellers/:id/consult" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
 
       {/* ZasaShop — Seller */}
       <Route path="/seller" element={<SellerRoute><SellerDashboardPage /></SellerRoute>} />
@@ -410,6 +412,8 @@ function AppRoutes() {
       <Route path="/seller/products" element={<SellerRoute><SellerProductsPage /></SellerRoute>} />
       <Route path="/seller/settings" element={<SellerRoute><SellerSettingsPage /></SellerRoute>} />
       <Route path="/seller/wallet" element={<SellerRoute><SellerWalletPage /></SellerRoute>} />
+      <Route path="/seller/mart/chats" element={<SellerRoute><SellerMartChatsPage /></SellerRoute>} />
+      <Route path="/seller/mart/chats/:id" element={<SellerRoute><ChatPage /></SellerRoute>} />
 
       {/* Admin ZasaShop */}
       <Route path="/admin/mart/sellers" element={<AdminRoute><AdminMartSellersPage /></AdminRoute>} />

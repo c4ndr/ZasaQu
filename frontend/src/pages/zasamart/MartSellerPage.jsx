@@ -100,8 +100,17 @@ export default function MartSellerPage() {
         )}
 
         {seller.address && (
-          <p style={{ fontSize: 11, color: 'var(--k-muted)' }}>📍 {seller.address}</p>
+          <p style={{ fontSize: 11, color: 'var(--k-muted)', marginBottom: 10 }}>📍 {seller.address}</p>
         )}
+
+        {/* Tombol Chat Penjual */}
+        <button
+          onClick={() => navigate(`/mart/sellers/${id}/consult`)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 12, border: '1px solid #6366F1', background: 'rgba(99,102,241,0.08)', color: '#6366F1', fontWeight: 700, fontSize: 13, cursor: 'pointer', width: '100%' }}
+        >
+          <span style={{ fontSize: 16 }}>💬</span>
+          Chat Penjual
+        </button>
       </div>
 
       {/* Search bar */}

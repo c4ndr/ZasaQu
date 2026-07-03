@@ -693,10 +693,26 @@ export default function MitraFoodOrdersPage() {
                             </div>
                           )}
 
-                          {/* COD warning */}
+                          {/* COD info — rincian uang yang harus dibayar & diterima */}
                           {isCOD && (
-                            <div style={{ fontSize: 12, padding: '8px 12px', borderRadius: 9, background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', fontWeight: 600, marginBottom: 12 }}>
-                              ⚠️ Pembayaran COD — terima {fmtRp(order.total_amount)} dari pelanggan saat tiba.
+                            <div style={{ fontSize: 12, padding: '10px 12px', borderRadius: 9, background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', marginBottom: 12 }}>
+                              <div style={{ color: '#DC2626', fontWeight: 700, marginBottom: 8 }}>
+                                {goingToMerchant ? '💵 COD — Bayar ke merchant saat ambil pesanan' : '💵 COD — Terima uang tunai dari pelanggan'}
+                              </div>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <div style={{ flex: 1, background: 'rgba(220,38,38,0.08)', borderRadius: 7, padding: '6px 8px' }}>
+                                  <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 700, marginBottom: 2 }}>Bayar ke merchant</div>
+                                  <div style={{ fontWeight: 800, fontSize: 14, color: '#DC2626' }}>{fmtRp(order.merchant_income)}</div>
+                                </div>
+                                <div style={{ flex: 1, background: 'rgba(220,38,38,0.08)', borderRadius: 7, padding: '6px 8px' }}>
+                                  <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 700, marginBottom: 2 }}>Terima dari pelanggan</div>
+                                  <div style={{ fontWeight: 800, fontSize: 14, color: '#DC2626' }}>{fmtRp(order.total_amount)}</div>
+                                </div>
+                                <div style={{ flex: 1, background: 'rgba(220,38,38,0.08)', borderRadius: 7, padding: '6px 8px' }}>
+                                  <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 700, marginBottom: 2 }}>Potong walletmu</div>
+                                  <div style={{ fontWeight: 800, fontSize: 14, color: '#DC2626' }}>−{fmtRp((order.platform_commission_food ?? 0) + (order.platform_commission_delivery ?? 0))}</div>
+                                </div>
+                              </div>
                             </div>
                           )}
 
@@ -812,10 +828,24 @@ export default function MitraFoodOrdersPage() {
                             🛍 {order.items?.map(i => `${i.item_name} ×${i.quantity}`).join(' · ')}
                           </div>
 
-                          {/* COD warning */}
+                          {/* COD info — rincian uang sebelum order diambil */}
                           {isCOD && (
-                            <div style={{ fontSize: 12, padding: '8px 12px', borderRadius: 9, background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', fontWeight: 600, marginBottom: 12 }}>
-                              ⚠️ Pembayaran COD — kamu terima uang tunai {fmtRp(order.total_amount)} dari pelanggan.
+                            <div style={{ fontSize: 12, padding: '10px 12px', borderRadius: 9, background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', marginBottom: 12 }}>
+                              <div style={{ color: '#DC2626', fontWeight: 700, marginBottom: 8 }}>💵 COD — Rincian uang yang perlu kamu siapkan</div>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <div style={{ flex: 1, background: 'rgba(220,38,38,0.08)', borderRadius: 7, padding: '6px 8px' }}>
+                                  <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 700, marginBottom: 2 }}>Bayar ke merchant</div>
+                                  <div style={{ fontWeight: 800, fontSize: 14, color: '#DC2626' }}>{fmtRp(order.merchant_income)}</div>
+                                </div>
+                                <div style={{ flex: 1, background: 'rgba(220,38,38,0.08)', borderRadius: 7, padding: '6px 8px' }}>
+                                  <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 700, marginBottom: 2 }}>Terima dari pelanggan</div>
+                                  <div style={{ fontWeight: 800, fontSize: 14, color: '#DC2626' }}>{fmtRp(order.total_amount)}</div>
+                                </div>
+                                <div style={{ flex: 1, background: 'rgba(220,38,38,0.08)', borderRadius: 7, padding: '6px 8px' }}>
+                                  <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 700, marginBottom: 2 }}>Potong walletmu</div>
+                                  <div style={{ fontWeight: 800, fontSize: 14, color: '#DC2626' }}>−{fmtRp((order.platform_commission_food ?? 0) + (order.platform_commission_delivery ?? 0))}</div>
+                                </div>
+                              </div>
                             </div>
                           )}
 

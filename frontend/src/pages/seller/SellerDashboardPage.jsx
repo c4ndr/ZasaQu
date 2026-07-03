@@ -140,12 +140,13 @@ export default function SellerDashboardPage() {
         {/* ── Menu aksi cepat ───────────────────────────────────────────── */}
         <div>
           <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--k-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Menu</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10 }}>
             {[
-              { emoji: '📦', label: 'Pesanan',  to: '/seller/orders',   badge: stats?.pending },
-              { emoji: '🛍️', label: 'Produk',   to: '/seller/products', badge: null },
-              { emoji: '⚙️', label: 'Pengaturan', to: '/seller/settings', badge: null },
-              { emoji: '💰', label: 'Dompet',   to: '/seller/wallet',   badge: null },
+              { emoji: '📦', label: 'Pesanan',  to: '/seller/orders',      badge: stats?.pending },
+              { emoji: '🛍️', label: 'Produk',   to: '/seller/products',    badge: null },
+              { emoji: '💬', label: 'Chat',      to: '/seller/mart/chats',  badge: null },
+              { emoji: '⚙️', label: 'Pengaturan', to: '/seller/settings',   badge: null },
+              { emoji: '💰', label: 'Dompet',   to: '/seller/wallet',       badge: null },
             ].map(m => (
               <button key={m.label} onClick={() => navigate(m.to)}
                 style={{ borderRadius: 14, padding: '14px 6px', background: 'var(--k-card)', border: '1px solid var(--k-border)', cursor: 'pointer', textAlign: 'center', position: 'relative' }}>

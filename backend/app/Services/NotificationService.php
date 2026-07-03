@@ -236,6 +236,36 @@ class NotificationService
 
     // ─── Withdraw & Admin ──────────────────────────────────────────────────────
 
+    public function jastipSessionStarted(User $mitra, string $destination, string $type = 'zasago'): void
+    {
+        // Cooldown: 1 notifikasi per mitra per 2 jam agar tidak spam pelanggan
+        $cacheKey = "jastip_notif:{$mitra->id}";
+        if (\Illuminate\Support\Facades\Cache::has($cacheKey)) return;
+        \Illuminate\Support\Facades\Cache::put($cacheKey, true, now()->addHours(2));
+
+        $dest    = $destination ?: 'sekitar area';
+        $title   = '🛍️ Ada Mitra Jastip Dekat Kamu!';
+        $body    = "{$mitra->name} lagi jalan ke {$dest}. Mau nitip beli sesuatu? Pesan sekarang!";
+        $data    = ['type' => 'jastip_available', 'mitra_id' => (string) $mitra->id, 'module' => $type];
+
+        User::where('role', 'pelanggan')->chunk(100, function ($customers) use ($title, $body, $data) {
+            foreach ($customers as $customer) {
+                try {
+                    App::make(FcmService::class)->sendToUser($customer, $title, $body, $data);
+                } catch (\Throwable) {}
+            }
+        });
+    }
+
+    public function topUpRequestCreated(User $admin, User $user, int $amount, int $topUpId): void
+    {
+        $this->send($admin, 'topup_request',
+            '💰 Top Up Baru Masuk',
+            "{$user->name} mengajukan top up Rp " . number_format($amount, 0, ',', '.') . '. Konfirmasi sekarang.',
+            ['topup_id' => $topUpId, 'user_id' => $user->id, 'module' => 'admin']
+        );
+    }
+
     public function withdrawRequestCreated(User $admin, User $mitra, int $amount, int $withdrawId): void
     {
         $this->send($admin, 'withdraw_request',

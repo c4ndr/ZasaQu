@@ -57,10 +57,20 @@ export default function useChatRoom(orderId, orderType = 'zasago') {
     return () => clearInterval(timer)
   }, [orderId, orderType]) // eslint-disable-line
 
-  const sendMessage = async (content, type = 'text') => {
-    if (!room || !content.trim()) return null
+  const sendMessage = async (content, type = 'text', imageFile = null) => {
+    if (!room || (!content.trim() && !imageFile)) return null
     try {
-      const res = await api.post(`/chat/rooms/${room.id}/messages`, { content, type })
+      let res
+      if (imageFile) {
+        const fd = new FormData()
+        fd.append('image', imageFile)
+        if (content.trim()) fd.append('content', content.trim())
+        res = await api.post(`/chat/rooms/${room.id}/messages`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+      } else {
+        res = await api.post(`/chat/rooms/${room.id}/messages`, { content, type })
+      }
       setMessages(prev => prev.find(m => m.id === res.data.data?.id) ? prev : [...prev, res.data.data])
       if (res.data.room_suspended) setSuspended(true)
       return res.data

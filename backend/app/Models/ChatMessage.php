@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ChatMessage extends Model
 {
-    protected $fillable = ['room_id', 'sender_id', 'content', 'type', 'is_blocked', 'blocked_reason'];
+    protected $fillable = ['room_id', 'sender_id', 'content', 'image_path', 'type', 'is_blocked', 'blocked_reason'];
 
     protected function casts(): array
     {

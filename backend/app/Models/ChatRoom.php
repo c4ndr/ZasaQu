@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ChatRoom extends Model
 {
-    protected $fillable = ['order_id', 'order_type', 'provider_id', 'customer_id', 'violation_count', 'is_suspended', 'suspended_at'];
+    protected $fillable = ['order_id', 'order_type', 'provider_id', 'customer_id', 'merchant_id', 'violation_count', 'is_suspended', 'suspended_at'];
 
     protected function casts(): array
     {

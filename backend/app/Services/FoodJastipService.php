@@ -20,7 +20,7 @@ class FoodJastipService
             ->where('status', 'active')
             ->update(['status' => 'closed', 'closed_reason' => 'manual', 'closed_at' => now()]);
 
-        return FoodJastipSession::create([
+        $session = FoodJastipSession::create([
             'mitra_id'            => $mitra->id,
             'vehicle_type'        => $data['vehicle_type'],
             'origin_lat'          => $data['origin_lat'],
@@ -33,6 +33,14 @@ class FoodJastipService
             'corridor_width'      => $data['corridor_width'] ?? 1000,
             'max_orders'          => $data['max_orders'] ?? 5,
         ]);
+
+        // Notifikasi ke semua pelanggan (best-effort, cooldown 2 jam per mitra)
+        try {
+            $dest = $data['destination_address'] ?? $data['origin_address'] ?? '';
+            $this->notifService->jastipSessionStarted($mitra, $dest, 'zasafood');
+        } catch (\Throwable) {}
+
+        return $session;
     }
 
     public function closeSession(FoodJastipSession $session, string $reason = 'manual'): void

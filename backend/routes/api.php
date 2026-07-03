@@ -220,6 +220,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('orders/{orderId}', [ChatController::class, 'getOrCreateRoom']);
         Route::post('rooms/{roomId}/messages', [ChatController::class, 'sendMessage']);
         Route::get('templates', [ChatController::class, 'templates']);
+        // ZasaMart pre-order chat (seller inbox)
+        Route::get('mart/seller/inbox', [ChatController::class, 'sellerInbox']);
     });
 
     // Voice call — WebRTC signaling relay (tanpa expose nomor HP)

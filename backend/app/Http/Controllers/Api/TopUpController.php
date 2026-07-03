@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
 use App\Models\BankAccount;
 use App\Models\TopUpRequest;
+use App\Models\User;
 use App\Services\IpaymuService;
 use App\Services\MidtransService;
+use App\Services\NotificationService;
 use App\Services\PaymentService;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
@@ -18,10 +20,11 @@ use Illuminate\Support\Facades\Log;
 class TopUpController extends Controller
 {
     public function __construct(
-        private PaymentService  $paymentService,
-        private WalletService   $walletService,
-        private MidtransService $midtransService,
-        private IpaymuService   $ipaymuService,
+        private PaymentService      $paymentService,
+        private WalletService       $walletService,
+        private MidtransService     $midtransService,
+        private IpaymuService       $ipaymuService,
+        private NotificationService $notifService,
     ) {}
 
     public function bankAccounts(): JsonResponse
@@ -59,6 +62,13 @@ class TopUpController extends Controller
             $data['bank_account_id'],
             $path
         );
+
+        // Notifikasi ke semua admin
+        User::where('role', 'admin')->get()->each(function ($admin) use ($topUp, $request) {
+            try {
+                $this->notifService->topUpRequestCreated($admin, $request->user(), (int) $topUp->amount, $topUp->id);
+            } catch (\Throwable) {}
+        });
 
         return response()->json([
             'message' => 'Bukti transfer berhasil dikirim. Menunggu konfirmasi admin.',
