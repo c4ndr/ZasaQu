@@ -7,6 +7,9 @@ import MapSatToggle from '../components/MapSatToggle'
 import useRoadRoute from '../hooks/useRoadRoute'
 import useOrderTracking from '../hooks/useOrderTracking'
 import api from '../services/api'
+import ReportComplaintModal from '../components/ReportComplaintModal'
+
+const COMPLAINT_WINDOW_HOURS = 24
 
 // ── Konstanta status ──────────────────────────────────────────────────────────
 const STATUS_STEPS = [
@@ -281,6 +284,8 @@ export default function TrackingPage() {
   const { mitraLocation, gpsActive, notifications, statusUpdate } = useOrderTracking(id)
   const [shownUpdate, setShownUpdate] = useState(null)
   const dismissNotif = useCallback(() => setShownUpdate(null), [])
+  const [showComplaint, setShowComplaint] = useState(false)
+  const [complaintSent, setComplaintSent] = useState(false)
 
   // Camera follow mitra
   useEffect(() => {
@@ -318,6 +323,9 @@ export default function TrackingPage() {
   const currentStep  = STATUS_STEPS.findIndex(s => s.key === order.status)
   const isDone       = ['completed', 'cancelled'].includes(order.status)
   const isCancelled  = order.status === 'cancelled'
+  const canComplain  = order.status === 'completed' && order.completed_at
+    && (Date.now() - new Date(order.completed_at).getTime()) / 36e5 <= COMPLAINT_WINDOW_HOURS
+    && !complaintSent
   const gpsBadge     = getGpsBadge(order, gpsActive, mitraLocation)
   const showGpsHint  = order.mitra && !gpsActive && !mitraLocation &&
                        ['accepted','on_pickup','picked_up','on_delivery'].includes(order.status)
@@ -576,8 +584,32 @@ export default function TrackingPage() {
           )}
 
           <PhotoViewer photos={order.photos} orderId={order.id} status={order.status} />
+
+          {canComplain && (
+            <button onClick={() => setShowComplaint(true)} style={{
+              width: '100%', marginTop: 12, padding: '13px', borderRadius: 14,
+              border: '1.5px solid rgba(246,173,85,0.4)', background: 'rgba(246,173,85,0.06)',
+              color: '#F6AD55', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+            }}>
+              ⚠️ Laporkan Masalah
+            </button>
+          )}
+          {complaintSent && (
+            <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--k-accent)', fontWeight: 700, marginTop: 12 }}>
+              ✓ Laporan sudah dikirim, tim kami akan meninjau
+            </p>
+          )}
         </div>
       </div>
+
+      {showComplaint && (
+        <ReportComplaintModal
+          orderType="zasago"
+          orderId={order.id}
+          onClose={() => setShowComplaint(false)}
+          onSuccess={() => { setShowComplaint(false); setComplaintSent(true) }}
+        />
+      )}
     </div>
   )
 }

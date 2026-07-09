@@ -266,6 +266,28 @@ class NotificationService
         );
     }
 
+    public function complaintCreated(User $admin, string $customerName, string $orderNumber, int $complaintId): void
+    {
+        $this->send($admin, 'complaint_created',
+            '⚠️ Laporan Masalah Baru',
+            "{$customerName} melaporkan masalah pada order #{$orderNumber}. Segera tinjau.",
+            ['complaint_id' => $complaintId, 'order_number' => $orderNumber, 'module' => 'admin']
+        );
+    }
+
+    public function complaintResolved(User $customer, int $complaintId, float $refundAmount, string $note): void
+    {
+        $body = $refundAmount > 0
+            ? 'Laporanmu sudah ditinjau. Refund Rp ' . number_format($refundAmount, 0, ',', '.') . " diberikan. Catatan: {$note}"
+            : "Laporanmu sudah ditinjau. Catatan: {$note}";
+
+        $this->send($customer, 'complaint_resolved',
+            'Laporan Masalah Ditinjau',
+            $body,
+            ['complaint_id' => $complaintId, 'refund_amount' => $refundAmount]
+        );
+    }
+
     public function newChatMessage(User $recipient, string $senderName, string $orderNumber, int $orderId, string $orderType = 'zasago'): void
     {
         // Hanya kirim FCM push, tidak buat DB record agar tidak spam notifikasi in-app

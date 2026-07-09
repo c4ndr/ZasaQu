@@ -7,6 +7,9 @@ import MapSatToggle from '../../components/MapSatToggle'
 import useRoadRoute from '../../hooks/useRoadRoute'
 import api from '../../services/api'
 import echo from '../../services/echo'
+import ReportComplaintModal from '../../components/ReportComplaintModal'
+
+const COMPLAINT_WINDOW_HOURS = 24
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtRp(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID') }
@@ -148,6 +151,8 @@ export default function FoodTrackingPage() {
   const [rated,        setRated]        = useState(false)
   const [toast,        setToast]        = useState(null)
   const [confirming,   setConfirming]   = useState(false)
+  const [showComplaint, setShowComplaint] = useState(false)
+  const [complaintSent, setComplaintSent] = useState(false)
 
   const loadOrder = useCallback(async () => {
     try {
@@ -256,6 +261,9 @@ export default function FoodTrackingPage() {
   const showMap   = ['mitra_on_pickup','picked_up','on_delivery','delivered'].includes(order.status)
   const showMitra = mitraGps && ['mitra_on_pickup','picked_up','on_delivery','delivered'].includes(order.status)
   const isDone    = ['completed','cancelled','rejected'].includes(order.status)
+  const canComplain = order.status === 'completed' && order.completed_at
+    && (Date.now() - new Date(order.completed_at).getTime()) / 36e5 <= COMPLAINT_WINDOW_HOURS
+    && !complaintSent
 
   const mapCenter = order.delivery_lat && order.delivery_lng
     ? { lat: parseFloat(order.delivery_lat), lng: parseFloat(order.delivery_lng) }
@@ -516,8 +524,32 @@ export default function FoodTrackingPage() {
               {order.rejection_reason    && <p style={{ fontSize: 13, color: 'var(--k-muted)', marginTop: 6 }}>{order.rejection_reason}</p>}
             </div>
           )}
+
+          {canComplain && (
+            <button onClick={() => setShowComplaint(true)} style={{
+              width: '100%', padding: '13px', borderRadius: 14,
+              border: '1.5px solid rgba(246,173,85,0.4)', background: 'rgba(246,173,85,0.06)',
+              color: '#F6AD55', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+            }}>
+              ⚠️ Laporkan Masalah
+            </button>
+          )}
+          {complaintSent && (
+            <p style={{ textAlign: 'center', fontSize: 12, color: '#00C896', fontWeight: 700 }}>
+              ✓ Laporan sudah dikirim, tim kami akan meninjau
+            </p>
+          )}
         </div>
       </div>
+
+      {showComplaint && (
+        <ReportComplaintModal
+          orderType="zasafood"
+          orderId={order.id}
+          onClose={() => setShowComplaint(false)}
+          onSuccess={() => { setShowComplaint(false); setComplaintSent(true) }}
+        />
+      )}
     </div>
   )
 }

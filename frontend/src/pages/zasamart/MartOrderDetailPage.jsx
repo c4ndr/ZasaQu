@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import api from '../../services/api'
+import ReportComplaintModal from '../../components/ReportComplaintModal'
+
+const COMPLAINT_WINDOW_HOURS = 24
 
 function AuthedImg({ src, alt, style = {} }) {
   const [url, setUrl] = useState(null)
@@ -41,6 +44,8 @@ export default function MartOrderDetailPage() {
   const [reviews, setReviews]     = useState({})
   const [cancelReason, setCancelReason] = useState('')
   const [showCancel, setShowCancel] = useState(false)
+  const [showComplaint, setShowComplaint] = useState(false)
+  const [complaintSent, setComplaintSent] = useState(false)
 
   const load = () => api.get(`/mart/orders/${id}`).then(r => setOrder(r.data))
   useEffect(() => { load() }, [id])
@@ -75,6 +80,9 @@ export default function MartOrderDetailPage() {
   const canReceive = order.status === 'delivered'
   const canReview  = order.status === 'completed' && order.reviews?.length < order.items?.length
   const reviewed   = order.reviews?.map(r => r.order_item_id) ?? []
+  const canComplain = order.status === 'completed' && order.completed_at
+    && (Date.now() - new Date(order.completed_at).getTime()) / 36e5 <= COMPLAINT_WINDOW_HOURS
+    && !complaintSent
 
   return (
     <div style={{ background: 'var(--k-bg)', minHeight: '100dvh', paddingBottom: 100 }}>
@@ -217,6 +225,15 @@ export default function MartOrderDetailPage() {
             Batalkan Pesanan
           </button>
         )}
+        {canComplain && (
+          <button onClick={() => setShowComplaint(true)}
+            style={{ width: '100%', padding: '11px', borderRadius: 12, border: '1px solid #F6AD55', background: 'none', color: '#F6AD55', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+            ⚠️ Laporkan Masalah
+          </button>
+        )}
+        {complaintSent && (
+          <p style={{ textAlign: 'center', fontSize: 12, color: '#22C55E', fontWeight: 700 }}>✓ Laporan sudah dikirim</p>
+        )}
       </div>
 
       {/* Cancel modal */}
@@ -261,6 +278,15 @@ export default function MartOrderDetailPage() {
             </button>
           </div>
         </>
+      )}
+
+      {showComplaint && (
+        <ReportComplaintModal
+          orderType="zasamart"
+          orderId={order.id}
+          onClose={() => setShowComplaint(false)}
+          onSuccess={() => { setShowComplaint(false); setComplaintSent(true) }}
+        />
       )}
     </div>
   )

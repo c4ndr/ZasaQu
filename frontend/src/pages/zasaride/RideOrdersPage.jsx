@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../services/api'
+import ReportComplaintModal from '../../components/ReportComplaintModal'
+
+const COMPLAINT_WINDOW_HOURS = 24
 
 const fmt = (n) => new Intl.NumberFormat('id-ID').format(n)
 
@@ -80,8 +83,13 @@ function RatingModal({ order, onClose, onDone }) {
 }
 
 function OrderCard({ order, onRate }) {
+  const [showComplaint, setShowComplaint] = useState(false)
+  const [complaintSent, setComplaintSent] = useState(false)
   const badge = STATUS_BADGE[order.status] || STATUS_BADGE.pending
   const date  = new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+  const canComplain = order.status === 'completed' && order.completed_at
+    && (Date.now() - new Date(order.completed_at).getTime()) / 36e5 <= COMPLAINT_WINDOW_HOURS
+    && !complaintSent
   return (
     <div style={{
       background: 'var(--k-card)', border: '1px solid var(--k-border)',
@@ -129,6 +137,26 @@ function OrderCard({ order, onRate }) {
           <span style={{ fontSize: 13, color: 'var(--k-muted)' }}>Rating kamu:</span>
           <span style={{ fontSize: 14, color: '#F59E0B', fontWeight: 700 }}>{'★'.repeat(order.my_rating.score)}{'☆'.repeat(5 - order.my_rating.score)}</span>
         </div>
+      )}
+
+      {canComplain && (
+        <button onClick={() => setShowComplaint(true)} style={{
+          marginTop: 8, width: '100%', padding: '10px', borderRadius: 12,
+          background: 'rgba(246,173,85,0.06)', border: '1px solid rgba(246,173,85,0.3)',
+          color: '#F6AD55', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+        }}>⚠️ Laporkan Masalah</button>
+      )}
+      {complaintSent && (
+        <p style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--k-accent)', fontWeight: 700 }}>✓ Laporan sudah dikirim</p>
+      )}
+
+      {showComplaint && (
+        <ReportComplaintModal
+          orderType="zasaride"
+          orderId={order.id}
+          onClose={() => setShowComplaint(false)}
+          onSuccess={() => { setShowComplaint(false); setComplaintSent(true) }}
+        />
       )}
     </div>
   )

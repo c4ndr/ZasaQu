@@ -36,9 +36,10 @@ const NAV_GROUPS = [
   {
     label: 'Keuangan',
     items: [
-      { to: '/admin/topup',    emoji: '💰', label: 'Top Up'      },
-      { to: '/admin/withdraw', emoji: '💸', label: 'Withdraw'    },
-      { to: '/admin/wallet',   emoji: '🏦', label: 'Adjust Saldo'},
+      { to: '/admin/topup',      emoji: '💰', label: 'Top Up'      },
+      { to: '/admin/withdraw',   emoji: '💸', label: 'Withdraw'    },
+      { to: '/admin/wallet',     emoji: '🏦', label: 'Adjust Saldo'},
+      { to: '/admin/complaints', emoji: '⚠️', label: 'Laporan Masalah' },
     ],
   },
   {

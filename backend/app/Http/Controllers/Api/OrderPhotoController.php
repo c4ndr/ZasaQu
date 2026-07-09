@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderPhoto;
+use App\Services\ImageCompressService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -12,10 +13,7 @@ use Illuminate\Support\Str;
 
 class OrderPhotoController extends Controller
 {
-    // Maks dimensi & kualitas JPEG setelah kompresi
-    private const MAX_WIDTH  = 1280;
-    private const MAX_HEIGHT = 1280;
-    private const JPEG_QUALITY = 82;
+    public function __construct(private ImageCompressService $imageCompress) {}
 
     // Serve foto dengan validasi kepemilikan — mencegah akses publik tanpa auth
     public function serve(Request $request, int $orderId, string $stage): \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\JsonResponse
@@ -63,13 +61,7 @@ class OrderPhotoController extends Controller
             mkdir(storage_path("app/public/{$dir}"), 0755, true);
         }
 
-        // Kompres dengan GD jika tersedia, fallback simpan langsung
-        if (extension_loaded('gd')) {
-            $this->compressAndSave($file->getRealPath(), $fullPath, $file->getMimeType());
-        } else {
-            // GD belum install — simpan langsung tanpa kompresi
-            $file->storeAs($dir, $filename, 'public');
-        }
+        $this->imageCompress->compressAndSave($file->getRealPath(), $fullPath, $file->getMimeType());
 
         $photo = OrderPhoto::create([
             'order_id'   => $order->id,
@@ -85,59 +77,5 @@ class OrderPhotoController extends Controller
             'data'    => $photo,
             'size_kb' => $sizeKb,
         ], 201);
-    }
-
-    private function compressAndSave(string $srcPath, string $destPath, string $mime): void
-    {
-        // Buat resource gambar sesuai tipe
-        $src = match (true) {
-            str_contains($mime, 'jpeg') || str_contains($mime, 'jpg') => imagecreatefromjpeg($srcPath),
-            str_contains($mime, 'png')  => imagecreatefrompng($srcPath),
-            str_contains($mime, 'webp') => function_exists('imagecreatefromwebp') ? imagecreatefromwebp($srcPath) : null,
-            str_contains($mime, 'heic') => null, // HEIC butuh Imagick
-            default                     => null,
-        };
-
-        if (!$src) {
-            // Tipe tidak didukung GD — salin saja
-            copy($srcPath, $destPath);
-            return;
-        }
-
-        [$origW, $origH] = getimagesize($srcPath);
-
-        // Hitung dimensi baru dengan mempertahankan rasio
-        $ratio  = min(self::MAX_WIDTH / $origW, self::MAX_HEIGHT / $origH, 1.0);
-        $newW   = (int) round($origW * $ratio);
-        $newH   = (int) round($origH * $ratio);
-
-        // Putar otomatis berdasarkan EXIF (foto portrait dari HP)
-        if (function_exists('exif_read_data') && in_array($mime, ['image/jpeg', 'image/jpg'])) {
-            $exif = @exif_read_data($srcPath);
-            $orientation = $exif['Orientation'] ?? 1;
-            if (in_array($orientation, [3, 6, 8])) {
-                $src = match ($orientation) {
-                    3 => imagerotate($src, 180, 0),
-                    6 => imagerotate($src, -90, 0),
-                    8 => imagerotate($src, 90, 0),
-                };
-                // Setelah rotasi 90/270, tukar dimensi
-                if (in_array($orientation, [6, 8])) [$newW, $newH] = [$newH, $newW];
-            }
-        }
-
-        $dst = imagecreatetruecolor($newW, $newH);
-
-        // Pertahankan transparansi PNG
-        if (str_contains($mime, 'png')) {
-            imagealphablending($dst, false);
-            imagesavealpha($dst, true);
-        }
-
-        imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, imagesx($src), imagesy($src));
-        imagejpeg($dst, $destPath, self::JPEG_QUALITY);
-
-        imagedestroy($src);
-        imagedestroy($dst);
     }
 }

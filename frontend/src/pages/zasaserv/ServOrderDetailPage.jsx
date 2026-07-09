@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../../services/api'
+import ReportComplaintModal from '../../components/ReportComplaintModal'
+
+const COMPLAINT_WINDOW_HOURS = 24
 
 function Stars({ score, onChange, size = 28 }) {
   return (
@@ -82,6 +85,8 @@ export default function ServOrderDetailPage() {
   const [ratedIds,   setRatedIds]    = useState(() => new Set(
     JSON.parse(sessionStorage.getItem('serv_rated_ids') || '[]')
   ))
+  const [showComplaint, setShowComplaint] = useState(false)
+  const [complaintSent, setComplaintSent] = useState(false)
 
   useEffect(() => {
     api.get(`/serv/orders/${id}`)
@@ -106,6 +111,9 @@ export default function ServOrderDetailPage() {
 
   const stepIdx  = STATUS_STEPS.indexOf(order.status)
   const isDone   = order.status === 'completed' || order.status === 'cancelled'
+  const canComplain = order.status === 'completed' && order.completed_at
+    && (Date.now() - new Date(order.completed_at).getTime()) / 36e5 <= COMPLAINT_WINDOW_HOURS
+    && !complaintSent
   const isRated  = ratedIds.has(order.id) || !!order.rated_at
 
   function handleRateDone() {
@@ -222,6 +230,17 @@ export default function ServOrderDetailPage() {
         {order.status === 'completed' && isRated && (
           <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--k-muted)', marginBottom: 14 }}>✓ Sudah memberi rating</p>
         )}
+
+        {canComplain && (
+          <button onClick={() => setShowComplaint(true)} style={{
+            width: '100%', padding: 14, borderRadius: 14, border: '1.5px solid rgba(246,173,85,0.4)',
+            background: 'rgba(246,173,85,0.06)', color: '#F6AD55',
+            fontSize: 14, fontWeight: 700, cursor: 'pointer', marginBottom: 14,
+          }}>⚠️ Laporkan Masalah</button>
+        )}
+        {complaintSent && (
+          <p style={{ textAlign: 'center', fontSize: 13, color: '#059669', fontWeight: 700, marginBottom: 14 }}>✓ Laporan sudah dikirim</p>
+        )}
       </div>
 
       {/* Cancel modal */}
@@ -252,6 +271,15 @@ export default function ServOrderDetailPage() {
 
       {showRating && (
         <ServRatingModal order={order} onClose={() => setShowRating(false)} onDone={handleRateDone} />
+      )}
+
+      {showComplaint && (
+        <ReportComplaintModal
+          orderType="zasaserv"
+          orderId={order.id}
+          onClose={() => setShowComplaint(false)}
+          onSuccess={() => { setShowComplaint(false); setComplaintSent(true) }}
+        />
       )}
     </div>
   )

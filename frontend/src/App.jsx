@@ -91,6 +91,7 @@ const AdminDashboardPage         = lazy_(() => import('./pages/admin/AdminDashbo
 const AdminPendingReviewPage     = lazy_(() => import('./pages/admin/AdminPendingReviewPage'))
 const AdminTopUpPage             = lazy_(() => import('./pages/admin/AdminTopUpPage'))
 const AdminWithdrawPage          = lazy_(() => import('./pages/admin/AdminWithdrawPage'))
+const AdminComplaintsPage        = lazy_(() => import('./pages/admin/AdminComplaintsPage'))
 const AdminWalletPage            = lazy_(() => import('./pages/admin/AdminWalletPage'))
 const AdminUsersPage             = lazy_(() => import('./pages/admin/AdminUsersPage'))
 const AdminSettingsPage          = lazy_(() => import('./pages/admin/AdminSettingsPage'))
@@ -389,6 +390,7 @@ function AppRoutes() {
       <Route path="/admin/serv/orders" element={<AdminRoute><AdminServOrdersPage /></AdminRoute>} />
       <Route path="/admin/topup" element={<AdminRoute><AdminTopUpPage /></AdminRoute>} />
       <Route path="/admin/withdraw" element={<AdminRoute><AdminWithdrawPage /></AdminRoute>} />
+      <Route path="/admin/complaints" element={<AdminRoute><AdminComplaintsPage /></AdminRoute>} />
       <Route path="/admin/wallet" element={<AdminRoute><AdminWalletPage /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
       <Route path="/admin/promos" element={<AdminRoute><AdminPromosPage /></AdminRoute>} />

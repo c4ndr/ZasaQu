@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import { STATUS_META as BASE_STATUS_META, FLOW_STEPS, getCategoryConfig } from '../../utils/homeServiceConfig'
+import ReportComplaintModal from '../../components/ReportComplaintModal'
+
+const COMPLAINT_WINDOW_HOURS = 24
 
 const UNIT_LABEL = { kg: 'kg', item: 'item', jam: 'jam', sesi: 'sesi' }
 
@@ -16,6 +19,8 @@ export default function HomeOrderDetailPage() {
   const [order,      setOrder]      = useState(null)
   const [loading,    setLoading]    = useState(true)
   const [cancelling, setCancelling] = useState(false)
+  const [showComplaint, setShowComplaint] = useState(false)
+  const [complaintSent, setComplaintSent] = useState(false)
 
   useEffect(() => {
     api.get(`/home/orders/${id}`)
@@ -46,6 +51,9 @@ export default function HomeOrderDetailPage() {
   const sm         = BASE_STATUS_META[order.status] ?? { label: order.status, color: '#A0A0BC', icon: '?' }
   const isCancelled = order.status === 'cancelled'
   const isActive    = !['completed', 'cancelled'].includes(order.status)
+  const canComplain = order.status === 'completed' && order.completed_at
+    && (Date.now() - new Date(order.completed_at).getTime()) / 36e5 <= COMPLAINT_WINDOW_HOURS
+    && !complaintSent
   const canChat     = !['cancelled'].includes(order.status)
   const stepIdx     = flowSteps.findIndex(s => s.key === order.status)
 
@@ -217,7 +225,32 @@ export default function HomeOrderDetailPage() {
             {cancelling ? 'Membatalkan...' : 'Batalkan Pesanan'}
           </button>
         )}
+
+        {/* Laporkan masalah — hanya order completed, dalam 24 jam */}
+        {canComplain && (
+          <button onClick={() => setShowComplaint(true)} style={{
+            padding: '13px', borderRadius: 14, border: '1.5px solid rgba(246,173,85,0.4)',
+            background: 'rgba(246,173,85,0.06)', color: '#F6AD55',
+            fontWeight: 700, fontSize: 14, cursor: 'pointer',
+          }}>
+            ⚠️ Laporkan Masalah
+          </button>
+        )}
+        {complaintSent && (
+          <p style={{ textAlign: 'center', fontSize: 12, color: '#00C896', fontWeight: 700 }}>
+            ✓ Laporan sudah dikirim, tim kami akan meninjau
+          </p>
+        )}
       </div>
+
+      {showComplaint && (
+        <ReportComplaintModal
+          orderType="zasahome"
+          orderId={order.id}
+          onClose={() => setShowComplaint(false)}
+          onSuccess={() => { setShowComplaint(false); setComplaintSent(true) }}
+        />
+      )}
     </div>
   )
 }

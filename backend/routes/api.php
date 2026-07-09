@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\WithdrawController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderPhotoController;
+use App\Http\Controllers\Api\ComplaintController;
+use App\Http\Controllers\Api\Admin\ComplaintController as AdminComplaintController;
 use App\Http\Controllers\Api\JastipController;
 use App\Http\Controllers\Api\Mitra\OnboardingController as MitraOnboardingController;
 use App\Http\Controllers\Api\Mitra\OrderController as MitraOrderController;
@@ -215,6 +217,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('unread-count', [NotificationController::class, 'unreadCount']);
     });
 
+    // Laporan masalah order (semua modul) — window 24 jam sejak completed_at
+    Route::prefix('complaints')->group(function () {
+        Route::get('/', [ComplaintController::class, 'index']);
+        Route::get('{id}', [ComplaintController::class, 'show']);
+        Route::post('/', [ComplaintController::class, 'store']);
+    });
+
     // Chat in-app
     Route::prefix('chat')->group(function () {
         Route::get('orders/{orderId}', [ChatController::class, 'getOrCreateRoom']);
@@ -312,6 +321,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::prefix('withdraw')->group(function () {
             Route::get('/', [AdminWithdrawController::class, 'index']);
             Route::post('{id}/process', [AdminWithdrawController::class, 'process']);
+        });
+
+        Route::prefix('complaints')->group(function () {
+            Route::get('/', [AdminComplaintController::class, 'index']);
+            Route::get('{id}', [AdminComplaintController::class, 'show']);
+            Route::post('{id}/resolve', [AdminComplaintController::class, 'resolve']);
+            Route::post('{id}/reject', [AdminComplaintController::class, 'reject']);
         });
 
         Route::get('dashboard', [AdminDashboardController::class, 'index']);
