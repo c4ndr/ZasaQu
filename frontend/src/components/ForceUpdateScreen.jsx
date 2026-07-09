@@ -1,7 +1,7 @@
 import useAppInfo from '../hooks/useAppInfo'
 
 // Versi APK yang sedang berjalan — update setiap build
-export const APP_VERSION = '1.0.5'
+export const APP_VERSION = '1.0.6'
 
 function parseVersion(v) {
   return (v || '0.0.0').split('.').map(Number)

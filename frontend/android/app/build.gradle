@@ -18,8 +18,8 @@ android {
         applicationId "com.zasaqu.com"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 105
-        versionName "1.0.5"
+        versionCode 106
+        versionName "1.0.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // Hanya ARM — x86/x86_64 hanya untuk emulator, tidak perlu di APK distribusi
