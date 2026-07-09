@@ -80,15 +80,6 @@ class NotificationService
         );
     }
 
-    public function orderDelivered(User $customer, string $orderNumber, int $orderId): void
-    {
-        $this->send($customer, 'order_delivered',
-            'Barang Terkirim!',
-            "Order #{$orderNumber} sudah sampai tujuan. Konfirmasi penerimaan dalam 2 jam.",
-            ['order_number' => $orderNumber, 'order_id' => $orderId]
-        );
-    }
-
     public function orderCompleted(User $customer, User $mitra, string $orderNumber, int $orderId): void
     {
         $this->send($customer, 'rating_request',
