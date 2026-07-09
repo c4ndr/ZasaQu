@@ -241,6 +241,8 @@ class ProviderController extends Controller
         // Settle pembayaran — idempoten, aman bila mitra sudah klik selesai lebih dulu
         if ($next === 'completed') {
             $this->servOrderService->settle($order->fresh());
+        } elseif ($next === 'cancelled') {
+            $this->servOrderService->releaseHold($order->fresh());
         }
 
         $fresh    = $order->fresh()->load('customer', 'items');

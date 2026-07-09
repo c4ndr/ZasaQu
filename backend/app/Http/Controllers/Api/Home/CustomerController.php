@@ -8,12 +8,14 @@ use App\Models\HomeOrder;
 use App\Models\HomeOrderItem;
 use App\Models\HomeProvider;
 use App\Models\HomeService;
-use App\Services\WalletService;
+use App\Services\HomeOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
+    public function __construct(private HomeOrderService $homeOrderService) {}
+
     public function providers(Request $request): JsonResponse
     {
         $query = HomeProvider::where('status', 'active')
@@ -114,6 +116,13 @@ class CustomerController extends Controller
         // Mitra kurir mendapat seluruh pickup_fee (ongkos antar-jemput)
         // On-site: pickup_fee = 0, mitra_income = 0
         $mitraIncome     = $pickupFee;
+        $grandTotal      = $totalPrice + $pickupFee;
+
+        try {
+            $this->homeOrderService->placeHold($request->user(), $grandTotal);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $order = HomeOrder::create([
             'order_number'        => HomeOrder::generateNumber(),
@@ -187,6 +196,8 @@ class CustomerController extends Controller
             'status'        => 'cancelled',
             'cancel_reason' => $data['reason'] ?? 'Dibatalkan oleh pelanggan',
         ]);
+
+        $this->homeOrderService->releaseHold($order);
 
         return response()->json([
             'message' => 'Pesanan dibatalkan.',

@@ -130,6 +130,8 @@ class MitraController extends Controller
         // Settle pembayaran — idempoten, aman bila provider juga klik selesai
         if ($next === 'completed') {
             $this->servOrderService->settle($order->fresh());
+        } elseif ($next === 'cancelled') {
+            $this->servOrderService->releaseHold($order->fresh());
         }
 
         $fresh    = $order->fresh()->load(['customer', 'provider', 'items']);

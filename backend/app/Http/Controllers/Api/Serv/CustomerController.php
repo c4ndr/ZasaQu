@@ -9,13 +9,17 @@ use App\Models\ServOrderItem;
 use App\Models\ServProvider;
 use App\Models\ServService;
 use App\Services\NotificationService;
+use App\Services\ServOrderService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
-    public function __construct(private NotificationService $notifService) {}
+    public function __construct(
+        private NotificationService $notifService,
+        private ServOrderService $servOrderService,
+    ) {}
 
     public function providers(Request $request): JsonResponse
     {
@@ -98,6 +102,12 @@ class CustomerController extends Controller
         $commRate   = (float) AdminSetting::valueOf('serv_commission_percent', 10);
         $commission = (int) round($totalPrice * $commRate / 100);
 
+        try {
+            $this->servOrderService->placeHold($request->user(), $totalPrice);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
         $order = ServOrder::create([
             'order_number'        => ServOrder::generateNumber(),
             'customer_id'         => $request->user()->id,
@@ -169,6 +179,8 @@ class CustomerController extends Controller
             'status'        => 'cancelled',
             'cancel_reason' => $data['reason'] ?? 'Dibatalkan oleh pelanggan',
         ]);
+
+        $this->servOrderService->releaseHold($order);
 
         return response()->json([
             'message' => 'Pesanan dibatalkan.',

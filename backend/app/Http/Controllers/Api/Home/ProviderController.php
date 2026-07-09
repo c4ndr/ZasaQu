@@ -254,6 +254,8 @@ class ProviderController extends Controller
         // sudah klik selesai lebih dulu (settled_at guard mencegah double credit)
         if ($next === 'completed') {
             $this->homeOrderService->settle($order->fresh());
+        } elseif ($next === 'cancelled') {
+            $this->homeOrderService->releaseHold($order->fresh());
         }
 
         return response()->json([
